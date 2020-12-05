@@ -1,6 +1,6 @@
 global:
-  alerts: eis-y-alerts@erickson.is
-  domain: erickson.is
+  alerts: alerts@example.com
+  domain: example.com
   ipv4: 172.16.44.0/24
   ipv6: fd86:ea04:1116::/64
   locus: eis_frr
@@ -9,69 +9,6 @@ global:
   privatekey: site.key
 
 hosts:
-  x1439-vpn-abbot.erickson.is:
-    ipv4: 172.16.44.1
-    ipv6: fd86:ea04:1116::1
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x249-vpn-abash.erickson.is:
-    ipv4: 172.16.44.3
-    ipv6: fd86:ea04:1116::3
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x329-vpn-abaca.erickson.is:
-    ipv4: 172.16.44.5
-    ipv6: fd86:ea04:1116::5
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x329-vpn-abaci.erickson.is:
-    ipv4: 172.16.44.4
-    ipv6: fd86:ea04:1116::4
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x388-vpn-agora.erickson.is:
-    ipv4: 172.16.44.2
-    ipv6: fd86:ea04:1116::2
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x4900-crashcart.erickson.is:
-    ipv4: 172.16.44.7
-    ipv6: fd86:ea04:1116::7
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x4900-vpn-alpine.erickson.is:
-    ipv4: 172.16.44.6
-    ipv6: fd86:ea04:1116::6
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x762.ashbyte.com:
-    ipv4: 172.16.44.8
-    ipv6: fd86:ea04:1116::8
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x826-vpn-agape.erickson.is:
-    ipv4: 172.16.44.9
-    ipv6: fd86:ea04:1116::9
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x908.erickson.is:
-    ipv4: 172.16.44.10
-    ipv6: fd86:ea04:1116::a
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
-  x9800-vpn-abide.erickson.is:
-    ipv4: 172.16.44.11
-    ipv6: fd86:ea04:1116::b
-    local_networks: ''
-    private_key_file: /etc/wireguard/eis_frr_priv
-    public_key: ''
+  vpn-abbot.example.com: {}
+  vpn-abash.example.com: {}
+  vpn-abaca.example.com: {}
