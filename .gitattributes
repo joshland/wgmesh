@@ -1,0 +1,5 @@
+*.txt  -crlf
+*.htm* -crlf
+*.py   -crlf
+*.md   -crlf
+*.yaml -crlf

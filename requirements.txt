@@ -1,0 +1,7 @@
+wheel
+click
+six
+natsort
+pyyaml
+attrs
+dnspython
