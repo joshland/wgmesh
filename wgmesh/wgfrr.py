@@ -7,12 +7,13 @@
 # created routes, and then exchange using FRR.
 # My plan would prefer something like L6
 import sys, os
+import yaml
 import click
 import loguru
 import attr, inspect
 from loguru import logger
 
-from wgcore import loadconfig, saveconfig, CheckConfig, gen_local_config
+from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, encrypt
 
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
@@ -58,31 +59,19 @@ def cli(debug, trace, update, output, publish, infile, sites):
         pass
     
     for host in possibles:
-        if os.path.exists()
+        fn = os.path.join(output, host.hostname)
+        yfile = open(f'{fn}.yaml', 'w')
+        bfile = open(f'{fn}.blob', 'w')
+        data = {}
         for inst in gen_local_config(c):
-            #ceate folder
-
-    taken = []
-    closed = []
-    for me in hosts:
-        ## source port == remote address last digit
-        ## remote port == my last digit
-        pb = site.portbase
-        my_octet = int(str(me.ipv4).split('.')[-1])
-        for this in hosts:
-            if me.hostname == this.hostname: continue
-            this_octet = int(str(this.ipv4).split('.')[-1])
-            sideA = f'{this.hostname}:{pb + my_octet}'
-            sideB = f'{me.hostname}:{pb + this_octet}'
-            temp = [ sideA, sideB ]
-            temp.sort()
-            if sideA in taken or sideB in taken:
-                if temp not in closed:
-                    print(f'ERROR: {temp} Collsion but something WRONG.')
-                    pass
-            else:
-                closed.append(temp)
+            dev = inst['device']
+            data[dev] = inst
             continue
+
+        ydata = yaml.safe_dump(data)
+        yfile.write(ydata)
+
+        bfile.write(encrypt(host, ydata))
         continue
 
     #for site in sites|*:
@@ -97,6 +86,8 @@ def cli(debug, trace, update, output, publish, infile, sites):
     #        continue
     #    continue
     return 0
+
+
 
 if __name__ == "__main__":
     sys.exit(Main())

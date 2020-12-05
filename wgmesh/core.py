@@ -7,13 +7,18 @@
 # Handle basic operations of loading and saving YAML files.
 # Basic Objects for managing site-specific and location specific settings.
 import sys
-import ipaddress
-import click
-import pprint
 import yaml
+import click
+import base64
 import loguru
+import pprint
+import ipaddress
+import nacl.utils
 import attr, inspect
+import hashlib, uuid
+
 from loguru import logger
+from nacl.public import PrivateKey, Box, PublicKey
 
 
 ## Validators must be loaded first
@@ -45,6 +50,7 @@ class Sitecfg(object):
     ipv6   = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
     portbase = attr.ib(default = 58822, kw_only=True, converter=int)
     publickey = attr.ib(default='', kw_only=True)
+    privatekey = attr.ib(default='', kw_only=True)
 
     def publish(self):
         #members = [attr for attr in dir(example) if not callable(getattr(example, attr)) and not attr.startswith("__")]
@@ -165,6 +171,20 @@ def post_check(publickey, site, hosts):
             continue
         continue
 
+def loadkey(keyfile):
+    ''' read key from a keyfile '''
+    uucontent = open(keyfile, 'r').read()
+    decontent = base64.decodebytes(uucontent)
+    pk = PrivateKey(decontent)
+    return pk
+
+def encrypt(host, ydata):
+    ''' encrypt a host blob target '''
+    SSK = loadkey(host.sitecfg.privatekey)
+    SPK = SSK.public_key
+    hpk = host.public_key
+    mybox = Box(SSK, hpk)
+    return mybox.encrypt(ydata)
 
 ##
 ## load template

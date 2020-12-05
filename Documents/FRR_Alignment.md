@@ -45,13 +45,13 @@ The port allocations beginning at `portbase` + [octet] of the site.  The script 
 
     #!YAML
     global:
-      alerts: eis-y-alerts@erickson.is
-      domain: erickson.is
+      alerts: alerts@othersite.is
+      domain: othersite.is
       ipv4: 172.16.44.0/24
       ipv6: fd86:ea04:1116::/64
-      locus: eis_frr
+      locus: poke_frr
       portbase: 49900
     hosts:
-      x1439-vpn-abbot.erickson.is: {}
-      x249-vpn-abash.erickson.is: {}
+      vpn-abbot.othersite.is: {}
+      vpn-abash.othersite.is: {}
 

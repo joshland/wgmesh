@@ -5,7 +5,9 @@ global:
   ipv6: fd86:ea04:1116::/64
   locus: eis_frr
   portbase: 49900
-  publickey: hioHVQ0Vzz/oDQIaeJfVzY2jhjJCRH5aZGjATIGDHFU=
+  publickey: Xi3NiwfV5+1qo91SlvW7VCUHNbgqndyPGk4YcD2LJnE=
+  privatekey: site.key
+
 hosts:
   x1439-vpn-abbot.erickson.is:
     ipv4: 172.16.44.1

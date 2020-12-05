@@ -19,7 +19,6 @@ if os.path.exists(readme_path):
         README = f.read()
 
 # Load version from version module (this might be a bad idea, not sure)
-#v = import_module('eis.tools.dns_export.version')
 v = import_module('version')
 
 requires = [
@@ -30,7 +29,8 @@ requires = [
     'pyyaml',
     'attrs',
     'dnspython',
-    'nacl',
+    'pynacl',
+    'loguru'
 ]
 
 test_requires = requires
@@ -57,6 +57,7 @@ setup(name='wgmesh',
       install_requires=requires,
       entry_points="""\
       [console_scripts]
+      wgsite  = wgmesh:wgsite_cli
       wgfrr   = wgmesh:wgfrr_cli
       wghost  = wgmesh:host_cli
       """,

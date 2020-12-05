@@ -5,3 +5,5 @@ natsort
 pyyaml
 attrs
 dnspython
+pynacl
+loguru
