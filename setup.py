@@ -57,12 +57,7 @@ setup(name='wgmesh',
       install_requires=requires,
       entry_points="""\
       [console_scripts]
-      rradd  = eis.tools.cli:add_cli
-      rrarpa = eis.tools.cli:arpa_cli
-      rrdel  = eis.tools.cli:delete_cli
-      rrdump  = eis.tools.cli:dump_cli
-      rrget  = eis.tools.cli:get_cli
-      rrls  = eis.tools.cli:list_cli
-      manicure  = eis.tools.cli:manicure_cli
+      wgfrr   = wgmesh:wgfrr_cli
+      wghost  = wgmesh:host_cli
       """,
       )

@@ -7,16 +7,12 @@
 # created routes, and then exchange using FRR.
 # My plan would prefer something like L6
 import sys, os
-from wgcore import loadconfig, saveconfig, CheckConfig, gen_local_config
 import click
 import loguru
 import attr, inspect
-
 from loguru import logger
 
-## Load Config, Save Config with changes 
-##
-##
+from wgcore import loadconfig, saveconfig, CheckConfig, gen_local_config
 
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
@@ -26,7 +22,7 @@ from loguru import logger
 @click.option('--publish', '-p', is_flag=True, default=False, help="Publish to [folder] (default: False)")
 @click.argument('infile')
 @click.argument('sites', required=False, nargs=-1)
-def Main(debug, trace, update, output, publish, infile, sites):
+def cli(debug, trace, update, output, publish, infile, sites):
     f''' Update or publish INFILE to Folder specified by OUTPUT {output} for [SITES] '''
     if not debug:
         logger.info('Debug')

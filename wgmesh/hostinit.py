@@ -6,7 +6,7 @@
 
 # Create the host basics locally
 import sys, os
-from wgcore import loadconfig, saveconfig, CheckConfig, gen_local_config
+from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config
 import click
 import loguru
 import attr, inspect
@@ -46,7 +46,7 @@ def fetchdomain(domain):
 @click.option('--pubkey','-p', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.options('--domain', '-d', default='', help="Source Domain (TXT lookups for DNS info")
-def Main(debug, trace, locus, pubkey, hostname, domain):
+def cli(debug, trace, locus, pubkey, hostname, domain):
     f''' Update or publish INFILE to Folder specified by OUTPUT {output} for [SITES] '''
     if not debug:
         logger.info('Debug')

@@ -25,7 +25,7 @@ from wgcore import loadconfig, saveconfig, CheckConfig, gen_local_config
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
 @click.argument('infile')
-def Main(debug, trace, infile):
+def cli(debug, trace, infile):
     f''' Check/Publish base64 to dns '''
     if not debug:
         logger.info('Debug')
@@ -53,4 +53,4 @@ def Main(debug, trace, infile):
     return 0
 
 if __name__ == "__main__":
-    sys.exit(Main())
+    sys.exit(cli())
