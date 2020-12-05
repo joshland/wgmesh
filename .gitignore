@@ -4,6 +4,8 @@
 bin/
 *.py[co]
 *.zip
+*.pub
+*.key
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
