@@ -59,3 +59,9 @@ else:
 
 print(f'Alice: {alice_decode}')
 print(f'Bob: {bob_decode}')
+
+## Load a message
+f = open(file, 'r').read()
+base64.decodestring(f.encode('ascii'))
+## Save a message
+base64.encodebytes(y.encode('ascii')).decode()

@@ -178,6 +178,14 @@ def loadkey(keyfile):
     pk = PrivateKey(decontent)
     return pk
 
+def genkey(keyfile):
+    ''' create a key, and save it to file {keyfile} '''
+    newKey = PrivateKey.generate()
+    content = base64.encodestring(newKey.encode())
+    with open(keyfile, 'w') as kf:
+        kf.write(content.decode())
+    return newKey
+
 def encrypt(host, ydata):
     ''' encrypt a host blob target '''
     SSK = loadkey(host.sitecfg.privatekey)

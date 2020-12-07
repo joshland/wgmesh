@@ -11,6 +11,12 @@ This is a small project designed to experiment with distribution and maintenance
  - Wireguard
  - Python
 
+
+##  Getting Started
+
+ - Create wgfrr.yaml from the wgfrr-example.yaml
+ - Execute site publisher: `wgsite wgfrr.yaml`
+ - 
  
  ## Changelog
 

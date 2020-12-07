@@ -5,7 +5,7 @@ global:
   ipv6: fd86:ea04:1116::/64
   locus: eis_frr
   portbase: 49900
-  publickey: Xi3NiwfV5+1qo91SlvW7VCUHNbgqndyPGk4YcD2LJnE=
+  publickey: ''
   privatekey: site.key
 
 hosts:
