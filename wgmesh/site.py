@@ -63,9 +63,11 @@ def cli(debug, trace, infile):
 
     if current == publish:
         logger.debug(f"Existing Records for {site.domain} are correct.")
-        logger.debug(f"Existing Records: {current}")
-        logger.debug(f"Calculated Records: {publish}")
+        logger.debug(f"Existing Records: {current}.")
+        logger.debug(f"Calculated Records: {publish}.")
         pass
+
+    saveconfig(site, hosts, infile)
 
     print()
     print(f'Caluclated Records:')

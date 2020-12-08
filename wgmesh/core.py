@@ -6,6 +6,7 @@
 
 # Handle basic operations of loading and saving YAML files.
 # Basic Objects for managing site-specific and location specific settings.
+import os
 import sys
 import yaml
 import click
@@ -50,13 +51,14 @@ class Sitecfg(object):
     ipv4   = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
     ipv6   = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
     portbase = attr.ib(default = 58822, kw_only=True, converter=int)
-    publickey = attr.ib(default='', kw_only=True)
+    publickey = attr.ib(default='',  kw_only=True)
     privatekey = attr.ib(default='', kw_only=True)
+    MSK    = attr.ib(default='',     kw_only=True)
 
     def publish(self):
-        #members = [attr for attr in dir(example) if not callable(getattr(example, attr)) and not attr.startswith("__")]
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
         logger.trace(f'publish dict: {m2}')
+        del m2['MSK']
         return m2
 
 @attr.s
@@ -116,7 +118,11 @@ def loadconfig(fn: str) -> list:
     sitecfg = Sitecfg(**y.get('global', {}))
 
     if sitecfg.privatekey > '':
-        sitecfg.MSK = loadkey(sitecfg.privatekey)
+        if os.path.exists(sitecfg.privatekey):
+            sitecfg.MSK = loadkey(sitecfg.privatekey)
+        else:
+            sitecfg.MSK = genkey(sitecfg.privatekey)
+            pass
         pass
 
     if sitecfg.publickey > '':
@@ -147,7 +153,7 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
         site: Sitecfg
         hosts: List of Hosts
     '''
-    if site.publickey > '':
+    if isinstance(site.publickey, PublicKey):
         site.publickey = keyexport(site.publickey)
         pass
 
