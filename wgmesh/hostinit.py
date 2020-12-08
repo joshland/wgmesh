@@ -20,23 +20,6 @@ from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, e
 import socket
 import pprint
 import base64
-import dns.resolver
-
-def fetchdomain(domain):
-    ''' return the record from the DNS '''
-    answer = dns.resolver.query(f"_wg.{domain}","TXT").response.answer[0]
-    output = ''
-    for item in answer:
-        output.append(item)
-    output = output.replace('"', '').replace(' ', '')
-    text = base64.decodestring(output)
-    retval = yaml.safe_load(text)
-    for k, v in retval.items():
-        if isinstance(v, bytes):
-            retval[k] = v.decode()
-            continue
-        continue
-    return retval
 
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")

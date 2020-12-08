@@ -17,6 +17,7 @@ import nacl.utils
 import attr, inspect
 import hashlib, uuid
 
+import dns.resolver
 from loguru import logger
 from nacl.public import PrivateKey, Box, PublicKey
 
@@ -77,8 +78,30 @@ class Host(object):
         #pprint.pprint(m2)
         return self.hostname, m2
 
+def loadkey(keyfile: str) -> PrivateKey:
+    ''' read key from a keyfile '''
+    uucontent = open(keyfile, 'r').read()
+    decontent = keyimport(uucontent)
+    logger.debug(f'Private Key {uucontent.strip()} / {decontent}')
+    pk = PrivateKey(decontent)
+    logger.debug(f'Encoded: {keyexport(pk)} / {keyexport(pk.public_key)}')
+    return pk
 
-def loadconfig( fn: str ):
+def keyimport(key: str) -> str:
+    ''' uudecode a key '''
+    logger.trace(f'keyimport: {type(key)}-{repr(key)}')
+    uucontent = base64.decodebytes(key.encode('ascii')).strip()
+    logger.trace(f'{repr(uucontent)} // {repr(key)}')
+    return uucontent
+
+def keyexport(key: PublicKey or PrivateKey) -> str:
+    ''' encode a key '''
+    logger.trace(f'keydecode: {type(key)}-{repr(key)}')
+    retval = base64.encodestring(key.encode()).decode().strip()
+    logger.trace(f'{repr(key)}-{type(key)} / {repr(retval)}-{type(retval)}')
+    return retval
+
+def loadconfig(fn: str) -> list:
     ''' load config from disk
         
         fn: YAML file.
@@ -91,6 +114,26 @@ def loadconfig( fn: str ):
     logger.trace(f'Hosts: {y.get("hosts").keys()}')
 
     sitecfg = Sitecfg(**y.get('global', {}))
+
+    if sitecfg.privatekey > '':
+        sitecfg.MSK = loadkey(sitecfg.privatekey)
+        pass
+
+    if sitecfg.publickey > '':
+        logger.trace(f'Decode Public Key: {sitecfg.publickey}')
+        decode = keyimport(sitecfg.publickey)
+        sitecfg.publickey = PublicKey(decode)
+    else:
+        sitecfg.publickey = sitecfg.MSK.public_key
+        pass
+
+    logger.trace(f'{sitecfg.MSK.public_key} /-/ {sitecfg.publickey}')
+    if sitecfg.MSK.public_key != sitecfg.publickey:
+        logger.error('PublicKey and Private Key Mismatch.')
+        print('')
+        sys.exit(2)
+        pass
+
     hosts = []
     for k, v in y.get('hosts',{}).items():
         h = Host(k, sitecfg, **v)
@@ -104,6 +147,10 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
         site: Sitecfg
         hosts: List of Hosts
     '''
+    if site.publickey > '':
+        site.publickey = keyexport(site.publickey)
+        pass
+
     dumphosts = { h.hostname: h.publish()[1] for h in hosts }
     publish = { 'global': site.publish(),
                 'hosts': dumphosts }
@@ -171,13 +218,6 @@ def post_check(publickey, site, hosts):
             continue
         continue
 
-def loadkey(keyfile):
-    ''' read key from a keyfile '''
-    uucontent = open(keyfile, 'r').read()
-    decontent = base64.decodebytes(uucontent)
-    pk = PrivateKey(decontent)
-    return pk
-
 def genkey(keyfile):
     ''' create a key, and save it to file {keyfile} '''
     newKey = PrivateKey.generate()
@@ -194,35 +234,25 @@ def encrypt(host, ydata):
     mybox = Box(SSK, hpk)
     return mybox.encrypt(ydata)
 
-##
-## load template
-## configure local settings
-## build a matrix of hosts:ips
-## Ensure that all of the hosts are consistent
-## back-fill the matrix from the empties
-##
+def dns_query(domain: str) -> str:
+    ''' return the record from the DNS '''
+    answer = dns.resolver.query(domain,"TXT").response.answer[0]
+    output = ''
+    for item in answer:
+        logger.trace(f'{item} // {type(item)}')
+        logger.trace(f'{str(item)}')
+        output += str(item).replace('"', '').replace(' ', '')
+        continue
 
-@click.command()
-@click.option('--debug','-d', is_flag=True, default=False)
-@click.option('--trace','-t', is_flag=True, default=False)
-@click.argument('infile')
-@click.argument('outfile', default='')
-def cli(debug, trace, infile, outfile):
-    if not debug:
-        logger.info('Debug')
-        logger.remove()
-        logger.add(sys.stdout, level='INFO')
-        pass
-    if trace:
-        logger.info('Trace')
-        logger.remove()
-        logger.add(sys.stdout, level='TRACE')
-        pass
-
-    site, hosts = loadconfig(infile)
-    site, hosts = CheckConfig(site, hosts)
-    saveconfig(site, hosts, outfile)
-    return (0)
+    text = base64.decodestring(output.encode('ascii'))
+    logger.trace(f'Output: {text} // {type(text)}')
+    retval = yaml.safe_load(text)
+    for k, v in retval.items():
+        if isinstance(v, bytes):
+            retval[k] = v.decode()
+            continue
+        continue
+    return retval
 
 def CheckConfig(site, hosts):
     ''' verify Wireguard Core YAML Config, Subnets, etc '''
@@ -291,5 +321,38 @@ def CheckConfig(site, hosts):
 
     return site, hosts
 
+##
+## load template
+## configure local settings
+## build a matrix of hosts:ips
+## Ensure that all of the hosts are consistent
+## back-fill the matrix from the empties
+##
+
+@click.command()
+@click.option('--debug','-d', is_flag=True, default=False)
+@click.option('--trace','-t', is_flag=True, default=False)
+@click.argument('infile')
+@click.argument('outfile', default='')
+def cli(debug, trace, infile, outfile):
+    if not debug:
+        logger.info('Debug')
+        logger.remove()
+        logger.add(sys.stdout, level='INFO')
+        pass
+    if trace:
+        logger.info('Trace')
+        logger.remove()
+        logger.add(sys.stdout, level='TRACE')
+        pass
+
+    logger.trace(f'Core CLI')
+    site, hosts = loadconfig(infile)
+    site, hosts = CheckConfig(site, hosts)
+    saveconfig(site, hosts, outfile)
+    return (0)
+
+
 if __name__ == "__main__":
     sys.exit(cli())
+    pass

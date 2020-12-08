@@ -19,7 +19,7 @@ import nacl.utils
 
 from loguru import logger
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey
+from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport
 
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
@@ -45,46 +45,49 @@ def cli(debug, trace, infile):
         sys.exit(2)
         pass
 
-    try:
-        with open(site.privatekey, 'r') as pkey:
-            RawMSK = pkey.read()
-            logger.debug(f'MSK Loaded {RawMSK}')
-            pass
-        MSK = PrivateKey( base64.decodestring(RawMSK.encode('ascii')) )
-        logger.debug('MSK Decode Succeeded')
-    except FileNotFoundError:
-        logger.debug('Sitekey does not exist on disk, skipping.')
-    except:
-        MSK = None
-        logger.debug('MSK Decode Failed')
-        pass
-
-    if not site.publickey and MSK == None:
-        logger.info(f'Generating Private Key: {site.privatekey}')
-        if not os.path.exists(site.privatekey):
-            ## create the private key
-            MSK = genkey(site.privatekey)
-            site.publickey = MSK.public_key
-            saveconfig(site, hosts, infile)
-            pass
-        else:
-            MSK = loadkey(site.privatekey)
-            site.publickey = base64.encodestring(site.publickey.encode())
-            pass
-        pass
-
     publish = { 
         'locus': site.locus,
-        'publickey': site.publickey,
+        'publickey': keyexport(site.publickey),
     }
 
     y = yaml.dump(publish)
 
     message = base64.encodebytes(y.encode('ascii')).decode()
 
-    print(f'Raw Text Record: {y}')
+    try:
+        current = dns_query(site.domain)
+    except:
+        logger.error("failed to decode dns record.")
+        current = {}
+        pass
 
-    print(f"Fix TXT record for domain {site.domain}, set this: \n\n{message}")
+    if current == publish:
+        logger.debug(f"Existing Records for {site.domain} are correct.")
+        logger.debug(f"Existing Records: {current}")
+        logger.debug(f"Calculated Records: {publish}")
+        pass
+
+    print()
+    print(f'Caluclated Records:')
+    for k, v in publish.items():
+        print(f'   {k}: {v}')
+        continue
+
+    print()
+    print(f'Existing Records:')
+    for k, v in current.items():
+        print(f'   {k}: {v}')
+        continue
+
+    print()
+    print(f'DNS TXT Record for {site.domain}:')
+    print()
+    print('"""')
+    for l in message.split('\n'):
+        print(f'{l.strip()}')
+        continue
+    print('"""')
+
     return 0
 
 if __name__ == "__main__":
