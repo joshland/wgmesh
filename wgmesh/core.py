@@ -43,6 +43,12 @@ def validateIpAddress(arg):
         pass
     return retval
 
+def nonone(arg):
+    ''' eliminate the None and blanks '''
+    if arg == None:
+        return ''
+    return arg
+
 @attr.s
 class Sitecfg(object):
     alerts = attr.ib(default='', kw_only=True)
@@ -51,7 +57,7 @@ class Sitecfg(object):
     ipv4   = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
     ipv6   = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
     portbase = attr.ib(default = 58822, kw_only=True, converter=int)
-    publickey = attr.ib(default='',  kw_only=True)
+    publickey = attr.ib(default='',  kw_only=True, converter=nonone)
     privatekey = attr.ib(default='', kw_only=True)
     MSK    = attr.ib(default='',     kw_only=True)
 
