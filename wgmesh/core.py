@@ -238,6 +238,14 @@ def genkey(keyfile):
         kf.write(content.decode())
     return newKey
 
+def decrypt(host, ydata):
+    ''' encrypt a host blob target '''
+    SSK = loadkey(host.sitecfg.privatekey)
+    SPK = SSK.public_key
+    hpk = host.public_key
+    mybox = Box(SSK, hpk)
+    return mybox.encrypt(ydata)
+
 def encrypt(host, ydata):
     ''' encrypt a host blob target '''
     SSK = loadkey(host.sitecfg.privatekey)

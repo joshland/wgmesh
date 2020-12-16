@@ -19,26 +19,19 @@ import nacl.utils
 
 from loguru import logger
 from nacl.public import PrivateKey, Box, PublicKey
+from wgmesh import core
 from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport
 
-@click.command()
-@click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
-@click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
-@click.argument('infile')
-def cli(debug, trace, infile):
-    f''' Check/Publish base64 to dns '''
-    if not debug:
-        logger.remove()
-        logger.add(sys.stdout, level='INFO')
-        pass
-    if trace:
-        logger.info('Trace')
-        logger.remove()
-        logger.add(sys.stdout, level='TRACE')
-        pass
+# Site generation / Maintenance
+# Generates a python dictionary with UUENCODE to support host inculcation
+#
 
-    site, hosts = CheckConfig(*loadconfig(infile))
+# Host import / update
+# UUID matching
+#
 
+def siteActivation(site: core.Sitecfg, hosts: core.Host):
+    ''' perform site activiation process '''
     if site.privatekey == '':
         logger.error(f"Global=>privatekey must be set in {infile}")
         print('Fix YAML Config')
@@ -67,7 +60,6 @@ def cli(debug, trace, infile):
         logger.debug(f"Calculated Records: {publish}.")
         pass
 
-    saveconfig(site, hosts, infile)
 
     print()
     print(f'Caluclated Records:')
@@ -90,6 +82,36 @@ def cli(debug, trace, infile):
         continue
     print('"""')
 
+    return retval
+
+def hostImport(data: str, site: core.Sitecfg, hosts: core.Host):
+
+    return retval
+
+@click.command()
+@click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
+@click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
+@click.option('--hostimport','-i', default='', help="Import Hostfile.")
+@click.argument('infile')
+def cli(debug, trace, hostimport, infile):
+    f''' Check/Publish base64 to dns '''
+    if not debug:
+        logger.remove()
+        logger.add(sys.stdout, level='INFO')
+        pass
+    if trace:
+        logger.info('Trace')
+        logger.remove()
+        logger.add(sys.stdout, level='TRACE')
+        pass
+
+    site, hosts = CheckConfig(*loadconfig(infile))
+    if hostimport:
+        site, hosts = hostImport(hostimport, site, hosts)
+    else:
+        site, hosts = siteActivation(site, hosts)
+        pass
+    saveconfig(site, hosts, infile)
     return 0
 
 if __name__ == "__main__":

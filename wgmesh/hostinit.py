@@ -24,7 +24,6 @@ import base64
 @click.option('--locus','-l', default='', help="Manually set Mesh Locus.")
 @click.option('--pubkey','-p', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
-#@click.option('--domain', '-D', default='', help="Source Domain (TXT lookups for DNS info")
 @click.argument('domain')
 def cli(force, debug, trace, locus, pubkey, hostname, domain):
     f''' Setup localhost, provide registration with master controller.'''
@@ -60,11 +59,11 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
     lsk = None
     lpk = None
     if os.path.exists(privfile):
-        logger.debug(f'Private keyfile exists.')
+        logger.debug(f'Private keyfile exists=>{privfile}')
         try:
             #lsk = PrivateKey(base64.decodebytes(open(privfile, 'r').read().encode('ascii')))
             lsk = PrivateKey( keyimport(open(privfile, 'r').read() ))
-            logger.debug(f'Private keyfile exists.')
+            logger.debug(f'Private keyfile loaded successfully.')
             lpk = lsk.public_key
         except:
             logger.error(f'Load or decrypt failed: {privfile}')
@@ -97,21 +96,32 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
         MPK = MBox = None
         logger.debug("failed to create MBox, no public key or local private key error.")
 
-    publish = {
+    encrypted = {
         'hostname': hostname,
         'publickey': keyexport(lpk)
     }
+
+    message = yaml.dump(encrypted)
+    hidden = base64.encodebytes( MBox.encrypt( message.encode('ascii') ) )
+
+    publish = {
+        'publickey': keyexport(lpk),
+        'message': hidden,
+    }
+
+    logger.trace(f'Publising dict: {publish}')
 
     print(f'\nCheck output:')
     pprint.pprint(publish, indent=5)
 
     message = yaml.dump(publish)
     
-    if MBox:
-        encmsg = MBox.encrypt( message.encode('ascii') )
-        output = base64.encodebytes( encmsg )
-        print(f'Message to Home: {output}')
-        pass
+    encmsg = MBox.encrypt( message.encode('ascii') )
+
+    output = base64.encodebytes( encmsg ).decode().replace('\n','')
+
+    print()
+    print(f'Message to Home: {output}')
 
     print('')
     return 0
