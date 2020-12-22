@@ -16,11 +16,12 @@ import base64
 import hashlib, uuid
 import nacl.utils
 import nacl.utils
+import dns.resolver
 
+from wgmesh import core
 from loguru import logger
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh import core
-from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport
+from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport, keyimport
 
 # Site generation / Maintenance
 # Generates a python dictionary with UUENCODE to support host inculcation
@@ -30,7 +31,7 @@ from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, g
 # UUID matching
 #
 
-def siteActivation(site: core.Sitecfg, hosts: core.Host):
+def siteActivation(site: core.Sitecfg, hosts: core.Host) -> list:
     ''' perform site activiation process '''
     if site.privatekey == '':
         logger.error(f"Global=>privatekey must be set in {infile}")
@@ -49,6 +50,9 @@ def siteActivation(site: core.Sitecfg, hosts: core.Host):
 
     try:
         current = dns_query(site.domain)
+    except dns.resolver.NXDOMAIN:
+        logger.debug(f'Domain reports no record found. Request: TXT:{site.domain}')
+        current = {}
     except:
         logger.error("failed to decode dns record.")
         current = {}
@@ -82,11 +86,23 @@ def siteActivation(site: core.Sitecfg, hosts: core.Host):
         continue
     print('"""')
 
-    return retval
+    return site, hosts
 
-def hostImport(data: str, site: core.Sitecfg, hosts: core.Host):
+def hostImport(data: str, site: core.Sitecfg, hosts: core.Host) -> list:
+    ''' import/update a host from a site '''
 
-    return retval
+    outer_message = base64.decodebytes( data.encode('ascii') ).decode()
+    logger.debug(f'Host import: {data}')
+    outer = yaml.safe_load(outer_message)
+    HPub = PublicKey( keyimport( outer['publickey'] ))
+    logger.trace(f'HPub/{HPub} -- SKey/{site.privatekey}')
+    SBox = Box(site.privatekey, HPub)
+
+    inner_message = SBox.decrypt( outer['message'] )
+    inner = yaml.safe_load (inner_message )
+    logger.debug(f'Host Decode: {inner}')
+    
+    return site, hosts
 
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
@@ -107,8 +123,10 @@ def cli(debug, trace, hostimport, infile):
 
     site, hosts = CheckConfig(*loadconfig(infile))
     if hostimport:
+        logger.debug(f'mode: Host Import.')
         site, hosts = hostImport(hostimport, site, hosts)
     else:
+        logger.debug(f'Site Activation.')
         site, hosts = siteActivation(site, hosts)
         pass
     saveconfig(site, hosts, infile)

@@ -5,6 +5,7 @@ import sys, os
 import yaml
 import click
 import loguru
+import socket
 import nacl.utils
 import attr, inspect
 import hashlib, uuid
@@ -12,8 +13,8 @@ import hashlib, uuid
 from loguru import logger
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, encrypt, dns_query, keyexport, keyimport
+from wgmesh.core import rootconfig
 
-import socket
 import pprint
 import base64
 
@@ -40,10 +41,12 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
 
     if not hostname:
         hostname = socket.gethostname()
+        pass
     
     if not locus or not pubkey:
         dominfo = dns_query(domain)
         logger.trace(f'domain info: {dominfo}') 
+        pass
 
     if locus == '':
         locus = dominfo['locus']
@@ -52,6 +55,8 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
     if pubkey == '':
         pubkey = dominfo['publickey']
         pass
+
+    hostconfig = rootconfig(domain, locus, pubkey)
 
     privfile = f'/etc/wireguard/{locus}_priv'
     pubfile  = f'/etc/wireguard/{locus}_pub'
@@ -95,33 +100,40 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
     except:
         MPK = MBox = None
         logger.debug("failed to create MBox, no public key or local private key error.")
+        pass
 
-    encrypted = {
+    ## Message Packet:
+    # Inner
+    #   {'hostname': '', 'uuid': '', 'publickey': ''}
+    # Outer:
+    #   {'publickey': '', 'message': <inner encrypted/base64>}
+
+    inner_plain = {
         'hostname': hostname,
+        'uuid': hostconfig['host']['uuid'],
         'publickey': keyexport(lpk)
     }
 
-    message = yaml.dump(encrypted)
-    hidden = base64.encodebytes( MBox.encrypt( message.encode('ascii') ) )
+    inner_crypt  = yaml.dump(inner_plain)
+    logger.trace(f'Dump Yaml String {len(inner_crypt)}')
+    inner_hidden = base64.encodebytes( MBox.encrypt( inner_crypt.encode('ascii') ) )
+    logger.trace(f'Crypt + Encoded String {len(inner_hidden)}')
 
-    publish = {
+    outer = {
         'publickey': keyexport(lpk),
-        'message': hidden,
+        'message': inner_hidden,
     }
 
-    logger.trace(f'Publising dict: {publish}')
+    logger.trace(f'Publising dict: {outer}')
 
     print(f'\nCheck output:')
-    pprint.pprint(publish, indent=5)
+    pprint.pprint(outer, indent=5)
 
-    message = yaml.dump(publish)
-    
-    encmsg = MBox.encrypt( message.encode('ascii') )
-
-    output = base64.encodebytes( encmsg ).decode().replace('\n','')
+    outer_plain   = yaml.dump(outer)
+    output_hidden = base64.encodebytes( outer_plain.encode('ascii') ).decode().replace('\n','')
 
     print()
-    print(f'Message to Home: {output}')
+    print(f'Message to Home: {output_hidden}')
 
     print('')
     return 0

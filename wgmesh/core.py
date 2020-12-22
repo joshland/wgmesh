@@ -13,6 +13,7 @@ import click
 import base64
 import loguru
 import pprint
+import socket
 import ipaddress
 import nacl.utils
 import attr, inspect
@@ -21,7 +22,6 @@ import hashlib, uuid
 import dns.resolver
 from loguru import logger
 from nacl.public import PrivateKey, Box, PublicKey
-
 
 ## Validators must be loaded first
 def validateNetworkAddress(arg):
@@ -56,10 +56,10 @@ class Sitecfg(object):
     locus  = attr.ib(default='', kw_only=True)
     ipv4   = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
     ipv6   = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
-    portbase = attr.ib(default = 58822, kw_only=True, converter=int)
-    publickey = attr.ib(default='',  kw_only=True, converter=nonone)
+    portbase   = attr.ib(default = 58822, kw_only=True, converter=int)
+    publickey  = attr.ib(default='',  kw_only=True, converter=nonone)
     privatekey = attr.ib(default='', kw_only=True)
-    MSK    = attr.ib(default='',     kw_only=True)
+    MSK        = attr.ib(default='',     kw_only=True)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
@@ -176,6 +176,38 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
         print(yaml.dump(publish))
         pass
     return
+
+def rootconfig(domain: str, locus: str, pubkey: str) -> str:
+    ''' Load/Generate local site-base config
+
+    opens /etc/wireguard/{locus}.yaml
+
+    return
+    '''
+    fn = f'/etc/wireguard/{domain}.yaml'
+    try:
+        with open(fn) as yamlfile:
+            config = yaml.safe_load(yamlfile)
+    except FileNotFoundError:
+        config = ''
+        pass
+    if config == '':
+        config = {
+            'host': {
+                'uuid': str( uuid.uuid4() ),
+                'hostname': socket.gethostname(),
+            },
+            'site': {
+                'locus': locus,
+                'pubkey': pubkey,
+            },
+        }
+        with open(fn, 'w') as yamlfile:
+            yamlfile.write( yaml.dump(config) )
+            pass
+            pass
+
+    return config
 
 def gen_local_config(publickey: str, site: Sitecfg, hosts: list):
     ''' look for port collisions in configuration '''
