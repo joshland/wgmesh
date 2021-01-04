@@ -20,7 +20,17 @@ This is a small project designed to experiment with distribution and maintenance
  - Publish the DNS Information, or else, ensure that you have some other communication mechanism.
  - Install Wireguard tools on the local host `pip install wgmesh`
  - Deploy the mesh (run as root or sudo): `wghost <myhostname>`
- - import the host by copying the output into the site controller.
+ - import the host by copying the output into the site controlle
+
+
+## Process Flow
+
+  ![image](Documents/workflow.png)
+
+ ## Ansible
+
+  - local shorewall deployment
+  - local frr deployment
 
  
  ## Changelog
