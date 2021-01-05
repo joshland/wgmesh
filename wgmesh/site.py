@@ -94,11 +94,13 @@ def hostImport(data: str, site: core.Sitecfg, hosts: core.Host) -> list:
     outer_message = base64.decodebytes( data.encode('ascii') ).decode()
     logger.debug(f'Host import: {data}')
     outer = yaml.safe_load(outer_message)
+    logger.trace(f'Outer message: {outer}')
     HPub = PublicKey( keyimport( outer['publickey'] ))
-    logger.trace(f'HPub/{HPub} -- SKey/{site.privatekey}')
-    SBox = Box(site.privatekey, HPub)
+    logger.trace(f'HPub/{HPub} -- SKey/{site.MSK}')
+    SBox = Box(site.MSK, HPub)
 
-    inner_message = SBox.decrypt( outer['message'] )
+    inner_decoded = base64.decodebytes( outer['message'] )
+    inner_message = SBox.decrypt( inner_decoded )
     inner = yaml.safe_load (inner_message )
     logger.debug(f'Host Decode: {inner}')
     

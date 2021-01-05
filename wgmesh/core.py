@@ -105,7 +105,7 @@ def keyimport(key: str) -> str:
 def keyexport(key: PublicKey or PrivateKey) -> str:
     ''' encode a key '''
     logger.trace(f'keydecode: {type(key)}-{repr(key)}')
-    retval = base64.encodestring(key.encode()).decode().strip()
+    retval = base64.encodebytes(key.encode()).decode().strip()
     logger.trace(f'{repr(key)}-{type(key)} / {repr(retval)}-{type(retval)}')
     return retval
 
@@ -265,7 +265,7 @@ def post_check(publickey, site, hosts):
 def genkey(keyfile):
     ''' create a key, and save it to file {keyfile} '''
     newKey = PrivateKey.generate()
-    content = base64.encodestring(newKey.encode())
+    content = base64.encodebytes(newKey.encode())
     with open(keyfile, 'w') as kf:
         kf.write(content.decode())
     return newKey
@@ -296,7 +296,7 @@ def dns_query(domain: str) -> str:
         output += str(item).replace('"', '').replace(' ', '')
         continue
 
-    text = base64.decodestring(output.encode('ascii'))
+    text = base64.decodebytes(output.encode('ascii'))
     logger.trace(f'Output: {text} // {type(text)}')
     retval = yaml.safe_load(text)
     for k, v in retval.items():

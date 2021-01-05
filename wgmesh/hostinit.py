@@ -6,6 +6,7 @@ import yaml
 import click
 import loguru
 import socket
+import netifaces
 import nacl.utils
 import attr, inspect
 import hashlib, uuid
@@ -17,6 +18,29 @@ from wgmesh.core import rootconfig
 
 import pprint
 import base64
+
+
+def get_local_addresses() -> list:
+    ''' gather local addresses '''
+    ipv4 = []
+    ipv6 = []
+    for iface in netifaces.interfaces():
+        all = netifaces.ifaddresses(iface)
+        try:
+            all4 = all[netifaces.AF_INET]
+        except KeyError:
+            all4 = []
+        try:
+            all6 = all[netifaces.AF_INET6]
+        except KeyError:
+            all6 = []
+        for x in all4:
+            ipv4.append((iface, x['addr']))
+        for x in all6:
+            ipv6.append((iface, x['addr']))
+        continue
+    return ipv4, ipv6
+
 
 @click.command()
 @click.option('--force','-f', is_flag=True, default=False, help="Overwrite key files (if needed).")
