@@ -8,7 +8,6 @@
 # Basic Objects for managing site-specific and location specific settings.
 import os
 import sys
-import yaml
 import click
 import base64
 import loguru
@@ -21,7 +20,10 @@ import hashlib, uuid
 
 import dns.resolver
 from loguru import logger
+from ruamel import yaml
 from nacl.public import PrivateKey, Box, PublicKey
+
+class HostMismatch(Exception): pass
 
 ## Validators must be loaded first
 def validateNetworkAddress(arg):
@@ -69,13 +71,17 @@ class Sitecfg(object):
 
 @attr.s
 class Host(object):
-    hostname = attr.ib()
-    sitecfg = attr.ib()
-    ipv4    = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
-    ipv6    = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
+    hostname    = attr.ib()
+    sitecfg     = attr.ib()
+    local_ipv4  = attr.ib(default= '', kw_only=True)
+    local_ipv6  = attr.ib(default= '', kw_only=True)
+    tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
+    tunnel_ipv6 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
+    public_key  = attr.ib(default=f'', kw_only=True)
     local_networks = attr.ib(default = '', kw_only=True)
-    public_key = attr.ib(default=f'', kw_only=True)
+    public_key_file = attr.ib(default=f'', kw_only=True)
     private_key_file = attr.ib(default=f'', kw_only=True)
+    uuid        = attr.ib()
 
     def publish(self):
         if self.private_key_file == '':
@@ -85,6 +91,30 @@ class Host(object):
         del m2['sitecfg']
         #pprint.pprint(m2)
         return self.hostname, m2
+
+    def update(self, host):
+        ''' update host from a new record 
+        
+        blocked: tunnel_ipv4, tunnel_ipv6
+        '''
+        if self.uuid != host.uuid:
+            raise HostMismatch
+
+        hostname, hdict = host.publish()
+
+        if self.hostname != hostname:
+            self.info(f'Hostname Update: {self.hostname} => {hostname}')
+            self.hostname = hostname
+            pass
+
+        for k, v in hdict.items():
+            if k == 'tunnel_ipv4': continue
+            if k == 'tunnel_ipv6': continue
+            logger.trace(f'host update: {k}: {getattr(self, k)} => {v}')
+            setattr(self, k, v)
+            continue
+
+        return True
 
 def loadkey(keyfile: str) -> PrivateKey:
     ''' read key from a keyfile '''
@@ -115,7 +145,7 @@ def loadconfig(fn: str) -> list:
         fn: YAML file.
     '''
     with open(fn) as yamlfile:
-        y = yaml.safe_load(yamlfile)
+        y = yaml.load(yamlfile, Loader=yaml.RoundTripLoader)
         pass
 
     logger.trace(f'Global: {y.get("global")}')
@@ -170,10 +200,10 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
     if fn:
         logger.info(f'Writing file: {fn}')
         with open(fn, 'w') as outfile:
-            yaml.dump(publish, outfile)
+            yaml.dump(publish, outfile, Dumper=yaml.RoundTripDumper)
     else:
         logger.info(f'Dumping to screen.')
-        print(yaml.dump(publish))
+        print(yaml.dump(publish, Dumper=yaml.RoundTripDumper))
         pass
     return
 
@@ -187,7 +217,7 @@ def rootconfig(domain: str, locus: str, pubkey: str) -> str:
     fn = f'/etc/wireguard/{domain}.yaml'
     try:
         with open(fn) as yamlfile:
-            config = yaml.safe_load(yamlfile)
+            config = yaml.load(yamlfile, Loader=yaml.RoundTripLoader )
     except FileNotFoundError:
         config = ''
         pass
@@ -203,7 +233,7 @@ def rootconfig(domain: str, locus: str, pubkey: str) -> str:
             },
         }
         with open(fn, 'w') as yamlfile:
-            yamlfile.write( yaml.dump(config) )
+            yamlfile.write( yaml.dump(config, Dumper=yaml.RoundTripDumper) )
             pass
             pass
 
@@ -222,11 +252,11 @@ def gen_local_config(publickey: str, site: Sitecfg, hosts: list):
     if me:
         retval = {}
         count = 1
-        my_octet = int(str(me.ipv4).split('.')[-1])
+        my_octet = int(str(me.tunnel_ipv4).split('.')[-1])
 
         for h in hosts:
             if me.hostname == h.hostname: continue
-            this_octet = int(str(this.ipv4).split('.')[-1])
+            this_octet = int(str(this.tunnel_ipv4).split('.')[-1])
             retval = { 
                 'device': f'wg{count}',
                 'port': site.portbase + int(this_octet),
@@ -245,10 +275,10 @@ def post_check(publickey, site, hosts):
     closed = []
     for me in hosts:
         pb = site.portbase
-        my_octet = int(str(me.ipv4).split('.')[-1])
+        my_octet = int(str(me.tunnel_ipv4).split('.')[-1])
         for this in hosts:
             if me.hostname == this.hostname: continue
-            this_octet = int(str(this.ipv4).split('.')[-1])
+            this_octet = int(str(this.tunnel_ipv4).split('.')[-1])
             sideA = f'{this.hostname}:{pb + my_octet}'
             sideB = f'{me.hostname}:{pb + this_octet}'
             temp = [ sideA, sideB ]
@@ -298,7 +328,7 @@ def dns_query(domain: str) -> str:
 
     text = base64.decodebytes(output.encode('ascii'))
     logger.trace(f'Output: {text} // {type(text)}')
-    retval = yaml.safe_load(text)
+    retval = yaml.load(text, Loader=yaml.RoundTripLoader )
     for k, v in retval.items():
         if isinstance(v, bytes):
             retval[k] = v.decode()
@@ -318,20 +348,20 @@ def CheckConfig(site, hosts):
 
     # log the existing IPs
     for h in hosts:
-        if h.ipv4 == '' or h.ipv4 not in site.ipv4:
+        if h.tunnel_ipv4 == '' or h.tunnel_ipv4 not in site.ipv4:
             logger.trace(f'Host needs ipv4 address: {h}')
             hosts4_to_be_adjusted.append(h)
         else:
             logger.trace(f'Host ipv4 address: {h}')
-            ipv4_master.append(h.ipv4)
+            ipv4_master.append(h.tunnel_ipv4)
             pass
 
-        if h.ipv6 == '' or h.ipv6 not in site.ipv6:
+        if h.tunnel_ipv6 == '' or h.tunnel_ipv6 not in site.ipv6:
             logger.trace(f'Host needs ipv6 address: {h}')
             hosts6_to_be_adjusted.append(h)
         else:
             logger.trace(f'Host ipv6 address: {h}')
-            ipv6_master.append(h.ipv6)
+            ipv6_master.append(h.tunnel_ipv6)
             pass
         continue
         
@@ -350,7 +380,7 @@ def CheckConfig(site, hosts):
             pass
 
         logger.trace(f'Assign ipv{addr.version} address: {host.hostname} => {addr}')
-        host.ipv4 = addr
+        host.tunnel_ipv4 = addr
         ipv4_master.append(addr)
         continue
 
@@ -367,7 +397,7 @@ def CheckConfig(site, hosts):
             sys.exit(1)
             pass
         logger.trace(f'Assign ipv{addr.version} address: {host.hostname} => {addr}')
-        host.ipv6 = addr
+        host.tunnel_ipv6 = addr
         ipv6_master.append(addr)
         continue
 

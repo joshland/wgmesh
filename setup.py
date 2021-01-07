@@ -26,11 +26,12 @@ requires = [
     'click',
     'six',
     'natsort',
-    'pyyaml',
+    'ruamel.yaml',
     'attrs',
     'dnspython',
     'pynacl',
-    'loguru'
+    'loguru',
+    'netifaces'
 ]
 
 test_requires = requires

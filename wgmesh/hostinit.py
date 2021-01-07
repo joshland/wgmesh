@@ -2,7 +2,6 @@
 
 # Create the host basics locally
 import sys, os
-import yaml
 import click
 import loguru
 import socket
@@ -12,6 +11,8 @@ import attr, inspect
 import hashlib, uuid
 
 from loguru import logger
+from ruamel import yaml
+from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, encrypt, dns_query, keyexport, keyimport
 from wgmesh.core import rootconfig
@@ -20,7 +21,7 @@ import pprint
 import base64
 
 
-def get_local_addresses() -> list:
+def get_local_addresses_with_interface() -> list:
     ''' gather local addresses '''
     ipv4 = []
     ipv6 = []
@@ -35,11 +36,41 @@ def get_local_addresses() -> list:
         except KeyError:
             all6 = []
         for x in all4:
-            ipv4.append((iface, x['addr']))
+            ipv4.append({ 'iface': iface, 'addr': x['addr']})
         for x in all6:
-            ipv6.append((iface, x['addr']))
+            ipv4.append({ 'iface': iface, 'addr': x['addr']})
         continue
     return ipv4, ipv6
+
+def get_local_addresses() -> list:
+    ''' gather local addresses '''
+    ipv4 = []
+    ipv6 = []
+
+    for iface in netifaces.interfaces():
+        all = netifaces.ifaddresses(iface)
+        try:
+            all4 = all[netifaces.AF_INET]
+        except KeyError:
+            all4 = []
+            pass
+
+        try:
+            all6 = all[netifaces.AF_INET6]
+        except KeyError:
+            all6 = []
+            pass
+
+        for x in all4:
+            logger.info(f'Adding local ipv4 address {x["addr"]}')
+            ipv4.append( str(x['addr']) )
+
+        for x in all6:
+            logger.info(f'Adding local ipv6 address {x["addr"]}')
+            ipv6.append( str(x['addr']) )
+
+        continue
+    return (ipv4, ipv6)
 
 
 @click.command()
@@ -132,19 +163,27 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
     # Outer:
     #   {'publickey': '', 'message': <inner encrypted/base64>}
 
+    ipv4, ipv6 = get_local_addresses()
+
     inner_plain = {
         'hostname': hostname,
         'uuid': hostconfig['host']['uuid'],
-        'publickey': keyexport(lpk)
+        'public_key': keyexport(lpk),
+        'public_key_file': pubfile,
+        'private_key_file': privfile,
+        'local_ipv4': ipv4,
+        'local_ipv6': ipv6,
     }
 
-    inner_crypt  = yaml.dump(inner_plain)
+    pprint.pprint(inner_plain)
+
+    inner_crypt  = yaml.dump(inner_plain, Dumper=yaml.RoundTripDumper)
     logger.trace(f'Dump Yaml String {len(inner_crypt)}')
     inner_hidden = base64.encodebytes( MBox.encrypt( inner_crypt.encode('ascii') ) )
     logger.trace(f'Crypt + Encoded String {len(inner_hidden)}')
 
     outer = {
-        'publickey': keyexport(lpk),
+        'public_key': keyexport(lpk),
         'message': inner_hidden,
     }
 
@@ -153,7 +192,7 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
     print(f'\nCheck output:')
     pprint.pprint(outer, indent=5)
 
-    outer_plain   = yaml.dump(outer)
+    outer_plain   = yaml.dump(outer, Dumper=yaml.RoundTripDumper)
     output_hidden = base64.encodebytes( outer_plain.encode('ascii') ).decode().replace('\n','')
 
     print()

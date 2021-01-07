@@ -7,11 +7,12 @@
 # created routes, and then exchange using FRR.
 # My plan would prefer something like L6
 import sys, os
-import yaml
 import click
 import loguru
 import attr, inspect
 from loguru import logger
+from ruamel import yaml
+from ruamel.yaml import RoundTripLoader, RoundTripDumper
 
 from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, encrypt
 
@@ -68,7 +69,7 @@ def cli(debug, trace, update, output, publish, infile, sites):
             data[dev] = inst
             continue
 
-        ydata = yaml.safe_dump(data)
+        ydata = yaml.safe_dump(data, Loader=yaml.RoundTripLoader)
         yfile.write(ydata)
 
         bfile.write(encrypt(host, ydata))

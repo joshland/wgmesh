@@ -11,7 +11,6 @@ import loguru
 import attr, inspect
 import socket
 import pprint
-import yaml
 import base64
 import hashlib, uuid
 import nacl.utils
@@ -20,8 +19,10 @@ import dns.resolver
 
 from wgmesh import core
 from loguru import logger
+from ruamel import yaml
+from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport, keyimport
+from wgmesh.core import Host, loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport, keyimport
 
 # Site generation / Maintenance
 # Generates a python dictionary with UUENCODE to support host inculcation
@@ -44,7 +45,7 @@ def siteActivation(site: core.Sitecfg, hosts: core.Host) -> list:
         'publickey': keyexport(site.publickey),
     }
 
-    y = yaml.dump(publish)
+    y = yaml.dump(publish, Dumper=yaml.RoundTripDumper)
 
     message = base64.encodebytes(y.encode('ascii')).decode()
 
@@ -88,22 +89,40 @@ def siteActivation(site: core.Sitecfg, hosts: core.Host) -> list:
 
     return site, hosts
 
-def hostImport(data: str, site: core.Sitecfg, hosts: core.Host) -> list:
+def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
     ''' import/update a host from a site '''
 
     outer_message = base64.decodebytes( data.encode('ascii') ).decode()
     logger.debug(f'Host import: {data}')
-    outer = yaml.safe_load(outer_message)
+    outer = yaml.load(outer_message, Loader=yaml.RoundTripLoader)
     logger.trace(f'Outer message: {outer}')
-    HPub = PublicKey( keyimport( outer['publickey'] ))
+    HPub = PublicKey( keyimport( outer['public_key'] ))
     logger.trace(f'HPub/{HPub} -- SKey/{site.MSK}')
     SBox = Box(site.MSK, HPub)
 
     inner_decoded = base64.decodebytes( outer['message'] )
     inner_message = SBox.decrypt( inner_decoded )
-    inner = yaml.safe_load (inner_message )
+    inner = yaml.load (inner_message, Loader=yaml.RoundTripLoader)
     logger.debug(f'Host Decode: {inner}')
     
+    key = inner['public_key'].lower()
+
+    hostname = inner['hostname'].lower()
+    del inner['hostname']
+    host = Host(hostname, site, **inner)
+
+    found = False
+    for x in hosts:
+        if x.uuid == host.uuid:
+            x.update(host)
+            found = True
+            continue
+        continue
+
+    if not found:
+        hosts.append(host)
+        pass
+
     return site, hosts
 
 @click.command()
