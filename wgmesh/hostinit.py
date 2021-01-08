@@ -62,8 +62,8 @@ def get_local_addresses() -> list:
             all6 = []
             pass
 
-        ipv4 = [ x['addr'] for x in all4 if not ipaddress.ip_address(x['addr']).is_private ]
-        ipv6 = [ x['addr'] for x in all6 if not ipaddress.ip_address(x['addr']).is_private ]
+        ipv4 = [ x['addr'] for x in all4 if x['addr'].find('%') == -1 and not ipaddress.ip_address(x['addr']).is_private ]
+        ipv6 = [ x['addr'] for x in all6 if x['addr'].find('%') == -1 and not ipaddress.ip_address(x['addr']).is_private ]
 
         if not len(ipv4):
             ipv4 = ''
