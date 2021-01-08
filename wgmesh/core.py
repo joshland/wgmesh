@@ -327,6 +327,7 @@ def dns_query(domain: str) -> str:
         output += str(item).replace('"', '').replace(' ', '')
         continue
 
+    logger.trace(f'Avengers Assembled: {output}')
     text = base64.decodebytes(output.encode('ascii'))
     logger.trace(f'Output: {text} // {type(text)}')
     retval = yaml.load(text, Loader=yaml.RoundTripLoader )
