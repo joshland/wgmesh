@@ -329,7 +329,7 @@ def dns_query(domain: str) -> str:
 
     if response[0].find(':') > -1:
         logger.trace(f'Ordered DNS List Published.')
-        sortlist = sorted([ (x[0], x[1]) for x in enumerate(response) ])
+        sortlist = sorted([ (x[0], x[1]) for x.split(':') in response ])
         output = "\n".join([ x[1] for x in sortlist ])
     else:
         logger.trace(f'Unordered DNS List Published.')
