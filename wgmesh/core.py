@@ -69,6 +69,7 @@ class Sitecfg(object):
         logger.trace(f'publish dict: {m2}')
         del m2['MSK']
         return m2
+    pass
 
 @attr.s
 class Host(object):
@@ -116,6 +117,7 @@ class Host(object):
             continue
 
         return True
+    pass
 
 def loadkey(keyfile: str) -> PrivateKey:
     ''' read key from a keyfile '''
@@ -317,6 +319,26 @@ def encrypt(host, ydata):
     mybox = Box(SSK, hpk)
     return mybox.encrypt(ydata)
 
+def splitOrderedList(data):
+    ''' take incoming encoded text, look for split order markers '''
+    if data[0].find(':') > -1:
+        logger.trace(f'Ordered DNS List Published: {data}')
+        slist = []
+        for r in data:
+            if not r or r.strip() == '': continue
+            k, v = r.split(':')
+            slist.append((k, v))
+            continue
+        #sortlist = sorted([ (x[0], x[1]) for x.split(':') in response ])
+        sortlist = sorted(slist)
+        retval = "".join([ x[1] for x in sortlist ])
+    else:
+        logger.trace(f'Unordered DNS List Published.')
+        retval = "".join(data)
+        pass
+
+    return retval
+
 def dns_query(domain: str) -> str:
     ''' return the record from the DNS '''
     answer = dns.resolver.query(domain,"TXT").response.answer[0]
@@ -324,17 +346,11 @@ def dns_query(domain: str) -> str:
     for item in answer:
         logger.trace(f'{item} // {type(item)}')
         logger.trace(f'{str(item)}')
-        response.append(str(item).replace('"', '').replace(' ', ''))
+        item = str(item).replace(' ', '\n').replace('"', '')
+        response += item.split('\n')
         continue
 
-    if response[0].find(':') > -1:
-        logger.trace(f'Ordered DNS List Published.')
-        sortlist = sorted([ (x[0], x[1]) for x.split(':') in response ])
-        output = "\n".join([ x[1] for x in sortlist ])
-    else:
-        logger.trace(f'Unordered DNS List Published.')
-        output = "\n".join(response)
-        pass
+    output = splitOrderedList(response)
 
     logger.trace(f'Avengers Assembled: {output}')
     text = base64.decodebytes(output.encode('ascii'))

@@ -92,12 +92,21 @@ def get_local_addresses() -> list:
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
 def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
-    f''' Setup localhost, provide registration with master controller.'''
+    f''' Setup localhost, provide registration with master controller.
+    
+    wghost: create and publish a host registration with a wgmesh instance.
+
+    Site setup uses DNS-based or manual hash exchange.
+
+    Output: message that can be imported into site-configurator.
+    
+    '''
     if debug:
         logger.info('Debug')
         logger.remove()
         logger.add(sys.stdout, level='INFO')
         pass
+
     if trace:
         logger.info('Trace')
         logger.remove()
@@ -215,8 +224,9 @@ def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
 
     logger.trace(f'Publising dict: {outer}')
 
-    print(f'\nCheck output:')
-    pprint.pprint(outer, indent=5)
+    if debug:
+        print(f'\nCheck output:')
+        pprint.pprint(outer, indent=5)
 
     outer_plain   = yaml.dump(outer, Dumper=yaml.RoundTripDumper)
     output_hidden = base64.encodebytes( outer_plain.encode('ascii') ).decode().replace('\n','')
