@@ -82,8 +82,9 @@ def siteActivation(site: core.Sitecfg, hosts: core.Host) -> list:
     print(f'DNS TXT Record for {site.domain}:')
     print()
     print('"""')
-    for l in message.split('\n'):
-        print(f'{l.strip()}')
+    for x, l in enumerate(message.split('\n')):
+        if l.strip() == "": continue
+        print(f'{x}:{l.strip()}')
         continue
     print('"""')
 

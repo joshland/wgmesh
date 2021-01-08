@@ -320,12 +320,19 @@ def encrypt(host, ydata):
 def dns_query(domain: str) -> str:
     ''' return the record from the DNS '''
     answer = dns.resolver.query(domain,"TXT").response.answer[0]
-    output = ''
+    response = []
     for item in answer:
         logger.trace(f'{item} // {type(item)}')
         logger.trace(f'{str(item)}')
-        output += str(item).replace('"', '').replace(' ', '')
+        response.append(str(item).replace('"', '').replace(' ', ''))
         continue
+
+    if response[0].find(':') > -1:
+        sortlist = sorted([ (x[0], x[1]) for x in enumerate(response) ])
+        output = "\n".join([ x[1] for x in sortlist ])
+    else:
+        output = "\n".join(response)
+        pass
 
     logger.trace(f'Avengers Assembled: {output}')
     text = base64.decodebytes(output.encode('ascii'))
