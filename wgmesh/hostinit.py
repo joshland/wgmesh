@@ -20,6 +20,7 @@ from wgmesh.core import rootconfig
 import pprint
 import base64
 
+import ipaddress
 
 def get_local_addresses_with_interface() -> list:
     ''' gather local addresses '''
@@ -61,13 +62,20 @@ def get_local_addresses() -> list:
             all6 = []
             pass
 
-        for x in all4:
-            logger.info(f'Adding local ipv4 address {x["addr"]}')
-            ipv4.append( str(x['addr']) )
+        ipv4 = [ x['addr'] for x in all4 if not ipaddress.ip_address(x['addr']).is_private ]
+        ipv6 = [ x['addr'] for x in all6 if not ipaddress.ip_address(x['addr']).is_private ]
 
-        for x in all6:
-            logger.info(f'Adding local ipv6 address {x["addr"]}')
-            ipv6.append( str(x['addr']) )
+        if not len(ipv4):
+            ipv4 = ''
+        elif len(ipv4) == 1:
+            ipv4 = ipv4[0]
+            pass
+
+        if not len(ipv6):
+            ipv6 = ''
+        elif len(ipv6) == 1:
+            ipv6 = ipv6[0]
+            pass
 
         continue
     return (ipv4, ipv6)
@@ -77,11 +85,13 @@ def get_local_addresses() -> list:
 @click.option('--force','-f', is_flag=True, default=False, help="Overwrite key files (if needed).")
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
-@click.option('--locus','-l', default='', help="Manually set Mesh Locus.")
+@click.option('--locus','-l', default='',   help="Manually set Mesh Locus.")
+@click.option('--ipa','-i',   default='',   help="Manually set Mesh Public Key.", multiple=True)
 @click.option('--pubkey','-p', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
+@click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
-def cli(force, debug, trace, locus, pubkey, hostname, domain):
+def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
     f''' Setup localhost, provide registration with master controller.'''
     if debug:
         logger.info('Debug')
@@ -163,7 +173,23 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
     # Outer:
     #   {'publickey': '', 'message': <inner encrypted/base64>}
 
-    ipv4, ipv6 = get_local_addresses()
+    if len(ipa):
+        local_ipv4 = []
+        local_ipv6 = []
+        for addr in ipa:
+            address = ipaddress.ip_address(addr)
+            if address.version == 4:
+                local_ipv4.append(addr)
+                pass
+
+            if address.version == 6:
+                local_ipv6.append(addr)
+                pass
+
+        logger.trace(f'command-line options for ipaddress: {ipa}')
+    else:
+        local_ipv4, local_ipv6 = get_local_addresses()
+        pass
 
     inner_plain = {
         'hostname': hostname,
@@ -171,11 +197,11 @@ def cli(force, debug, trace, locus, pubkey, hostname, domain):
         'public_key': keyexport(lpk),
         'public_key_file': pubfile,
         'private_key_file': privfile,
-        'local_ipv4': ipv4,
-        'local_ipv6': ipv6,
+        'local_ipv4': ','.join(local_ipv4),
+        'local_ipv6': ','.join(local_ipv6),
     }
 
-    pprint.pprint(inner_plain)
+    #pprint.pprint(inner_plain)
 
     inner_crypt  = yaml.dump(inner_plain, Dumper=yaml.RoundTripDumper)
     logger.trace(f'Dump Yaml String {len(inner_crypt)}')

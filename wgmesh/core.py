@@ -8,6 +8,7 @@
 # Basic Objects for managing site-specific and location specific settings.
 import os
 import sys
+import ast
 import click
 import base64
 import loguru
@@ -89,7 +90,7 @@ class Host(object):
         m2 = { attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") }
         del m2['hostname']
         del m2['sitecfg']
-        #pprint.pprint(m2)
+        pprint.pprint(m2)
         return self.hostname, m2
 
     def update(self, host):
