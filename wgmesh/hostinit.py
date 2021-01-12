@@ -21,6 +21,13 @@ import base64
 
 import ipaddress
 
+class StandardIPv4(Exception): pass
+class StandardIPv6(Exception): pass
+class HostnameRevolves(Exception): pass
+class HostnameNoResolve(Exception): pass
+class InvalidAddress(Exception): pass
+
+
 def get_local_addresses_with_interface() -> list:
     ''' gather local addresses '''
     ipv4 = []
@@ -79,20 +86,44 @@ def get_local_addresses() -> list:
         continue
     return (ipv4, ipv6)
 
+def qualifyAddress(addr):
+    try:
+        address = ipaddress.ip_address(addr)
+    except:
+        logger.debug(f'{addr} is apparently not an ip address.')
+        address = None
+        pass
+
+    if address:
+        ## treat it like an ip.
+        if address.version == 4:
+            raise StandardIPv4
+        if address.version == 6:
+            raise StandardIPv6
+        raise InvalidAddress
+    else:
+        if not(is_valid_hostname(addr)):
+            raise InvalidAddress
+        try:
+            socket.gethostbyname(addr)
+            raise HostnameRevolves
+        except:
+            raise HostnameNoResolve
+        pass
+    pass
 
 @click.command()
 @click.option('--force','-f', is_flag=True, default=False, help="Overwrite key files (if needed).")
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
 @click.option('--locus','-l', default='', help="Manually set Mesh Locus.")
-@click.option('--ipa','-i', default='', help="Local IP(s) - ipv4 or ipv6.", multiple=True)
-@click.option('--port','-p', default=41110, help="Base port for configuration.")
+@click.option('--addr','-a', default='', help="Endpoint Address(es) - hostname, ipv4, or ipv6.", multiple=True)
 @click.option('--pubkey','-P', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
-def cli(force, debug, trace, locus, ipa, port, pubkey, hostname, domain):
+def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
     f''' Setup localhost, provide registration with master controller.
-    
+
     wghost: create and publish a host registration with a wgmesh instance.
 
     Site setup uses DNS-based or manual hash exchange.
@@ -175,15 +206,23 @@ def cli(force, debug, trace, locus, ipa, port, pubkey, hostname, domain):
         local_ipv4 = []
         local_ipv6 = []
         for addr in ipa:
-            address = ipaddress.ip_address(addr)
-            if address.version == 4:
+            try:
+                qualifyAddress(addr)
+            except StandardIPv4:
+                logger.trace(f'IPv4 Address Configured: {addr}')
+                local_ipv4.append(addr)
+            except StandardIPv6:
+                logger.trace(f'IPv6 Address Configured: {addr}')
+                local_ipv6.append(addr)
+            except HostnameRevolves:
+                logger.trace(f'Hostname Configured: {addr}')
+                local_ipv4.append(addr)
+            except HostnameNoResolve:
+                logger.trace(f'Hostname Configured: {addr}')
+                logger.warning(f'Hostname added, does not resolve: {addr}')
                 local_ipv4.append(addr)
                 pass
-
-            if address.version == 6:
-                local_ipv6.append(addr)
-                pass
-
+            continue
         logger.trace(f'command-line options for ipaddress: {ipa}')
     else:
         local_ipv4, local_ipv6 = get_local_addresses()
@@ -202,9 +241,10 @@ def cli(force, debug, trace, locus, ipa, port, pubkey, hostname, domain):
     #pprint.pprint(inner_plain)
 
     inner_crypt  = yaml.dump(inner_plain, Dumper=yaml.RoundTripDumper)
-    logger.trace(f'Dump Yaml String {len(inner_crypt)}')
+    logger.debug(f'Dump Yaml String {len(inner_crypt)}')
+    logger.trace(f'Dump Yaml String {inner_crypt}')
     inner_hidden = base64.encodebytes( MBox.encrypt( inner_crypt.encode('ascii') ) )
-    logger.trace(f'Crypt + Encoded String {len(inner_hidden)}')
+    logger.debug(f'Crypt + Encoded String {len(inner_hidden)}')
 
     outer = {
         'public_key': keyexport(lpk),

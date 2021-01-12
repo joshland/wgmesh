@@ -7,6 +7,7 @@
 # Handle basic operations of loading and saving YAML files.
 # Basic Objects for managing site-specific and location specific settings.
 import os
+import re
 import sys
 import ast
 import click
@@ -84,6 +85,13 @@ class Host(object):
     public_key_file = attr.ib(default=f'', kw_only=True)
     private_key_file = attr.ib(default=f'', kw_only=True)
     uuid        = attr.ib()
+
+    def endport(self):
+        ''' returns the last octet of the tunnel_ipv6 address as a decimal number, added to the site.portbase '''
+        octet = str(self.tunnel_ipv6).split(':')[-1]
+        base = int(octet, 16)
+        retval = self.sitecfg.portbase + base
+        return retval
 
     def publish(self):
         if self.private_key_file == '':
@@ -363,14 +371,35 @@ def dns_query(domain: str) -> str:
         continue
     return retval
 
+def is_valid_hostname(hostname):
+    if hostname[-1] == ".":
+        # strip exactly one dot from the right, if present
+        hostname = hostname[:-1]
+    if len(hostname) > 253:
+        return False
+
+    labels = hostname.split(".")
+
+    # the TLD must be not all-numeric
+    if re.match(r"[0-9]+$", labels[-1]):
+        return False
+
+    allowed = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(label) for label in labels)
+
 def LoggerConfig(debug: bool, trace: bool):
     '''
     Setup logging configuration.
     '''
+    if not debug and not trace:
+        logger.remove()
+        logger.add(sys.stdout, level='INFO')
+        pass
+
     if debug:
         logger.info('Debug')
         logger.remove()
-        logger.add(sys.stdout, level='INFO')
+        logger.add(sys.stdout, level='DEBUG')
         pass
 
     if trace:

@@ -33,7 +33,11 @@ from wgmesh.core import *
 #
 
 def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Host) -> list:
-    ''' perform site activiation process '''
+    '''
+
+    Check and publish mesh domain activation.
+
+    '''
     if site.privatekey == '':
         logger.error(f"Global=>privatekey must be set in {infile}")
         print('Fix YAML Config')
