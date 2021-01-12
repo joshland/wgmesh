@@ -58,9 +58,10 @@ setup(name='wgmesh',
       install_requires=requires,
       entry_points="""\
       [console_scripts]
-      wgsite  = wgmesh:wgsite_cli
-      wgfrr   = wgmesh:wgfrr_cli
-      wghost  = wgmesh:host_cli
-      wgpub   = wgmesh:pub_cli
+      wgfrr    = wgmesh:frr_cli
+      wgdeploy = wgmesh:deploy_cli
+      wghost   = wgmesh:host_cli
+      wgpub    = wgmesh:pub_cli
+      wgsite   = wgmesh:site_cli
       """,
       )
