@@ -60,9 +60,9 @@ class Sitecfg(object):
     ipv4   = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
     ipv6   = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
     portbase   = attr.ib(default = 58822, kw_only=True, converter=int)
-    publickey  = attr.ib(default='',  kw_only=True, converter=nonone)
+    publickey  = attr.ib(default='', kw_only=True, converter=nonone)
     privatekey = attr.ib(default='', kw_only=True)
-    MSK        = attr.ib(default='',     kw_only=True)
+    MSK        = attr.ib(default='', kw_only=True)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
@@ -91,7 +91,7 @@ class Host(object):
         m2 = { attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") }
         del m2['hostname']
         del m2['sitecfg']
-        pprint.pprint(m2)
+        logger.trace(pprint.pformat(m2))
         return self.hostname, m2
 
     def update(self, host):
@@ -362,6 +362,24 @@ def dns_query(domain: str) -> str:
             continue
         continue
     return retval
+
+def LoggerConfig(debug: bool, trace: bool):
+    '''
+    Setup logging configuration.
+    '''
+    if debug:
+        logger.info('Debug')
+        logger.remove()
+        logger.add(sys.stdout, level='INFO')
+        pass
+
+    if trace:
+        logger.info('Trace')
+        logger.remove()
+        logger.add(sys.stdout, level='TRACE')
+        pass
+
+    pass
 
 def CheckConfig(site, hosts):
     ''' verify Wireguard Core YAML Config, Subnets, etc '''

@@ -22,7 +22,7 @@ from loguru import logger
 from ruamel import yaml
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import Host, loadconfig, saveconfig, CheckConfig, gen_local_config, genkey, loadkey, dns_query, keyexport, keyimport
+from wgmesh.core import *
 
 # Site generation / Maintenance
 # Generates a python dictionary with UUENCODE to support host inculcation
@@ -32,7 +32,7 @@ from wgmesh.core import Host, loadconfig, saveconfig, CheckConfig, gen_local_con
 # UUID matching
 #
 
-def siteActivation(site: core.Sitecfg, hosts: core.Host) -> list:
+def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Host) -> list:
     ''' perform site activiation process '''
     if site.privatekey == '':
         logger.error(f"Global=>privatekey must be set in {infile}")
@@ -65,28 +65,41 @@ def siteActivation(site: core.Sitecfg, hosts: core.Host) -> list:
         logger.debug(f"Calculated Records: {publish}.")
         pass
 
+    found = False
+    if publish == current:
+        print()
+        print(f"Check: DNS Records OK! ({site.domain})")
+        print()
+        found = True
+    else:
+        print()
+        print(f"Check: DNS Records Incorrect: ({site.domain})")
+        print()
 
-    print()
-    print(f'Caluclated Records:')
-    for k, v in publish.items():
-        print(f'   {k}: {v}')
-        continue
+        print(f'Existing Records:')
+        for k, v in current.items():
+            print(f'   {k}: {v}')
+            continue
 
-    print()
-    print(f'Existing Records:')
-    for k, v in current.items():
-        print(f'   {k}: {v}')
-        continue
+        print(f'Corrected Records:')
+        for k, v in publish.items():
+            print(f'   {k}: {v}')
+            continue
+        print()
+        pass
 
-    print()
-    print(f'DNS TXT Record for {site.domain}:')
-    print()
-    print('"""')
-    for x, l in enumerate(message.split('\n')):
-        if l.strip() == "": continue
-        print(f'{x}:{l.strip()}')
-        continue
-    print('"""')
+    if debug or trace or not found:
+        print()
+        print(f'DNS TXT Record for {site.domain}:')
+        print()
+        print(f'Diversified Holdings')
+        print('"""')
+        for x, l in enumerate(message.split('\n')):
+            if l.strip() == "": continue
+            print(f'{x}:{l.strip()}')
+            continue
+        print('"""')
+        pass
 
     return site, hosts
 
@@ -133,15 +146,7 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
 @click.argument('infile')
 def cli(debug, trace, hostimport, infile):
     f''' Check/Publish base64 to dns '''
-    if not debug:
-        logger.remove()
-        logger.add(sys.stdout, level='INFO')
-        pass
-    if trace:
-        logger.info('Trace')
-        logger.remove()
-        logger.add(sys.stdout, level='TRACE')
-        pass
+    LoggerConfig(debug, trace)
 
     site, hosts = CheckConfig(*loadconfig(infile))
     if hostimport:
@@ -149,7 +154,7 @@ def cli(debug, trace, hostimport, infile):
         site, hosts = hostImport(hostimport, site, hosts)
     else:
         logger.debug(f'Site Activation.')
-        site, hosts = siteActivation(site, hosts)
+        site, hosts = siteActivation(debug, trace, site, hosts)
         pass
     saveconfig(site, hosts, infile)
     return 0

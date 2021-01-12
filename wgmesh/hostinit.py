@@ -14,8 +14,7 @@ from loguru import logger
 from ruamel import yaml
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import loadconfig, saveconfig, CheckConfig, gen_local_config, encrypt, dns_query, keyexport, keyimport
-from wgmesh.core import rootconfig
+from wgmesh.core import *
 
 import pprint
 import base64
@@ -86,9 +85,8 @@ def get_local_addresses() -> list:
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
 @click.option('--locus','-l', default='',   help="Manually set Mesh Locus.")
-@click.option('--ipa','-i',   default='',   help="Manually set Mesh Public Key.", multiple=True)
+@click.option('--ipa','-i',   default='',   help="Local IP(s) - ipv4 or ipv6.", multiple=True)
 @click.option('--pubkey','-p', default='', help="Manually set Mesh Public Key.")
-@click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
 def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
@@ -101,17 +99,7 @@ def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
     Output: message that can be imported into site-configurator.
     
     '''
-    if debug:
-        logger.info('Debug')
-        logger.remove()
-        logger.add(sys.stdout, level='INFO')
-        pass
-
-    if trace:
-        logger.info('Trace')
-        logger.remove()
-        logger.add(sys.stdout, level='TRACE')
-        pass
+    LoggerConfig(debug, trace)
 
     if not hostname:
         hostname = socket.gethostname()

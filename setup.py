@@ -61,5 +61,6 @@ setup(name='wgmesh',
       wgsite  = wgmesh:wgsite_cli
       wgfrr   = wgmesh:wgfrr_cli
       wghost  = wgmesh:host_cli
+      wgpub   = wgmesh:pub_cli
       """,
       )
