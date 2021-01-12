@@ -84,12 +84,13 @@ def get_local_addresses() -> list:
 @click.option('--force','-f', is_flag=True, default=False, help="Overwrite key files (if needed).")
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
-@click.option('--locus','-l', default='',   help="Manually set Mesh Locus.")
-@click.option('--ipa','-i',   default='',   help="Local IP(s) - ipv4 or ipv6.", multiple=True)
-@click.option('--pubkey','-p', default='', help="Manually set Mesh Public Key.")
+@click.option('--locus','-l', default='', help="Manually set Mesh Locus.")
+@click.option('--ipa','-i', default='', help="Local IP(s) - ipv4 or ipv6.", multiple=True)
+@click.option('--port','-p', default=41110, help="Base port for configuration.")
+@click.option('--pubkey','-P', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
-def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
+def cli(force, debug, trace, locus, ipa, port, pubkey, hostname, domain):
     f''' Setup localhost, provide registration with master controller.
     
     wghost: create and publish a host registration with a wgmesh instance.

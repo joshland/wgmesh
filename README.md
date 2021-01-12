@@ -7,20 +7,33 @@ This is a small project designed to experiment with distribution and maintenance
 ## Requirements
 
  - Fedora
- - Shorewall
  - Wireguard
  - Python
+ - FRR w/ BGP
 
 
 ##  Getting Started
 
- - Create wgfrr.yaml from the wgfrr-example.yaml (example: create wgfrr.yaml)
- - Setup hostnames for the machines you want added.
+Example config: `wgfrr.yaml`
+Example Domain: `mesh.example.com`
+
+ - Copy wgfrr-example.yaml to `wgfrr.yaml`
+ - Edit the file and set the primitives.
  - Execute site publisher: `wgsite wgfrr.yaml`
- - Publish the DNS Information, or else, ensure that you have some other communication mechanism.
+ - Publish the DNS Information. (TXT record 'mesh.example.com')
+ - Connect to mesh endpoints, setup python virtualenv.
  - Install Wireguard tools on the local host `pip install wgmesh`
- - Deploy the mesh (run as root or sudo): `wghost <myhostname>`
- - import the host by copying the output into the site controlle
+ - Deploy the mesh (run as root or sudo): `wghost mesh.example.com`
+ - Import the host by copying the output into the site controller. `wgsite -i <hash> wgfrr.yaml`
+ - Once host(s) are ready, publish Host-base DNS records: `wgpub wgfrr.yaml`
+ - Publish output to the `[uuid].wgfrr.example.com` TXT records.
+ - Deploy on the local hosts: `wgdeploy mesh.example.com`
+
+ Publish and deploy processes can be automated.
+
+## Warnings:
+
+ `wghost` setup, and `wgsite -i` must be a human-approved process, because this adds nodes to the mesh.
 
 
 ## Process Flow
