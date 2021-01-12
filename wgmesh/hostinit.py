@@ -121,7 +121,7 @@ def qualifyAddress(addr):
 @click.option('--pubkey','-P', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
-def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
+def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
     f''' Setup localhost, provide registration with master controller.
 
     wghost: create and publish a host registration with a wgmesh instance.
@@ -154,7 +154,7 @@ def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
 
     privfile = f'/etc/wireguard/{locus}_priv'
     pubfile  = f'/etc/wireguard/{locus}_pub'
-
+    cli_ipaddress = addr
     lsk = None
     lpk = None
     if os.path.exists(privfile):
@@ -202,10 +202,10 @@ def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
     # Outer:
     #   {'publickey': '', 'message': <inner encrypted/base64>}
 
-    if len(ipa):
+    if len(cli_ipaddress):
         local_ipv4 = []
         local_ipv6 = []
-        for addr in ipa:
+        for addr in cli_ipaddress:
             try:
                 qualifyAddress(addr)
             except StandardIPv4:
@@ -223,7 +223,7 @@ def cli(force, debug, trace, locus, ipa, pubkey, hostname, domain):
                 local_ipv4.append(addr)
                 pass
             continue
-        logger.trace(f'command-line options for ipaddress: {ipa}')
+        logger.trace(f'command-line options for ipaddress: {cli_ipaddress}')
     else:
         local_ipv4, local_ipv6 = get_local_addresses()
         pass
