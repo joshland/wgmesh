@@ -35,7 +35,6 @@ Example Domain: `mesh.example.com`
 
  `wghost` setup, and `wgsite -i` must be a human-approved process, because this adds nodes to the mesh.
 
-
 ## Process Flow
 
   ![image](Documents/workflow.png)

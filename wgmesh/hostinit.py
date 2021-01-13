@@ -138,7 +138,7 @@ def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
         pass
     
     if not locus or not pubkey:
-        dominfo = dns_query(domain)
+        dominfo = fetch_domain(domain)
         logger.trace(f'domain info: {dominfo}') 
         pass
 

@@ -358,10 +358,16 @@ def dns_query(domain: str) -> str:
         response += item.split('\n')
         continue
 
-    output = splitOrderedList(response)
+    retval = splitOrderedList(response)
+    logger.trace(f'Avengers Assembled: {retval}')
+    return retval
 
-    logger.trace(f'Avengers Assembled: {output}')
-    text = base64.decodebytes(output.encode('ascii'))
+def fetch_domain(domain: str) -> str:
+    ''' return the decoded domain package '''
+
+    output = dns_query(domain)
+    logger.trace(f'{type(output)}')
+    text = base64.decodebytes(str(output).encode('ascii'))
     logger.trace(f'Output: {text} // {type(text)}')
     retval = yaml.load(text, Loader=yaml.RoundTripLoader )
     for k, v in retval.items():

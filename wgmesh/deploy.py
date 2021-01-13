@@ -117,7 +117,11 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
     LoggerConfig(debug, trace)
 
     if not locus or not pubkey:
-        dominfo = dns_query(domain)
+        try:
+            dominfo = fetch_domain(domain)
+        except:
+            logger.error(f'DNS Query Timeout: {domain}')
+            sys.exit(1)
         logger.trace(f'domain info: {dominfo}') 
         pass
 
@@ -129,22 +133,50 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
         pubkey = dominfo['publickey']
         pass
 
-    # load data
-    site, hosts = CheckConfig(*loadconfig(infile))
-    CR = '\n'
+    #hostconfig
+    hostconfig = rootconfig(domain, locus, pubkey)
+    import pprint
+    print('|-----------------------------------|')
+    pprint.pprint(hostconfig)
+
+    #Get UUID
+    target = f'{hostconfig["host"]["uuid"]}.{domain}'
+    try:
+        crypt = dns_query(target)
+    except:
+        logger.error(f"DNS Exception: {target}")
+        print()
+        raise
+        sys.exit(1)
+        pass
+
+    try:
+        cipher = base64.decodebytes(str(crypt).encode('ascii'))
+    except:
+        logger.error(f"DNS Exception: {target}")
+        print()
+        raise
+        sys.exit(1)
+        pass
+
+    # build Box
+    # Loop THrough Contacts
+    # Write somethign to disk
+
+
+    import pprint
+    pprint.pprint(nodeconfig)
+
+    #Get Domain
+
+    # Deploy Configuration
 
     ## Fetch Domain Settings ffrom DNS (or import)
 
-    # local config (Multiple?)
+    # local config load -> get UUID
     # We need port settings
     # /etc/wireguard/(that file).yaml
     
-
-    # Get DNS Record with encrypted key
-    rpcdata = dns_query(f'{uuid}.{site.domain}')
-    print(rpcdata)    
-    # Decrypt message
-
     # build wireguard config
 
     return 0

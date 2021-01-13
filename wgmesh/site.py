@@ -12,6 +12,7 @@ import attr, inspect
 import socket
 import pprint
 import base64
+import binascii
 import hashlib, uuid
 import nacl.utils
 import nacl.utils
@@ -32,6 +33,7 @@ from wgmesh.core import *
 # UUID matching
 #
 
+CR="\n"
 def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Host) -> list:
     '''
 
@@ -50,14 +52,17 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
     }
 
     y = yaml.dump(publish, Dumper=yaml.RoundTripDumper)
-
     message = base64.encodebytes(y.encode('ascii')).decode()
 
     try:
-        current = dns_query(site.domain)
+        current = fetch_domain(site.domain)
     except dns.resolver.NXDOMAIN:
         logger.debug(f'Domain reports no record found. Request: TXT:{site.domain}')
         current = {}
+    except binascii.Error:
+        logger.error(f'Bindecode base64 error.')
+        raise
+        sys.exit(1)
     except:
         logger.error("failed to decode dns record.")
         current = {}
