@@ -15,6 +15,8 @@ from ruamel import yaml
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
+from wgmesh import HostDB
+from .endpointdb import *
 
 import pprint
 import base64
@@ -110,9 +112,9 @@ lect = """
 @click.argument('domain')
 def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain: str):
     f''' Setup localhost, provide registration with master controller.
-    
+
     wgdeploy: deploy wireguard and FRR configuration.
-    
+
     '''
     LoggerConfig(debug, trace)
 
@@ -134,7 +136,7 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
         pass
 
     #hostconfig
-    hostconfig = rootconfig(domain, locus, pubkey)
+    hostconfig = hostConfig(domain, locus, pubkey)
     import pprint
     print('|-----------------------------------|')
     pprint.pprint(hostconfig)
@@ -150,8 +152,10 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
         sys.exit(1)
         pass
 
+    print(decrypt(hostconfig['site']['pubkey']))
+
     try:
-        cipher = base64.decodebytes(str(crypt).encode('ascii'))
+        cipher = base64.decodebytes(crypt.encode('ascii'))
     except:
         logger.error(f"DNS Exception: {target}")
         print()
@@ -159,6 +163,9 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
         sys.exit(1)
         pass
 
+    logger.trace(f'Coded Crypt Len: {len(crypt)}')
+    logger.trace(f'Raw Cipher Len: {len(cipher)}')
+    pprint.pprint(hostconfig)
     # build Box
     # Loop THrough Contacts
     # Write somethign to disk

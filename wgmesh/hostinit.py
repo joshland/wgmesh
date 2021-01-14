@@ -14,7 +14,8 @@ from loguru import logger
 from ruamel import yaml
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import *
+from .core import *
+from .endpointdb import *
 
 import pprint
 import base64
@@ -150,40 +151,42 @@ def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
         pubkey = dominfo['publickey']
         pass
 
-    hostconfig = rootconfig(domain, locus, pubkey)
+    hostconfig = CheckLostHostConfig(domain, locus, pubkey)
 
-    privfile = f'/etc/wireguard/{locus}_priv'
-    pubfile  = f'/etc/wireguard/{locus}_pub'
+    #hostconfig = load_host_config(domain, locus, pubkey)
+    #privfile = f'/etc/wireguard/{locus}_priv'
+    #hostconfig.host.public_key_file  = f'/etc/wireguard/{locus}_pub'
+
     cli_ipaddress = addr
     lsk = None
     lpk = None
-    if os.path.exists(privfile):
-        logger.debug(f'Private keyfile exists=>{privfile}')
+    if os.path.exists(hostconfig.host.private_key_file):
+        logger.debug(f'Private keyfile exists=>{hostconfig.host.private_key_file}')
         try:
-            #lsk = PrivateKey(base64.decodebytes(open(privfile, 'r').read().encode('ascii')))
-            lsk = PrivateKey( keyimport(open(privfile, 'r').read() ))
+            #lsk = PrivateKey(base64.decodebytes(open(hostconfig.host.private_key_file, 'r').read().encode('ascii')))
+            lsk = PrivateKey( keyimport(open(hostconfig.host.private_key_file, 'r').read() ))
             logger.debug(f'Private keyfile loaded successfully.')
             lpk = lsk.public_key
         except:
-            logger.error(f'Load or decrypt failed: {privfile}')
+            logger.error(f'Load or decrypt failed: {hostconfig.host.private_key_file}')
             pass
 
     if not lsk:
         logger.warning(f'Generating Private Key (this overwrites) ')
 
-        if os.path.exists(privfile) and not force:
-            logger.error(f'{privfile} exists, but, is unreadable, corrupt, or empty.  Use -f to overwrite.')
+        if os.path.exists(hostconfig.host.private_key_file) and not force:
+            logger.error(f'{hostconfig.host.private_key_file} exists, but, is unreadable, corrupt, or empty.  Use -f to overwrite.')
             sys.exit(1)
 
         lsk = PrivateKey.generate()
-        with open(privfile, 'w') as priv:
-            logger.trace(f'Writing Secret Key: {privfile}')
+        with open(hostconfig.host.private_key_file, 'w') as priv:
+            logger.trace(f'Writing Secret Key: {hostconfig.host.private_key_file}')
             priv.write( keyexport(lsk) )
             pass
 
         lpk = lsk.public_key
-        with open(pubfile, 'w') as pub:
-            logger.trace(f'Writing Public Key: {pubfile}')
+        with open(hostconfig.host.public_key_file, 'w') as pub:
+            logger.trace(f'Writing Public Key: {hostconfig.host.public_key_file}')
             pub.write( keyexport(lpk) )
             pass
         pass
@@ -230,15 +233,13 @@ def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
 
     inner_plain = {
         'hostname': hostname,
-        'uuid': hostconfig['host']['uuid'],
+        'uuid': hostconfig.host.uuid,
         'public_key': keyexport(lpk),
-        'public_key_file': pubfile,
-        'private_key_file': privfile,
+        'public_key_file': hostconfig.host.public_key_file,
+        'private_key_file': hostconfig.host.private_key_file,
         'local_ipv4': ','.join(local_ipv4),
         'local_ipv6': ','.join(local_ipv6),
     }
-
-    #pprint.pprint(inner_plain)
 
     inner_crypt  = yaml.dump(inner_plain, Dumper=yaml.RoundTripDumper)
     logger.debug(f'Dump Yaml String {len(inner_crypt)}')

@@ -23,6 +23,7 @@ import hashlib, uuid
 import dns.resolver
 from loguru import logger
 from ruamel import yaml
+from typing import Union
 from nacl.public import PrivateKey, Box, PublicKey
 
 class HostMismatch(Exception): pass
@@ -218,38 +219,6 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
         pass
     return
 
-def rootconfig(domain: str, locus: str, pubkey: str) -> str:
-    ''' Load/Generate local site-base config
-
-    opens /etc/wireguard/{locus}.yaml
-
-    return
-    '''
-    fn = f'/etc/wireguard/{domain}.yaml'
-    try:
-        with open(fn) as yamlfile:
-            config = yaml.load(yamlfile, Loader=yaml.RoundTripLoader )
-    except FileNotFoundError:
-        config = ''
-        pass
-    if config == '':
-        config = {
-            'host': {
-                'uuid': str( uuid.uuid4() ),
-                'hostname': socket.gethostname(),
-            },
-            'site': {
-                'locus': locus,
-                'pubkey': pubkey,
-            },
-        }
-        with open(fn, 'w') as yamlfile:
-            yamlfile.write( yaml.dump(config, Dumper=yaml.RoundTripDumper) )
-            pass
-            pass
-
-    return config
-
 def gen_local_config(publickey: str, site: Sitecfg, hosts: list):
     ''' look for port collisions in configuration '''
     me = None
@@ -311,13 +280,56 @@ def genkey(keyfile):
         kf.write(content.decode())
     return newKey
 
-def decrypt(host, ydata):
-    ''' encrypt a host blob target '''
-    SSK = loadkey(host.sitecfg.privatekey)
-    SPK = SSK.public_key
-    hpk = host.public_key
-    mybox = Box(SSK, hpk)
-    return mybox.encrypt(ydata)
+def _km_process(km: Union[str, bytes], handler: Union[PrivateKey, PublicKey]):
+    ''' convert a km to private/public key (handler) else. '''
+    if isinstance(km, str):
+        logger.trace(f'Convert keymaterial to ASCII bytes.')
+        km = km.encode('ascii')
+        pass
+
+    logger.trace(f'Attempt to remove base64 wrapper.')
+    try:
+        decode = base64.decodebytes(km)
+    except binascii.Error:
+        logger.trace('base64 decode failed, assume it is a raw key.')
+        decode = km
+        pass
+    retval = handler(decode)
+
+    return retval
+
+def decrypt(secret: Union[PrivateKey, str, bytes], public: Union[PublicKey, str, bytes], cipher: Union[str, bytes]):
+    ''' encrypt a host blob target
+
+    secret is either a UUEncoded Key or a realized PrivateKey
+    public is either a UUEncoded Key or a realized PublicKey
+
+    '''
+    if not isinstance(secret, PrivateKey):
+        SSK = _km_process(secret, PrivateKey)
+    else:
+        SSK = secret
+        pass
+
+    if not isinstance(public, PublicKey):
+        PPK = _km_process(public, PublicKey)
+    else:
+        PPK = public
+        pass
+
+    if isinstance(cipher, str):
+        logger.trace(f'convert cipher[str] to ASCII.')
+        cipher = cipher.encode('ascii')
+        pass
+
+    try:
+        cipher = base64.decodebytes(cipher)
+    except binascii.Error:
+        logger.trace(f'cipher appears to be raw')
+
+    sBox = Box(SSK, PPK)
+    output = sBox.decrypt(cipher)
+    return (SSK, PPK, output)
 
 def encrypt(host, ydata):
     ''' encrypt a host blob target '''
