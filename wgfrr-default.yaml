@@ -10,7 +10,4 @@ global:
   publickey: ''
   privatekey: site.key
 
-hosts:
-  vpn-abbot.example.com: {}
-  vpn-abash.example.com: {}
-  vpn-abaca.example.com: {}
+hosts: {}

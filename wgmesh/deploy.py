@@ -103,6 +103,23 @@ lect = """
     - remote_address: {remoteaddr}
 """
 
+wire_template = """
+#
+# Peering template generated template for {myhost} => {Hostname}
+#
+[Interface]
+PrivateKey = {private_key}
+Address    = {tunnel_addresses}
+ListenPort = {local_port}
+
+# {Hostname}
+[Peer]
+PublicKey  = {public_key}
+Endpoint   = {remote_address}
+AllowedIPs = 0/0
+PersistentKeepAlive = 25
+"""
+
 @click.command()
 @click.option( '--debug','-d', is_flag=True, default=False, help="Activate Debug Logging." )
 @click.option( '--trace','-t', is_flag=True, default=False, help="Activate Trace Logging." )
@@ -136,13 +153,13 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
         pass
 
     #hostconfig
-    hostconfig = hostConfig(domain, locus, pubkey)
+    hostconfig = CheckLostHostConfig(domain, locus, pubkey)
     import pprint
-    print('|-----------------------------------|')
+    print(f'|-----------------------------------|')
     pprint.pprint(hostconfig)
 
     #Get UUID
-    target = f'{hostconfig["host"]["uuid"]}.{domain}'
+    target = f'{hostconfig.host.uuid}.{domain}'
     try:
         crypt = dns_query(target)
     except:
@@ -152,27 +169,39 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
         sys.exit(1)
         pass
 
-    print(decrypt(hostconfig['site']['pubkey']))
+    message = decrypt(hostconfig.host.SSK, hostconfig.site.PPK, crypt)[2]
+    o = yaml.load(message, Loader=yaml.RoundTripLoader)
 
-    try:
-        cipher = base64.decodebytes(crypt.encode('ascii'))
-    except:
-        logger.error(f"DNS Exception: {target}")
-        print()
-        raise
-        sys.exit(1)
-        pass
+    print("HostConfig:")
+    pprint.pprint(hostconfig.publish(), indent=2)
+    print()
+    print('Published:')
+    pprint.pprint(o, indent=2)
 
-    logger.trace(f'Coded Crypt Len: {len(crypt)}')
-    logger.trace(f'Raw Cipher Len: {len(cipher)}')
-    pprint.pprint(hostconfig)
+    portbase = o['portbase']
+    site = o['site']
+    mykey = open(hostconfig.host.private_key_file, 'r').read().strip()
+
+    for host, values in o['hosts'].items():
+        if len(values['remote']):
+            addrs = values['remote'].split(',')
+            remotes = (',').join( [ f"{x}:{values['remoteport']}" for x in addrs ] )
+            pass
+        fulfill = {
+            'myhost':           hostconfig.host.hostname,
+            'private_key':      mykey,
+            'tunnel_addresses': values['local'],
+            'local_port':       values['localport'],
+            'Hostname':         host,
+            'public_key':       values['key'],
+            'remote_address':   remotes,
+        }
+        print(wire_template.format(**fulfill))
+        continue
+
     # build Box
     # Loop THrough Contacts
     # Write somethign to disk
-
-
-    import pprint
-    pprint.pprint(nodeconfig)
 
     #Get Domain
 

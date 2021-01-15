@@ -18,6 +18,8 @@ from ruamel import yaml
 from typing import Union
 from nacl.public import PrivateKey, Box, PublicKey
 
+from .core import loadkey, keyimport
+
 def nonone(arg):
     ''' eliminate the None and blanks '''
     if arg == None:
@@ -38,12 +40,16 @@ def validateUuid(value):
 class Endpoint(object):
     hostname = attr.ib(default=None, kw_only=True, converter=validateHostname)
     uuid     = attr.ib(default=None, kw_only=True, converter=validateUuid)
+    SSK      = attr.ib(default='', kw_only=True)
+    PPK      = attr.ib(default='', kw_only=True)
     private_key_file = attr.ib(default='', kw_only=True, converter=nonone)
     public_key_file  = attr.ib(default='', kw_only=True, converter=nonone)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
         logger.trace(f'publish dict: {m2}')
+        del m2['SSK']
+        del m2['PPK']
         return m2
     pass
 
@@ -51,10 +57,12 @@ class Endpoint(object):
 class SiteDetail(object):
     locus      = attr.ib(default='', kw_only=True, converter=nonone)
     public_key = attr.ib(default='', kw_only=True, converter=nonone)
+    PPK        = attr.ib(default='', kw_only=True)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
         logger.trace(f'publish dict: {m2}')
+        del m2['PPK']
         return m2
     pass
 
@@ -64,20 +72,6 @@ class HostDB(object):
         self.host  = Endpoint(**kwargs.get('host', {}))
         self.site  = SiteDetail(**kwargs.get('site', {}))
         pass
-
-    def publish(self):
-        retval = {
-            'host': self.host.publish(),
-            'site': self.site.publish(),
-        }
-        logger.trace(f'publish dict: {retval}')
-        return retval
-    pass
-
-@attr.s
-class bHostDB(object):
-    host = attr.ib( kw_only=True, converter=Endpoint )
-    site = attr.ib( kw_only=True, converter=SiteDetail)
 
     def publish(self):
         retval = {
@@ -140,6 +134,24 @@ def CheckLostHostConfig(domain: str, locus: str, pubkey: str) -> str:
     if config.host.public_key_file == '':
         config.host.public_key_file  = f'/etc/wireguard/{locus}_pub'
         pass
+
+    try:
+        SSK = loadkey(config.host.private_key_file, PrivateKey)
+    except FileNotFoundError:
+        logger.debug(f'Private key does not exist. {config.host.private_key_file}')
+        SSK = None
+        pass
+
+    try:
+        PPK = loadkey(config.host.public_key_file, PublicKey)
+    except FileNotFoundError:
+        logger.debug(f'Public key does not exist. {config.host.public_key_file}')
+        PPK = None
+        pass
+
+    config.host.SSK = SSK
+    config.host.PPK = PPK
+    config.site.PPK = PublicKey(keyimport(config.site.public_key))
 
     save_host_config(config)
 

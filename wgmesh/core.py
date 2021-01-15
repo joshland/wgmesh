@@ -128,13 +128,22 @@ class Host(object):
         return True
     pass
 
-def loadkey(keyfile: str) -> PrivateKey:
+#def loadkey(keyfile: str) -> PrivateKey:
+#    ''' read key from a keyfile '''
+#    uucontent = open(keyfile, 'r').read()
+#    decontent = keyimport(uucontent)
+#    logger.debug(f'Private Key {uucontent.strip()} / {decontent}')
+#    pk = PrivateKey(decontent)
+#    logger.debug(f'Encoded: {keyexport(pk)} / {keyexport(pk.public_key)}')
+#    return pk
+
+def loadkey(keyfile: str, method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' read key from a keyfile '''
     uucontent = open(keyfile, 'r').read()
     decontent = keyimport(uucontent)
-    logger.debug(f'Private Key {uucontent.strip()} / {decontent}')
-    pk = PrivateKey(decontent)
-    logger.debug(f'Encoded: {keyexport(pk)} / {keyexport(pk.public_key)}')
+    logger.debug(f'Create KM Object {uucontent.strip()} / {decontent}')
+    pk = method(decontent)
+    logger.debug(f'Encoded: {keyexport(pk)}')
     return pk
 
 def keyimport(key: str) -> str:
@@ -167,7 +176,7 @@ def loadconfig(fn: str) -> list:
 
     if sitecfg.privatekey > '':
         if os.path.exists(sitecfg.privatekey):
-            sitecfg.MSK = loadkey(sitecfg.privatekey)
+            sitecfg.MSK = loadkey(sitecfg.privatekey, PrivateKey)
         else:
             sitecfg.MSK = genkey(sitecfg.privatekey)
             pass
@@ -333,7 +342,7 @@ def decrypt(secret: Union[PrivateKey, str, bytes], public: Union[PublicKey, str,
 
 def encrypt(host, ydata):
     ''' encrypt a host blob target '''
-    SSK = loadkey(host.sitecfg.privatekey)
+    SSK = loadkey(host.sitecfg.privatekey, PrivateKey)
     SPK = SSK.public_key
     hpk = host.public_key
     mybox = Box(SSK, hpk)
@@ -365,7 +374,6 @@ def dns_query(domain: str) -> str:
     response = []
     for item in answer:
         logger.trace(f'{item} // {type(item)}')
-        logger.trace(f'{str(item)}')
         item = str(item).replace(' ', '\n').replace('"', '')
         response += item.split('\n')
         continue

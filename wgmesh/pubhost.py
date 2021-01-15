@@ -124,9 +124,13 @@ def cli(debug: bool, trace: bool, infile: str):
 
     for me in hosts:
         uuid = me.uuid
-        core = { 'site': site.domain, 'portbase': site.portbase, 'hosts': {} }
         myport = me.endport()
-        myaddrs = ','.join((me.local_ipv4, me.local_ipv6))
+        myaddrs = ','.join([str(me.tunnel_ipv4), str(me.tunnel_ipv6)])
+        core = {
+            'site': site.domain,
+            'portbase': site.portbase,
+            'hosts': {},
+            }
         logger.trace(f'Deploy Host: {me.uuid}')
         for h in hosts:
             if me.uuid == h.uuid: continue
@@ -136,7 +140,7 @@ def cli(debug: bool, trace: bool, infile: str):
                 'localport': h.endport(),
                 'remoteport': myport,
                 'local': myaddrs,
-                'remote': ','.join((h.local_ipv4, h.local_ipv6))
+                'remote': ','.join([ x for x in h.local_ipv4 + h.local_ipv6 if x > '' ])
                 }
             continue
 
@@ -148,7 +152,7 @@ def cli(debug: bool, trace: bool, infile: str):
         # uuencode core
         message = base64.encodebytes( MBox.encrypt( host_package.encode('ascii') ) ).decode()
         logger.debug(f'Plain Data: {host_package}')
-        print(f'|----| ## BEGIN HOST:')
+        print(f'|----| ## BEGIN HOST: {me.hostname}')
         print(f'TXT:{CR}{me.uuid}.{site.domain}{CR}{CR}DATA:')
         for i, l in enumerate(message.split('\n')):
             if l.strip() == "": continue

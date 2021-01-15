@@ -153,10 +153,6 @@ def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
 
     hostconfig = CheckLostHostConfig(domain, locus, pubkey)
 
-    #hostconfig = load_host_config(domain, locus, pubkey)
-    #privfile = f'/etc/wireguard/{locus}_priv'
-    #hostconfig.host.public_key_file  = f'/etc/wireguard/{locus}_pub'
-
     cli_ipaddress = addr
     lsk = None
     lpk = None
