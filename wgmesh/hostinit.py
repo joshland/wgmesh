@@ -54,15 +54,16 @@ def qualifyAddress(addr):
     pass
 
 @click.command()
-@click.option('--force','-f', is_flag=True, default=False, help="Overwrite key files (if needed).")
-@click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
-@click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
+@click.option('--force','-f',     is_flag=True, default=False, help="Overwrite key files (if needed).")
+@click.option('--debug','-d',     is_flag=True, default=False, help="Activate Debug Logging.")
+@click.option('--trace','-t',     is_flag=True, default=False, help="Activate Trace Logging.")
+@click.option('--no-locals','-n', is_flag=True, default=False, help="No local addresses.")
 @click.option('--locus','-l', default='', help="Manually set Mesh Locus.")
 @click.option('--addr','-a', default='', help="Endpoint Address(es) - hostname, ipv4, or ipv6.", multiple=True)
 @click.option('--pubkey','-P', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
-def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
+def cli(force, debug, trace, no_locals, locus, addr, pubkey, hostname, domain):
     f''' Setup localhost, provide registration with master controller.
 
     wghost: create and publish a host registration with a wgmesh instance.
@@ -164,7 +165,15 @@ def cli(force, debug, trace, locus, addr, pubkey, hostname, domain):
             continue
         logger.trace(f'command-line options for ipaddress: {cli_ipaddress}')
     else:
-        local_ipv4, local_ipv6 = get_local_addresses()
+        if no_locals:
+            logger.debug('Eliminate IP addresses.')
+            local_ipv4 = local_ipv6 = []
+        else:
+            local_ipv4, local_ipv6 = get_local_addresses()
+            # eliminate rfc1918 addresses
+            local_ipv4 = filter_private(local_ipv4)
+            local_ipv6 = filter_private(local_ipv6)
+            pass
         pass
 
     inner_plain = {

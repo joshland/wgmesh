@@ -404,16 +404,15 @@ def fetch_domain(domain: str) -> str:
     return retval
 
 def get_local_addresses_with_interfaces() -> (list, list):
+    ''' return a list of tuples, (iface, address) '''
     addr4 = []
     addr6 = []
     for x in ifaddr.get_adapters():
-        print(x.name)
         for a in x.ips:
-            a.ip
             if a.is_IPv4:
-                addr4.append((x.name a.ip))
+                addr4.append((x.name, a.ip))
             elif a.is_IPv6:
-                addr6.append((x.name, a.ip[0)])
+                addr6.append((x.name, a.ip[0]))
                 continue
             else:
                 print(f'Nothing: {a.ip}')
@@ -422,9 +421,20 @@ def get_local_addresses_with_interfaces() -> (list, list):
     return (addr4, addr6)
 
 def get_local_addresses() -> (list, list):
-    addr4, addr4 = get_local_addresses_with_interfaces()
+    ''' get local addresses sans interface '''
+    addr4, addr6 = get_local_addresses_with_interfaces()
     return ([ x[1] for x in addr4 ], [ x[1] for x in addr6 ])
 
+def filter_private(addr: list) -> list:
+    ''' remote rfc1918 addresses from a list '''
+    retval = []
+    for x in addr:
+        ip = ipaddress.ip_address(x)
+        if ip.is_private:
+            continue
+        retval.append(x)
+        continue
+    return retval
 
 def is_valid_hostname(hostname):
     if hostname[-1] == ".":
