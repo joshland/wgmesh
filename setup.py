@@ -23,15 +23,15 @@ v = import_module('version')
 
 requires = [
     'wheel',
-    'click',
-    'six',
-    'natsort',
-    'ruamel.yaml',
     'attrs',
+    'click',
     'dnspython',
-    'pynacl',
+    'ifaddr',
     'loguru',
-    'netifaces'
+    'natsort',
+    'pynacl',
+    'ruamel.yaml',
+    'six',
 ]
 
 test_requires = requires

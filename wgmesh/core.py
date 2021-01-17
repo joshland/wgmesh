@@ -13,17 +13,19 @@ import ast
 import click
 import base64
 import loguru
+import ifaddr
 import pprint
 import socket
 import ipaddress
 import nacl.utils
+import dns.resolver
 import attr, inspect
 import hashlib, uuid
-
-import dns.resolver
-from loguru import logger
-from ruamel import yaml
 from typing import Union
+
+from ruamel import yaml
+from loguru import logger
+from natsort import natsorted
 from nacl.public import PrivateKey, Box, PublicKey
 
 class HostMismatch(Exception): pass
@@ -89,10 +91,14 @@ class Host(object):
 
     def endport(self):
         ''' returns the last octet of the tunnel_ipv6 address as a decimal number, added to the site.portbase '''
+        retval = self.sitecfg.portbase + self.octet()
+        return retval
+
+    def octet(self):
+        ''' returns the last octet of the tunnel_ipv6 address as a decimal number, added to the site.portbase '''
         octet = str(self.tunnel_ipv6).split(':')[-1]
         base = int(octet, 16)
-        retval = self.sitecfg.portbase + base
-        return retval
+        return base
 
     def publish(self):
         if self.private_key_file == '':
@@ -359,7 +365,7 @@ def splitOrderedList(data):
             slist.append((k, v))
             continue
         #sortlist = sorted([ (x[0], x[1]) for x.split(':') in response ])
-        sortlist = sorted(slist)
+        sortlist = natsorted(slist)
         retval = "".join([ x[1] for x in sortlist ])
     else:
         logger.trace(f'Unordered DNS List Published.')
@@ -396,6 +402,29 @@ def fetch_domain(domain: str) -> str:
             continue
         continue
     return retval
+
+def get_local_addresses_with_interfaces() -> (list, list):
+    addr4 = []
+    addr6 = []
+    for x in ifaddr.get_adapters():
+        print(x.name)
+        for a in x.ips:
+            a.ip
+            if a.is_IPv4:
+                addr4.append((x.name a.ip))
+            elif a.is_IPv6:
+                addr6.append((x.name, a.ip[0)])
+                continue
+            else:
+                print(f'Nothing: {a.ip}')
+            continue
+        continue
+    return (addr4, addr6)
+
+def get_local_addresses() -> (list, list):
+    addr4, addr4 = get_local_addresses_with_interfaces()
+    return ([ x[1] for x in addr4 ], [ x[1] for x in addr6 ])
+
 
 def is_valid_hostname(hostname):
     if hostname[-1] == ".":
@@ -502,6 +531,8 @@ def CheckConfig(site, hosts):
         continue
 
     return site, hosts
+
+
 
 ##
 ## load template

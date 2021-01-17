@@ -1,9 +1,10 @@
 wheel
-click
-six
-natsort
-pyyaml
 attrs
+click
 dnspython
-pynacl
+ifaddr
 loguru
+natsort
+pynacl
+ruamel.yaml
+six

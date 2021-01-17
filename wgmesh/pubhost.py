@@ -5,7 +5,6 @@ import sys, os
 import click
 import loguru
 import socket
-import netifaces
 import nacl.utils
 import attr, inspect
 import hashlib, uuid
@@ -20,64 +19,6 @@ import pprint
 import base64
 
 import ipaddress
-
-def get_local_addresses_with_interface() -> list:
-    ''' gather local addresses '''
-    ipv4 = []
-    ipv6 = []
-    for iface in netifaces.interfaces():
-        all = netifaces.ifaddresses(iface)
-        try:
-            all4 = all[netifaces.AF_INET]
-        except KeyError:
-            all4 = []
-        try:
-            all6 = all[netifaces.AF_INET6]
-        except KeyError:
-            all6 = []
-        for x in all4:
-            ipv4.append({ 'iface': iface, 'addr': x['addr']})
-        for x in all6:
-            ipv4.append({ 'iface': iface, 'addr': x['addr']})
-        continue
-    return ipv4, ipv6
-
-def get_local_addresses() -> list:
-    ''' gather local addresses '''
-    ipv4 = []
-    ipv6 = []
-
-    for iface in netifaces.interfaces():
-        all = netifaces.ifaddresses(iface)
-        try:
-            all4 = all[netifaces.AF_INET]
-        except KeyError:
-            all4 = []
-            pass
-
-        try:
-            all6 = all[netifaces.AF_INET6]
-        except KeyError:
-            all6 = []
-            pass
-
-        ipv4 = [ x['addr'] for x in all4 if x['addr'].find('%') == -1 and not ipaddress.ip_address(x['addr']).is_private ]
-        ipv6 = [ x['addr'] for x in all6 if x['addr'].find('%') == -1 and not ipaddress.ip_address(x['addr']).is_private ]
-
-        if not len(ipv4):
-            ipv4 = ''
-        elif len(ipv4) == 1:
-            ipv4 = ipv4[0]
-            pass
-
-        if not len(ipv6):
-            ipv6 = ''
-        elif len(ipv6) == 1:
-            ipv6 = ipv6[0]
-            pass
-
-        continue
-    return (ipv4, ipv6)
 
 
 lect = """
@@ -127,8 +68,10 @@ def cli(debug: bool, trace: bool, infile: str):
         myport = me.endport()
         myaddrs = ','.join([str(me.tunnel_ipv4), str(me.tunnel_ipv6)])
         core = {
-            'site': site.domain,
+            'site':     site.domain,
+            'octet':    me.octet(),
             'portbase': site.portbase,
+            'remote':   str(site.ipv6),
             'hosts': {},
             }
         logger.trace(f'Deploy Host: {me.uuid}')
@@ -139,8 +82,8 @@ def cli(debug: bool, trace: bool, infile: str):
                 'key': h.public_key,
                 'localport': h.endport(),
                 'remoteport': myport,
-                'local': myaddrs,
-                'remote': ','.join([ x for x in h.local_ipv4 + h.local_ipv6 if x > '' ])
+                #'local': myaddrs,
+                'remote': ','.join([ x for x in h.local_ipv4 + h.local_ipv6 if x > '' ]),
                 }
             continue
 
