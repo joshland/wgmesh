@@ -156,7 +156,7 @@ def keyimport(key: str) -> str:
     ''' uudecode a key '''
     logger.trace(f'keyimport: {type(key)}-{repr(key)}')
     uucontent = base64.decodebytes(key.encode('ascii')).strip()
-    logger.trace(f'{repr(uucontent)} // {repr(key)}')
+    logger.trace(f'{len(uucontent)}:{repr(uucontent)} // {len(key)}:{repr(key)}')
     return uucontent
 
 def keyexport(key: PublicKey or PrivateKey) -> str:
