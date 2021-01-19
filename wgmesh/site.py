@@ -119,7 +119,7 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
     logger.debug(f'Host import: {data}')
     outer = yaml.load(outer_message, Loader=yaml.RoundTripLoader)
     logger.trace(f'Outer message: {outer}')
-    HPub = PublicKey( keyimport( outer['public_key'] ))
+    HPub = keyimport( outer['public_key'], PublicKey)
     logger.trace(f'HPub/{HPub} -- SKey/{site.MSK}')
     SBox = Box(site.MSK, HPub)
 

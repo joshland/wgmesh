@@ -41,13 +41,17 @@ def validateLocalAddresses(arg):
     ''' validate and clean up network addressing '''
     retval = []
     if isinstance(arg, str):
-        if arg != '':
-            logger.trace(f'ipaddress: {arg}')
-            retval.append( ipaddress.ip_network(arg) )
+        arg = [arg]
+
+    for x in arg:
+        logger.trace(f'local addres: {x}')
+        try:
+            retval.append( ipaddress.ip_network(x) )
+        except ValueError:
+            logger.debug(f'Assuming:{x} is a hostname.')
+            retval.append(x)
             pass
-    elif isinstance(arg, tuple) or isinstance(arg, list):
-        logger.trace(f'convert address list: {arg}')
-        retval = [ ipaddress.ip_address(x) for x in arg ]
+        pass
     return retval
 
 def validateIpAddress(arg):
@@ -120,8 +124,10 @@ class Host(object):
         if self.private_key_file == '':
             self.private_key_file =f'/etc/wireguard/{self.sitecfg.locus}_priv'
         m2 = { attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") }
-        m2['local_ipv4'] = ",".join([ str(x) for x in self.local_ipv4 ])
-        m2['local_ipv6'] = ",".join([ str(x) for x in self.local_ipv6 ])
+        logger.error(f'Publishing local_ipv4: {self.local_ipv4}')
+        m2['local_ipv4'] = [ str(x).replace('/32','') for x in self.local_ipv4 ]
+        logger.error(f'Publishing local_ipv4: {self.local_ipv6}')
+        m2['local_ipv6'] = [ str(x).replace('/128','') for x in self.local_ipv6 ]
         del m2['hostname']
         del m2['sitecfg']
         logger.trace(pprint.pformat(m2))
@@ -163,22 +169,22 @@ class Host(object):
 
 def loadkey(keyfile: str, method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' read key from a keyfile '''
-    uucontent = open(keyfile, 'r').read()
-    pk = keyimport(uucontent, method)
+    content = open(keyfile, 'r').read()
+    pk = keyimport(content, method)
     return pk
 
 def keyimport(key: Union[str, bytes],  method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' uudecode a key '''
     logger.trace(f'keyimport: {type(key)}-{repr(key)}')
     try:
-        uucontent = base64.decodebytes(key.encode('ascii')).strip()
-        logger.trace(f'{len(uucontent)}:{repr(uucontent)} // {len(key)}:{repr(key)}')
+        content = base64.decodebytes(key.encode('ascii')).strip()
+        logger.trace(f'{len(content)}:{repr(content)} // {len(key)}:{repr(key)}')
     except binascii.Error:
         logger.debug(r'base64 decode fails - assume raw key.')
-        uucontent = key.encode('ascii')
+        content = key.encode('ascii')
         pass
-    logger.debug(f'Create KM Object key:{len(key)} / raw:{len(uucontent)}')
-    pk = method(uucontent)
+    logger.debug(f'Create KM Object key:{len(key)} / raw:{len(content)}')
+    pk = method(content)
     logger.debug(f'Encoded: {keyexport(pk)}')
     return pk
 

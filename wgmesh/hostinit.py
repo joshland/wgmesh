@@ -101,7 +101,8 @@ def cli(force, debug, trace, no_locals, locus, addr, pubkey, hostname, domain):
         logger.debug(f'Private keyfile exists=>{hostconfig.host.private_key_file}')
         try:
             #lsk = PrivateKey(base64.decodebytes(open(hostconfig.host.private_key_file, 'r').read().encode('ascii')))
-            lsk = PrivateKey( keyimport(open(hostconfig.host.private_key_file, 'r').read() ))
+            #lsk = PrivateKey( keyimport(open(hostconfig.host.private_key_file, 'r').read() ))
+            lsk = loadkey(hostconfig.host.private_key_file, PrivateKey)
             logger.debug(f'Private keyfile loaded successfully.')
             lpk = lsk.public_key
         except:
