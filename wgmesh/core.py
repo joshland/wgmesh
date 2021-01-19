@@ -124,9 +124,7 @@ class Host(object):
         if self.private_key_file == '':
             self.private_key_file =f'/etc/wireguard/{self.sitecfg.locus}_priv'
         m2 = { attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") }
-        logger.error(f'Publishing local_ipv4: {self.local_ipv4}')
         m2['local_ipv4'] = [ str(x).replace('/32','') for x in self.local_ipv4 ]
-        logger.error(f'Publishing local_ipv4: {self.local_ipv6}')
         m2['local_ipv6'] = [ str(x).replace('/128','') for x in self.local_ipv6 ]
         del m2['hostname']
         del m2['sitecfg']

@@ -30,6 +30,7 @@ requires = [
     'loguru',
     'natsort',
     'pynacl',
+    'route53',
     'ruamel.yaml',
     'six',
 ]
