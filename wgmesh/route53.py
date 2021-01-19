@@ -7,7 +7,7 @@ CR="\n"
 
 @attr.s
 class Route53(object):
-    sitecfg = attr.ib()
+    site = attr.ib()
     rr_conn = attr.ib(default=None, kw_only=True)
     rr_zone = attr.ib(default=None, kw_only=True)
     rr_recs = attr.ib(default=[], kw_only=True)
@@ -19,14 +19,18 @@ class Route53(object):
         if not self.rr_conn:
             logger.debug(f'Open credentialed connection to route53.')
             self.rr_conn = route53.connect(
-                aws_access_key_id = self.sitecfg.aws_access_key_id,
+                aws_access_key_id = self.site.aws_access_key_id,
                 aws_secret_access_key = self.site.aws_secret_access_key
             )
             pass
 
         if not self.rr_zone:
-            logger.debug(f'open zone {self.sitecfg.route53}.')
-            self.rr_zone = con.get_hosted_zone_by_id(self.sitecfg.route53)
+            logger.debug(f'open zone {self.site.route53}.')
+            try:
+                self.rr_zone = self.rr_conn.get_hosted_zone_by_id(self.site.route53)
+            except:
+                logger.error(f'Failed to load zone: {self.site.route53}.')
+                raise
             pass
 
         if not len(self.rr_recs):
@@ -57,6 +61,6 @@ class Route53(object):
         else:
             logger.debug(f'create new host record')
             self.rr_zone.create_txt_record(hostname, newvalues)
-
+            pass
 
         return True

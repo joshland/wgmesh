@@ -120,6 +120,8 @@ class Host(object):
         if self.private_key_file == '':
             self.private_key_file =f'/etc/wireguard/{self.sitecfg.locus}_priv'
         m2 = { attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") }
+        m2['local_ipv4'] = ",".join([ str(x) for x in self.local_ipv4 ])
+        m2['local_ipv6'] = ",".join([ str(x) for x in self.local_ipv6 ])
         del m2['hostname']
         del m2['sitecfg']
         logger.trace(pprint.pformat(m2))
@@ -162,20 +164,25 @@ class Host(object):
 def loadkey(keyfile: str, method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' read key from a keyfile '''
     uucontent = open(keyfile, 'r').read()
-    decontent = keyimport(uucontent)
-    logger.debug(f'Create KM Object {uucontent.strip()} / {decontent}')
-    pk = method(decontent)
+    pk = keyimport(uucontent, method)
+    return pk
+
+def keyimport(key: Union[str, bytes],  method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
+    ''' uudecode a key '''
+    logger.trace(f'keyimport: {type(key)}-{repr(key)}')
+    try:
+        uucontent = base64.decodebytes(key.encode('ascii')).strip()
+        logger.trace(f'{len(uucontent)}:{repr(uucontent)} // {len(key)}:{repr(key)}')
+    except binascii.Error:
+        logger.debug(r'base64 decode fails - assume raw key.')
+        uucontent = key.encode('ascii')
+        pass
+    logger.debug(f'Create KM Object key:{len(key)} / raw:{len(uucontent)}')
+    pk = method(uucontent)
     logger.debug(f'Encoded: {keyexport(pk)}')
     return pk
 
-def keyimport(key: str) -> str:
-    ''' uudecode a key '''
-    logger.trace(f'keyimport: {type(key)}-{repr(key)}')
-    uucontent = base64.decodebytes(key.encode('ascii')).strip()
-    logger.trace(f'{len(uucontent)}:{repr(uucontent)} // {len(key)}:{repr(key)}')
-    return uucontent
-
-def keyexport(key: PublicKey or PrivateKey) -> str:
+def keyexport(key: Union[PublicKey, PrivateKey]) -> str:
     ''' encode a key '''
     logger.trace(f'keydecode: {type(key)}-{repr(key)}')
     retval = base64.encodebytes(key.encode()).decode().strip()
@@ -206,8 +213,7 @@ def loadconfig(fn: str) -> list:
 
     if sitecfg.publickey > '':
         logger.trace(f'Decode Public Key: {sitecfg.publickey}')
-        decode = keyimport(sitecfg.publickey)
-        sitecfg.publickey = PublicKey(decode)
+        sitecfg.publickey = keyimport(sitecfg.publickey, PublicKey)
     else:
         sitecfg.publickey = sitecfg.MSK.public_key
         pass

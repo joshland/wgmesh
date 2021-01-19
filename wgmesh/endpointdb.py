@@ -151,7 +151,7 @@ def CheckLostHostConfig(domain: str, locus: str, pubkey: str) -> str:
 
     config.host.SSK = SSK
     config.host.PPK = PPK
-    config.site.PPK = PublicKey(keyimport(config.site.public_key))
+    config.site.PPK = keyimport(config.site.public_key, PublicKey)
 
     save_host_config(config)
 

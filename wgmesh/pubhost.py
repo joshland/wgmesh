@@ -95,12 +95,12 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
                 'key': h.public_key,
                 'localport': h.endport(),
                 'remoteport': myport,
-                #'local': myaddrs,
                 'remote': ','.join([ str(x) for x in h.local_ipv4 + h.local_ipv6 if str(x) > '' ]),
                 }
             continue
 
-        MPK = PublicKey(base64.decodebytes(me.public_key.encode('ascii')))
+        #MPK = PublicKey(base64.decodebytes(me.public_key.encode('ascii')))
+        MPK = keyimport(me.public_key, PublicKey)
         MBox = Box(site.MSK, MPK)
 
         host_package  = yaml.dump(core, Dumper=yaml.RoundTripDumper)
@@ -108,15 +108,18 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         # uuencode core
         message = base64.encodebytes( MBox.encrypt( host_package.encode('ascii') ) ).decode()
         logger.debug(f'Plain Data: {host_package}')
+
+        rr_name =  f'{me.uuid}.{site.domain}'
+        rr_data = [ f'{i}:{x.strip()}' for i, x in enumerate(message.split('\n')) if x > '' ]
+
         print(f'|----| ## BEGIN HOST: {me.hostname}')
-        print(f'TXT:{CR}{me.uuid}.{site.domain}{CR}{CR}DATA:')
-        data = [ f'{i}:{x.strip()}' for i, x in enumerate(message.split('\n')) if x > '' ]
+        print(f'TXT:{CR}{rr_name}{CR}{CR}DATA:')
 
         if r53:
             logger.info('commit to route53')
-            r53.save_txt_record(hostname, data, commit)
+            r53.save_txt_record(rr_name, rr_data, commit)
         else:
-            print('\n'.join(data))
+            print('\n'.join(rr_data))
             print(f'{CR}|----| ###END')
             pass
 
