@@ -37,6 +37,19 @@ def validateNetworkAddress(arg):
     retval = ipaddress.ip_network(arg)
     return retval
 
+def validateLocalAddresses(arg):
+    ''' validate and clean up network addressing '''
+    retval = []
+    if isinstance(arg, str):
+        if arg != '':
+            logger.trace(f'ipaddress: {arg}')
+            retval.append( ipaddress.ip_network(arg) )
+            pass
+    elif isinstance(arg, tuple) or isinstance(arg, list):
+        logger.trace(f'convert address list: {arg}')
+        retval = [ ipaddress.ip_address(x) for x in arg ]
+    return retval
+
 def validateIpAddress(arg):
     ''' validate and clean up network addressing '''
     if arg.strip() == '': return ''
@@ -59,6 +72,8 @@ def nonone(arg):
 @attr.s
 class Sitecfg(object):
     alerts = attr.ib(default='', kw_only=True)
+    aws_access_key_id = attr.ib(default='', kw_only=True, converter=nonone)
+    aws_secret_access_key = attr.ib(default='', kw_only=True, converter=nonone)
     domain = attr.ib(default='', kw_only=True)
     locus  = attr.ib(default='', kw_only=True)
     ipv4   = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
@@ -66,6 +81,7 @@ class Sitecfg(object):
     portbase   = attr.ib(default = 58822, kw_only=True, converter=int)
     publickey  = attr.ib(default='', kw_only=True, converter=nonone)
     privatekey = attr.ib(default='', kw_only=True)
+    route53    = attr.ib(default='', kw_only=True, converter=nonone)
     MSK        = attr.ib(default='', kw_only=True)
 
     def publish(self):
@@ -79,8 +95,8 @@ class Sitecfg(object):
 class Host(object):
     hostname    = attr.ib()
     sitecfg     = attr.ib()
-    local_ipv4  = attr.ib(default= '', kw_only=True)
-    local_ipv6  = attr.ib(default= '', kw_only=True)
+    local_ipv4  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
+    local_ipv6  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
     tunnel_ipv6 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
     public_key  = attr.ib(default=f'', kw_only=True)

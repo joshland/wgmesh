@@ -14,6 +14,7 @@ from ruamel import yaml
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
+from wgmesh.route53 import Route53
 
 import pprint
 import base64
@@ -45,8 +46,9 @@ lect = """
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
+@click.option('--dry-run','-n', is_flag=True, default=False, help="Do not commit changes.")
 @click.argument('infile')
-def cli(debug: bool, trace: bool, infile: str):
+def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
     f''' Setup localhost, provide registration with master controller.
     
     wghost: create and publish a host registration with a wgmesh instance.
@@ -63,6 +65,15 @@ def cli(debug: bool, trace: bool, infile: str):
     'myport == their octet'
     'theirport == myoctet'
 
+    if site.route53:
+        r53 = Route53(site)
+    else:
+        r53 = None
+        pass
+    if dry_run:
+        logger.info(f'No DNS Commits will be made.')
+        commit = False
+
     for me in hosts:
         uuid = me.uuid
         myport = me.endport()
@@ -78,12 +89,14 @@ def cli(debug: bool, trace: bool, infile: str):
         for h in hosts:
             if me.uuid == h.uuid: continue
             logger.trace(f'Add host: {h.uuid}')
+            logger.trace(f'IPv4: {h.local_ipv4}')
+            logger.trace(f'IPv6: {h.local_ipv6}')
             core['hosts'][h.hostname] = { 
                 'key': h.public_key,
                 'localport': h.endport(),
                 'remoteport': myport,
                 #'local': myaddrs,
-                'remote': ','.join([ x for x in h.local_ipv4 + h.local_ipv6 if x > '' ]),
+                'remote': ','.join([ str(x) for x in h.local_ipv4 + h.local_ipv6 if str(x) > '' ]),
                 }
             continue
 
@@ -97,11 +110,16 @@ def cli(debug: bool, trace: bool, infile: str):
         logger.debug(f'Plain Data: {host_package}')
         print(f'|----| ## BEGIN HOST: {me.hostname}')
         print(f'TXT:{CR}{me.uuid}.{site.domain}{CR}{CR}DATA:')
-        for i, l in enumerate(message.split('\n')):
-            if l.strip() == "": continue
-            print(f'{i}:{l.strip()}')
-            continue
-        print(f'{CR}|----| ###END ')
+        data = [ f'{i}:{x.strip()}' for i, x in enumerate(message.split('\n')) if x > '' ]
+
+        if r53:
+            logger.info('commit to route53')
+            r53.save_txt_record(hostname, data, commit)
+        else:
+            print('\n'.join(data))
+            print(f'{CR}|----| ###END')
+            pass
+
         print()
         continue
         
