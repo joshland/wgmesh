@@ -122,7 +122,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         if r53:
             logger.debug('commit to route53')
             r53.save_txt_record(rr_name, rr_data, commit)
-        else:
+            pass
+        if debug or not r53:
             print('\n'.join(rr_data))
             print(f'{CR}|----| ###END')
             pass

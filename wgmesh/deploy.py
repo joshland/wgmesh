@@ -63,11 +63,12 @@ PersistentKeepAlive = 25
 @click.command()
 @click.option( '--debug','-d', is_flag=True, default=False, help="Activate Debug Logging." )
 @click.option( '--trace','-t', is_flag=True, default=False, help="Activate Trace Logging." )
-@click.option( '--locus','-l',    default='', help="Manually set Mesh Locus." )
-@click.option( '--pubkey','-p',   default='', help="Manually set Mesh Public Key." )
+@click.option( '--dry-run','-n', is_flag=True, default=False, help="Don't write any files." )
+@click.option( '--locus','-l', default='', help="Manually set Mesh Locus." )
+@click.option( '--pubkey','-p', default='', help="Manually set Mesh Public Key." )
 @click.option( '--hostname','-h', default='', help="Override local hostname." )
 @click.argument('domain')
-def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain: str):
+def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str, domain: str):
     f''' Setup localhost, provide registration with master controller.
 
     wgdeploy: deploy wireguard and FRR configuration.
@@ -140,9 +141,17 @@ def cli(debug: bool, trace: bool, locus: str, pubkey: str, hostname: str, domain
             'public_key':       values['key'],
             'remote_address':   remotes,
         }
+
         print()
-        print(f'wg{index}')
-        print(wire_template.format(**fulfill))
+        print(f'writing: /etc/wireguard/wg{index}.conf')
+        if dry_run:
+            logger.info(f'Dry-run Mode.')
+            print(wire_template.format(**fulfill))
+        else:
+            with open(f'/etc/wireguard/wg{index}.conf', 'w') as writer:
+                writer.write(wire_template.format(**fulfill))
+                pass
+            pass
         continue
 
     # build Box
