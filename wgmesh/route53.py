@@ -34,18 +34,18 @@ class Route53(object):
             pass
 
         if not len(self.rr_recs):
-            logger.debug(f'search records for domain {domain}.')
+            logger.debug(f'search records for domain {self.site.domain}.')
             for x in self.rr_zone.record_sets:
-                if x.rrset_type == 'TXT' and x.name.find(domain) > -1:
+                if x.rrset_type == 'TXT' and x.name.find(self.site.domain) > -1:
                     logger.trace(f'located record: {x.name}')
-                    self.domain_records.append(x)
+                    self.rr_recs.append(x)
                     continue
                 continue
             pass
 
         record = None
-        for x in self.domain_records:
-            if x.name == hostname:
+        for x in self.rr_recs:
+            if x.name == hostname or f'{hostname}.' == x.name:
                 record = x
                 break
             continue
@@ -57,10 +57,18 @@ class Route53(object):
                 pass
             record.records = newvalues
             print('Would')
-            record.save()
+            if commit:
+                record.save()
+            else:
+                logger.warning(f'Would have saved changes: {hostname} // {newvalues}.')
+                pass
         else:
             logger.debug(f'create new host record')
-            self.rr_zone.create_txt_record(hostname, newvalues)
+            if commit:
+                self.rr_zone.create_txt_record(hostname, newvalues)
+            else:
+                logger.error(f'Would have committed: {hostname} // {newvalues}')
+                pass
             pass
 
         return True

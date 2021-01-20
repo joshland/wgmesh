@@ -79,14 +79,14 @@ class Sitecfg(object):
     aws_access_key_id = attr.ib(default='', kw_only=True, converter=nonone)
     aws_secret_access_key = attr.ib(default='', kw_only=True, converter=nonone)
     domain = attr.ib(default='', kw_only=True)
-    locus  = attr.ib(default='', kw_only=True)
-    ipv4   = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
-    ipv6   = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
-    portbase   = attr.ib(default = 58822, kw_only=True, converter=int)
-    publickey  = attr.ib(default='', kw_only=True, converter=nonone)
+    locus = attr.ib(default='', kw_only=True)
+    ipv4 = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
+    ipv6 = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
+    portbase = attr.ib(default = 58822, kw_only=True, converter=int)
+    publickey = attr.ib(default='', kw_only=True, converter=nonone)
     privatekey = attr.ib(default='', kw_only=True)
-    route53    = attr.ib(default='', kw_only=True, converter=nonone)
-    MSK        = attr.ib(default='', kw_only=True)
+    route53 = attr.ib(default='', kw_only=True, converter=nonone)
+    MSK  = attr.ib(default='', kw_only=True)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
@@ -97,17 +97,17 @@ class Sitecfg(object):
 
 @attr.s
 class Host(object):
-    hostname    = attr.ib()
-    sitecfg     = attr.ib()
-    local_ipv4  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
-    local_ipv6  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
+    hostname = attr.ib()
+    sitecfg = attr.ib()
+    local_ipv4 = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
+    local_ipv6 = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
     tunnel_ipv6 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
-    public_key  = attr.ib(default=f'', kw_only=True)
+    public_key = attr.ib(default=f'', kw_only=True)
     local_networks = attr.ib(default = '', kw_only=True)
     public_key_file = attr.ib(default=f'', kw_only=True)
     private_key_file = attr.ib(default=f'', kw_only=True)
-    uuid        = attr.ib()
+    uuid = attr.ib()
 
     def endport(self):
         ''' returns the last octet of the tunnel_ipv6 address as a decimal number, added to the site.portbase '''

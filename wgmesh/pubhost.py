@@ -70,9 +70,13 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
     else:
         r53 = None
         pass
+
     if dry_run:
         logger.info(f'No DNS Commits will be made.')
         commit = False
+    else:
+        commit = True
+        pass
 
     for me in hosts:
         uuid = me.uuid
@@ -116,7 +120,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         print(f'TXT:{CR}{rr_name}{CR}{CR}DATA:')
 
         if r53:
-            logger.info('commit to route53')
+            logger.debug('commit to route53')
             r53.save_txt_record(rr_name, rr_data, commit)
         else:
             print('\n'.join(rr_data))
