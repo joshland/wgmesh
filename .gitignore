@@ -67,3 +67,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+Documents/Relationships.md
+wif.py
+
