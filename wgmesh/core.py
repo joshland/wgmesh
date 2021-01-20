@@ -46,7 +46,7 @@ def validateLocalAddresses(arg):
     for x in arg:
         logger.trace(f'local addres: {x}')
         try:
-            retval.append( ipaddress.ip_network(x) )
+            retval.append( ipaddress.ip_address(x) )
         except ValueError:
             logger.debug(f'Assuming:{x} is a hostname.')
             retval.append(x)
@@ -124,8 +124,8 @@ class Host(object):
         if self.private_key_file == '':
             self.private_key_file =f'/etc/wireguard/{self.sitecfg.locus}_priv'
         m2 = { attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") }
-        m2['local_ipv4'] = [ str(x).replace('/32','') for x in self.local_ipv4 ]
-        m2['local_ipv6'] = [ str(x).replace('/128','') for x in self.local_ipv6 ]
+        m2['local_ipv4'] = [ str(x) for x in self.local_ipv4 ]
+        m2['local_ipv6'] = [ str(x) for x in self.local_ipv6 ]
         del m2['hostname']
         del m2['sitecfg']
         logger.trace(pprint.pformat(m2))

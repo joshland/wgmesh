@@ -56,7 +56,7 @@ ListenPort = {local_port}
 [Peer]
 PublicKey  = {public_key}
 Endpoint   = {remote_address}
-AllowedIPs = 0/0
+AllowedIPs = 0.0.0.0/0
 PersistentKeepAlive = 25
 """
 
@@ -129,7 +129,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
         remotes = ''
         if len(values['remote']):
             addrs = values['remote'].split(',')
-            remotes = (',').join( [ f"{x}:{values['remoteport']}" for x in addrs ] )
+            remotes = (',').join( [ f"{str(x)}:{values['remoteport']}" for x in addrs ] )
             pass
         epaddr = f'{tunnel}{index}:{o["octet"]}/{cidr}'
         fulfill = {
