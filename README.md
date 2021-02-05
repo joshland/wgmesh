@@ -1,7 +1,11 @@
 ## Wireguard Mesh Tool
 
 
-This is a small project designed to experiment with distribution and maintenance of Wireguard Meshes for private networks using Protocol Routing
+This is a small project designed to experiment with distribution and maintenance of Wireguard Meshes for private networks using Protocol Routing.
+
+Of necessity, the Routing Daemons are running against the wireguard interfaces.
+
+If there are local Routing Requirements, they are beyond the scope of this mesh development.  This is intended to produce a routing mesh - care and feeding of the mesh is your responsibility.
 
 
 ## Requirements
@@ -11,6 +15,10 @@ This is a small project designed to experiment with distribution and maintenance
  - Python
  - FRR w/ BGP
 
+## TODO
+ - Router IDs
+ - BGP ASN configuration
+ - Local Site-specific configurations integration?
 
 ##  Getting Started
 

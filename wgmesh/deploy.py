@@ -56,7 +56,7 @@ ListenPort = {local_port}
 [Peer]
 PublicKey  = {public_key}
 Endpoint   = {remote_address}
-AllowedIPs = 0.0.0.0/0
+AllowedIPs = 0.0.0.0/0, ::0/0
 PersistentKeepAlive = 25
 """
 
