@@ -15,6 +15,7 @@ from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
+from wgmesh.templates import render, shorewall_interfaces
 from .endpointdb import *
 
 import pprint
@@ -60,6 +61,72 @@ AllowedIPs = 0.0.0.0/0, ::0/0
 PersistentKeepAlive = 25
 """
 
+class MixedInterface(Exception): pass
+class NoInterface(Exception): pass
+
+def find_interfaces():
+    ''' return the public interface '''
+    all = get_local_addresses_with_interfaces()
+    public4  = []
+    trust4 = []
+    public6  = []
+    trust6 = []
+    retval = (None, None)
+
+    for iface, addr in all[0] + all[1]:
+        logger.trace(f'Located IP Address: {iface} / {addr}')
+        addr = ipaddress.ip_address(addr)
+        if addr.version == 4:
+            apub = public4
+            atru = trust4
+        else:
+            apub = public6
+            atru = trust6
+            pass
+
+        if addr.is_private:
+            if iface in atru: continue
+            if getattr(addr, 'is_link_local', False):
+                continue
+            if iface in apub: 
+                raise MixedInterface
+            logger.debug(f'Private address {addr} on interface {iface}.')
+            atru.append(iface)
+        else:
+            if iface in apub: continue
+            if iface in atru:
+                raise MixedInterface
+            logger.debug(f'Public address {addr} on interface {iface}.')
+            apub.append(iface)
+            continue
+        continue
+
+    if len(public4) == 1 and len(trust4) == 1:
+        retval = (public4[0], trust4[0])
+    elif len(public6) == 1 and len(trust6) == 1:
+        retval = (public6[0], trust6[0])
+    elif len(public6) == 1 and len(trust4) == 1:
+        retval = (public6[0], trust4[0])
+        pass
+
+    return retval
+
+def find_trust():
+    ''' return the trust(private) interface '''
+    public, private = find_interfaces()
+    if private:
+        return private
+    else:
+        raise NoInterface
+
+def find_public():
+    ''' return the trust(private) interface '''
+    public, private = find_interfaces()
+    if public:
+        return public
+    else:
+        raise NoInterface
+
 @click.command()
 @click.option( '--debug','-d', is_flag=True, default=False, help="Activate Debug Logging." )
 @click.option( '--trace','-t', is_flag=True, default=False, help="Activate Trace Logging." )
@@ -67,8 +134,11 @@ PersistentKeepAlive = 25
 @click.option( '--locus','-l', default='', help="Manually set Mesh Locus." )
 @click.option( '--pubkey','-p', default='', help="Manually set Mesh Public Key." )
 @click.option( '--hostname','-h', default='', help="Override local hostname." )
+@click.option( '--inbound','-i', default='', help="Inbound interface." )
+@click.option( '--outbound','-o', default='', help="Outbound interface." )
 @click.argument('domain')
-def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str, domain: str):
+def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str,
+        inbound: str, outbound: str, domain: str):
     f''' Setup localhost, provide registration with master controller.
 
     wgdeploy: deploy wireguard and FRR configuration.
@@ -124,6 +194,26 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
     tunnel, cidr = o['remote'].split('/')
     mykey = open(hostconfig.host.private_key_file, 'r').read().strip()
 
+    if not inbound:
+        try:
+            public = find_public()
+        except NoInterface:
+            logger.error('No public interface found.')
+            sys.exit(1)
+    else:
+        public = inbound
+        pass
+
+    if not outbound:
+        try:
+            trust = find_trust()
+        except NoInterface:
+            logger.error('No trust interface found.')
+            sys.exit(1)
+    else:
+        trust = outbound
+        pass
+
     for index, item in enumerate(o['hosts'].items()):
         host, values = item
         remotes = ''
@@ -140,6 +230,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             'Hostname':         host,
             'public_key':       values['key'],
             'remote_address':   remotes,
+            'public_interface': public,
+            'trust_interface':  trust,
         }
 
         print()
@@ -153,6 +245,30 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
                 pass
             pass
         continue
+
+    shorewall_args = {
+        'public_interface': public,
+        'trust_interface': trust,
+    }
+
+    output = render(shorewall_interfaces, shorewall_args)
+    try:
+        current = open('/etc/shorewall/interfaces', 'r').read()
+        if current == output:
+            update = False
+        update = True
+    except FileNotFoundError:
+        update = True
+
+    try:
+        if update:
+            with open('/etc/shorewall/interfaces','w') as ifacefile:
+                ifacefile.write(output)
+                pass
+            pass
+    except FileNotFoundError:
+        logger.error(f'Unknown problem (re)creatign /etc/shorewall/interfaces')
+        sys.exit(1)
 
     # build Box
     # Loop THrough Contacts
