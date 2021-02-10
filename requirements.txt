@@ -8,3 +8,4 @@ natsort
 pynacl
 ruamel.yaml
 six
+jinja
