@@ -15,7 +15,7 @@ from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
-from wgmesh.templates import render, shorewall_interfaces
+from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start
 from .endpointdb import *
 
 import pprint
@@ -127,6 +127,34 @@ def find_public():
     else:
         raise NoInterface
 
+def check_update_file(buffer, path):
+    ''' compare existing contents to calculated buffers, write if different '''
+    try:
+        current = open(path, 'r').read()
+        if current == buffer:
+            logger.trace(f'buffer matches {path}, no update needed.')
+            update = False
+        update = True
+    except FileNotFoundError:
+        logger.trace(f'Unable to load file {path}')
+        update = True
+
+    try:
+        if update:
+            logger.trace(f'Write file: {path}.')
+            with open(path,'w') as ifacefile:
+                ifacefile.write(buffer)
+                pass
+            pass
+    except FileNotFoundError:
+        logger.error(f'Unknown problem (re)creatign {path}')
+        sys.exit(1)
+        pass
+    except PermissionError:
+        logger.error(f'Permission Denied Writing: {path}')
+        sys.exit(1)
+        pass
+
 @click.command()
 @click.option( '--debug','-d', is_flag=True, default=False, help="Activate Debug Logging." )
 @click.option( '--trace','-t', is_flag=True, default=False, help="Activate Trace Logging." )
@@ -194,24 +222,25 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
     tunnel, cidr = o['remote'].split('/')
     mykey = open(hostconfig.host.private_key_file, 'r').read().strip()
 
+    template_args = {
+        'ports': [],
+        'wireguard_interfaces': [],
+    }
+
     if not inbound:
         try:
-            public = find_public()
+            template_args['public_interface'] = find_public()
         except NoInterface:
             logger.error('No public interface found.')
             sys.exit(1)
     else:
-        public = inbound
+        template_args['public_interface'] = inbound
         pass
 
     if not outbound:
-        try:
-            trust = find_trust()
-        except NoInterface:
-            logger.error('No trust interface found.')
-            sys.exit(1)
+        template_args['trust_interface'] = 'veth0'
     else:
-        trust = outbound
+        template_args['trust_interface'] = outbound
         pass
 
     for index, item in enumerate(o['hosts'].items()):
@@ -230,12 +259,17 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             'Hostname':         host,
             'public_key':       values['key'],
             'remote_address':   remotes,
-            'public_interface': public,
-            'trust_interface':  trust,
+            'octet':            o['octet'],
+            'public_interface': template_args['public_interface'],
+            'trust_interface':  template_args['trust_interface'],
         }
+        template_args['octet'] = o['octet']
+        template_args['ports'].append( values['localport'] )
+        template_args['wireguard_interfaces'].append(f'wg{index}')
 
         print()
         print(f'writing: /etc/wireguard/wg{index}.conf')
+    
         if dry_run:
             logger.info(f'Dry-run Mode.')
             print(wire_template.format(**fulfill))
@@ -246,45 +280,13 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             pass
         continue
 
-    shorewall_args = {
-        'public_interface': public,
-        'trust_interface': trust,
-    }
+    interfaces = render(shorewall_interfaces, template_args)
+    dnatrules  = render(shorewall_rules,      template_args)
+    namespace  = render(namespace_start,      template_args)
 
-    output = render(shorewall_interfaces, shorewall_args)
-    try:
-        current = open('/etc/shorewall/interfaces', 'r').read()
-        if current == output:
-            update = False
-        update = True
-    except FileNotFoundError:
-        update = True
-
-    try:
-        if update:
-            with open('/etc/shorewall/interfaces','w') as ifacefile:
-                ifacefile.write(output)
-                pass
-            pass
-    except FileNotFoundError:
-        logger.error(f'Unknown problem (re)creatign /etc/shorewall/interfaces')
-        sys.exit(1)
-
-    # build Box
-    # Loop THrough Contacts
-    # Write somethign to disk
-
-    #Get Domain
-
-    # Deploy Configuration
-
-    ## Fetch Domain Settings ffrom DNS (or import)
-
-    # local config load -> get UUID
-    # We need port settings
-    # /etc/wireguard/(that file).yaml
-    
-    # build wireguard config
+    check_update_file(dnatrules,  '/etc/shorewall/rules')
+    check_update_file(interfaces, '/etc/shorewall/interfaces')
+    check_update_file(namespace,  '/usr/local/sbin/namestart_start')
 
     return 0
 
