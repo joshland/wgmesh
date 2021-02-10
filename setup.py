@@ -33,7 +33,7 @@ requires = [
     'route53',
     'ruamel.yaml',
     'six',
-    'jinja'
+    'jinja2'
 ]
 
 test_requires = requires
