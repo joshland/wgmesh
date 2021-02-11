@@ -17,20 +17,20 @@ namespace_start = """
 ## NS Creation
 ip netns add private
 
-## Add {{ trust_interface }}
-ip link set netns private dev {{ trust_interface }}
+## Add {{ interface_trust }}
+ip link set netns private dev {{ interface_trust }}
 ip netns exec private ip addr add 127.0.0.1/8 dev lo
-ip netns exec private ip addr add 172.16.143.51/24 dev {{ trust_interface }}
-ip link add veth0 type veth peer name veth0 netns private
+ip netns exec private ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
+ip link add {{ interface_outbound }} type veth peer name {{ interface_outbound }} netns private
 
 ## Establish Namespace Uplink
-ip netns exec private ip addr add 169.254.{{ octet }}.2/24 dev veth0
-ip addr add 169.254.{{ octet }}.1/24 dev veth0
+ip netns exec private ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
+ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
 
 ip netns exec private ip link set lo up
-ip netns exec private ip link set {{ trust_interface }} up
-ip netns exec private ip link set veth0 up
-ip link set veth0 up
+ip netns exec private ip link set {{ interface_trust }} up
+ip netns exec private ip link set {{ interface_outbound }} up
+ip link set {{ interface_outbound }} up
 
 ## Enable Routing
 ip netns exec private sysctl -qw net.ipv6.conf.all.forwarding=1
@@ -75,7 +75,7 @@ SSH(ACCEPT)     loc             $FW
 #BGP(ACCEPT)     $FW		        loc
 
 {% for port in ports -%}
-DNAT            net             loc:169.254.{{ octet }}.1  udp     {{ port }}
+DNAT            net             loc:169.254.{{ octet }}.2  udp     {{ port }}
 {% endfor %}
 # Drop Ping from the "bad" net zone.
 Ping(DROP)   	net             $FW
@@ -103,9 +103,8 @@ shorewall_interfaces = """
 ?FORMAT 2
 ###############################################################################
 #ZONE	INTERFACE	OPTIONS
-net     NET_IF      tcpflags,nosmurfs,routefilter,sourceroute=0,physical={{ public_interface }}
-loc     LOC_IF      tcpflags,routefilter,physical={{ trust_interface }}
+net     NET_IF      tcpflags,nosmurfs,routefilter,sourceroute=0,physical={{ interface_public }}
+loc     LOC_IF      tcpflags,routefilter,physical={{ interface_trust }}
 #dmz    DMZ_IF      tcpflags,nosmurfs,routefilter,logmartians,physical={{ wireguard_interface | default('wg+') }}
 
 """
-

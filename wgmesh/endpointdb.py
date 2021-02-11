@@ -44,6 +44,10 @@ class Endpoint(object):
     PPK      = attr.ib(default='', kw_only=True)
     private_key_file = attr.ib(default='', kw_only=True, converter=nonone)
     public_key_file  = attr.ib(default='', kw_only=True, converter=nonone)
+    interface_public = attr.ib(default='', kw_only=True, converter=nonone)
+    interface_trust  = attr.ib(default='', kw_only=True, converter=nonone)
+    interface_trust_ip = attr.ib(default='', kw_only=True, converter=nonone)
+    interface_outbound = attr.ib(default='', kw_only=True, converter=nonone)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
@@ -118,7 +122,9 @@ def save_host_config(config: HostDB):
         yamlfile.write( yaml.dump(data, Dumper=yaml.RoundTripDumper) )
         pass
 
-def CheckLostHostConfig(domain: str, locus: str, pubkey: str) -> str:
+def CheckLocalHostConfig(domain: str, locus: str, pubkey: str,
+                         public: str = '', trust: str = '', outbound: str = '',
+                         trustip: str = '') -> str:
     ''' Load/Generate local site-base config
 
     Validate and update the settings.
@@ -126,6 +132,11 @@ def CheckLostHostConfig(domain: str, locus: str, pubkey: str) -> str:
     return
     '''
     config = load_host_config(domain, locus, pubkey)
+
+    if outbound: config.host.interface_outbound = outbound
+    if public:   config.host.interface_public   = public
+    if trustip:  config.host.interface_trust_ip = trustip
+    if trust:    config.host.interface_trust    = trust
 
     if config.host.private_key_file == '':
         config.host.private_key_file = f'/etc/wireguard/{locus}_priv'

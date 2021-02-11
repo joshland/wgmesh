@@ -156,17 +156,19 @@ def check_update_file(buffer, path):
         pass
 
 @click.command()
-@click.option( '--debug','-d', is_flag=True, default=False, help="Activate Debug Logging." )
-@click.option( '--trace','-t', is_flag=True, default=False, help="Activate Trace Logging." )
-@click.option( '--dry-run','-n', is_flag=True, default=False, help="Don't write any files." )
-@click.option( '--locus','-l', default='', help="Manually set Mesh Locus." )
-@click.option( '--pubkey','-p', default='', help="Manually set Mesh Public Key." )
-@click.option( '--hostname','-h', default='', help="Override local hostname." )
-@click.option( '--inbound','-i', default='', help="Inbound interface." )
-@click.option( '--outbound','-o', default='', help="Outbound interface." )
+@click.option( '--debug',    '-d', default=False, is_flag=True, help="Activate Debug Logging." )
+@click.option( '--trace',    '-t', default=False, is_flag=True, help="Activate Trace Logging." )
+@click.option( '--dry-run',  '-n', default=False, is_flag=True, help="Don't write any files."  )
+@click.option( '--locus',    '-l', default='', help="Manually set Mesh Locus."      )
+@click.option( '--pubkey',   '-p', default='', help="Manually set Mesh Public Key." )
+@click.option( '--hostname', '-h', default='', help="Override local hostname."      )
+@click.option( '--inbound',  '-i', default='', help="Inbound interface."  )
+@click.option( '--outbound', '-o', default='', help="Outbound interface." )
+@click.option( '--trust',    '-T', default='', help="Trust interface."    )
+@click.option( '--trustip',  '-I', default='', help="Trust interface IP address."    )
 @click.argument('domain')
 def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str,
-        inbound: str, outbound: str, domain: str):
+        inbound: str, outbound: str, trust: str, trustip: str, domain: str):
     f''' Setup localhost, provide registration with master controller.
 
     wgdeploy: deploy wireguard and FRR configuration.
@@ -192,7 +194,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
         pass
 
     #hostconfig
-    hostconfig = CheckLostHostConfig(domain, locus, pubkey)
+    hostconfig = CheckLocalHostConfig(domain, locus, pubkey)
     import pprint
     print(f'|-----------------------------------|')
     pprint.pprint(hostconfig)
@@ -227,21 +229,25 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
         'wireguard_interfaces': [],
     }
 
-    if not inbound:
-        try:
-            template_args['public_interface'] = find_public()
-        except NoInterface:
-            logger.error('No public interface found.')
-            sys.exit(1)
+    if inbound:
+        template_args['interface_public'] = inbound
     else:
-        template_args['public_interface'] = inbound
-        pass
+        template_args['interface_public'] = hostconfig.host.interface_public
 
-    if not outbound:
-        template_args['trust_interface'] = 'veth0'
+    if outbound:
+        template_args['interface_outbound'] = outbound
     else:
-        template_args['trust_interface'] = outbound
-        pass
+        template_args['interface_outbound'] = hostconfig.host.interface_outbound
+
+    if trust:
+        template_args['interface_trust'] = trust
+    else:
+        template_args['interface_trust'] = hostconfig.host.interface_trust
+
+    if trustip:
+        template_args['interface_trust_ip'] = trustip
+    else:
+        template_args['interface_trust_ip'] = hostconfig.host.interface_trust_ip
 
     for index, item in enumerate(o['hosts'].items()):
         host, values = item
@@ -260,8 +266,9 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             'public_key':       values['key'],
             'remote_address':   remotes,
             'octet':            o['octet'],
-            'public_interface': template_args['public_interface'],
-            'trust_interface':  template_args['trust_interface'],
+            'interface_public':    template_args['interface_public'],
+            'interface_trust':     template_args['interface_trust'],
+            'interface_outbound':  template_args['interface_outbound'],
         }
         template_args['octet'] = o['octet']
         template_args['ports'].append( values['localport'] )
