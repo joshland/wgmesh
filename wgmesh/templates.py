@@ -26,11 +26,13 @@ ip link add {{ interface_outbound }} type veth peer name {{ interface_outbound }
 ## Establish Namespace Uplink
 ip netns exec private ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
 ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
+ip netns exec private ip route add default via 169.254.{{ octet }}.1
 
 ip netns exec private ip link set lo up
 ip netns exec private ip link set {{ interface_trust }} up
 ip netns exec private ip link set {{ interface_outbound }} up
 ip link set {{ interface_outbound }} up
+shorewall restart
 
 ## Enable Routing
 ip netns exec private sysctl -qw net.ipv6.conf.all.forwarding=1
