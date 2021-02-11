@@ -5,6 +5,7 @@ dnspython
 ifaddr
 loguru
 natsort
+netaddr
 pynacl
 ruamel.yaml
 six

@@ -29,6 +29,7 @@ requires = [
     'ifaddr',
     'loguru',
     'natsort',
+    'netaddr',
     'pynacl',
     'route53',
     'ruamel.yaml',
