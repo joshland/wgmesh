@@ -81,7 +81,7 @@ SSH(ACCEPT)     loc             $FW
 DNAT            net             loc:169.254.{{ octet }}.2  udp     {{ port }}
 {% endfor %}
 # Drop Ping from the "bad" net zone.
-Ping(DROP)   	net             $FW
+Ping(ACCEPT)   	net             $FW
 
 # Make ping work bi-directionally between the dmz, net, Firewall and local zone
 # (assumes that the loc-> net policy is ACCEPT).
