@@ -92,7 +92,7 @@ def cli(force, debug, trace, no_locals, locus, addr, pubkey, hostname, domain):
         pubkey = dominfo['publickey']
         pass
 
-    hostconfig = CheckLostHostConfig(domain, locus, pubkey)
+    hostconfig = CheckLocalHostConfig(domain, locus, pubkey)
 
     cli_ipaddress = addr
     lsk = None

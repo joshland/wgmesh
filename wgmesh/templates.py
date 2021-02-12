@@ -44,6 +44,7 @@ ip netns exec private sysctl -qw net.ipv4.conf.all.forwarding=1
 
 ## Start Wireguard
 {% for iface in wireguard_interfaces -%}
+ip netns exec private wg-quick down {{ iface }}
 ip netns exec private wg-quick up {{ iface }}
 {% endfor %}
 
