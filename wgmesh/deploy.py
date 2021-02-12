@@ -259,7 +259,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
 
         portpoints = [ o['octet']]
         portpoints.append(values['localport'] - o['portbase'])
-        netbits = ':'.join( [str(x) for x in portpoints ] )
+        netbits = ':'.join( [str(x) for x in sorted(portpoints, reverse=True) ] )
         epaddr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
         fulfill = {
             'myhost':           hostconfig.host.hostname,
