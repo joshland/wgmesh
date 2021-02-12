@@ -256,7 +256,11 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             addrs = values['remote'].split(',')
             remotes = (',').join( [ f"{str(x)}:{values['remoteport']}" for x in addrs ] )
             pass
-        epaddr = f'{tunnel}{index}:{o["octet"]}/{cidr}'
+
+        portpoints = [ o['octet']]
+        portpoints.append(values['localport'] - o['portbase'])
+        netbits = ':'.join( [str(x) for x in portpoints ] )
+        epaddr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
         fulfill = {
             'myhost':           hostconfig.host.hostname,
             'private_key':      mykey,
