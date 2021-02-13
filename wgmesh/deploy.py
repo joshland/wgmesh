@@ -257,10 +257,11 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             remotes = (',').join( [ f"{str(x)}:{values['remoteport']}" for x in addrs ] )
             pass
 
-        portpoints = [ o['octet']]
-        portpoints.append(values['localport'] - o['portbase'])
-        netbits = ':'.join( [str(x) for x in sorted(portpoints, reverse=True) ] )
+        portpoints = [ o['octet'] ]
+        portpoints.append( values['localport'] - o['portbase'] )
+        netbits = ':'.join( [ str(x) for x in sorted(portpoints, reverse=True) ] )
         epaddr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
+
         fulfill = {
             'myhost':           hostconfig.host.hostname,
             'private_key':      mykey,
@@ -274,6 +275,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
             'interface_trust':     template_args['interface_trust'],
             'interface_outbound':  template_args['interface_outbound'],
         }
+
+        template_args['asn'] = o['asn']
         template_args['octet'] = o['octet']
         template_args['ports'].append( values['localport'] )
         template_args['wireguard_interfaces'].append(f'wg{index}')

@@ -7,6 +7,7 @@ global:
   # https://simpledns.plus/private-ipv6
   locus: eis_frr
   portbase: 49900
+  asn_range: 65151:65171
   publickey: ''
   privatekey: site.key
 

@@ -67,6 +67,19 @@ def validateIpAddress(arg):
         pass
     return retval
 
+def validateAsnRange(arg):
+    ''' Check format, and expand the ASNs '''
+    if isinstance(arg, tuple) or isinstance(arg, list):
+        retval = [ int(x) for x in arg ]
+    else:
+        try:
+            low, high = [ int(x) for x in arg.split(':') ]
+            retval = list(range(low, high + 1))
+        except:
+            retval = ast.literal_eval(arg)
+        pass
+    return retval
+
 def nonone(arg):
     ''' eliminate the None and blanks '''
     if arg == None:
@@ -76,6 +89,7 @@ def nonone(arg):
 @attr.s
 class Sitecfg(object):
     alerts = attr.ib(default='', kw_only=True)
+    asn_range = attr.ib(default='', kw_only=True, converter=validateAsnRange)
     aws_access_key_id = attr.ib(default='', kw_only=True, converter=nonone)
     aws_secret_access_key = attr.ib(default='', kw_only=True, converter=nonone)
     domain = attr.ib(default='', kw_only=True)
@@ -98,14 +112,15 @@ class Sitecfg(object):
 @attr.s
 class Host(object):
     hostname = attr.ib()
-    sitecfg = attr.ib()
-    local_ipv4 = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
-    local_ipv6 = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
+    sitecfg  = attr.ib()
+    asn      = attr.ib(default= '', kw_only=True)
+    local_ipv4  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
+    local_ipv6  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
     tunnel_ipv6 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
-    public_key = attr.ib(default=f'', kw_only=True)
-    local_networks = attr.ib(default = '', kw_only=True)
-    public_key_file = attr.ib(default=f'', kw_only=True)
+    public_key  = attr.ib(default=f'', kw_only=True)
+    local_networks   = attr.ib(default = '', kw_only=True)
+    public_key_file  = attr.ib(default=f'', kw_only=True)
     private_key_file = attr.ib(default=f'', kw_only=True)
     uuid = attr.ib()
 
@@ -155,15 +170,6 @@ class Host(object):
 
         return True
     pass
-
-#def loadkey(keyfile: str) -> PrivateKey:
-#    ''' read key from a keyfile '''
-#    uucontent = open(keyfile, 'r').read()
-#    decontent = keyimport(uucontent)
-#    logger.debug(f'Private Key {uucontent.strip()} / {decontent}')
-#    pk = PrivateKey(decontent)
-#    logger.debug(f'Encoded: {keyexport(pk)} / {keyexport(pk.public_key)}')
-#    return pk
 
 def loadkey(keyfile: str, method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' read key from a keyfile '''
@@ -507,9 +513,11 @@ def CheckConfig(site, hosts):
 
     ipv4_master = []
     ipv6_master = []
+    asn_list    = []
 
     hosts4_to_be_adjusted = []
     hosts6_to_be_adjusted = []
+    hosts_asn_fix = []
 
     # log the existing IPs
     for h in hosts:
@@ -527,6 +535,11 @@ def CheckConfig(site, hosts):
         else:
             logger.trace(f'Host ipv6 address: {h}')
             ipv6_master.append(h.tunnel_ipv6)
+            pass
+        if not h.asn:
+            hosts_asn_fix.append(h)
+        else:
+            asn_list.append(h.asn)
             pass
         continue
         
@@ -566,9 +579,18 @@ def CheckConfig(site, hosts):
         ipv6_master.append(addr)
         continue
 
+    sset = set(site.asn_range)
+    aset = set(asn_list)
+    open_asn = list(sset - aset)
+    if len(open_asn) == 0:
+        logger.error("ASN Space Exhausted")
+        pass
+
+    for h in hosts_asn_fix:
+        h.asn = open_asn.pop(0)
+        continue
+
     return site, hosts
-
-
 
 ##
 ## load template

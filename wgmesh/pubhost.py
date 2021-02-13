@@ -83,6 +83,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         myport = me.endport()
         myaddrs = ','.join([str(me.tunnel_ipv4), str(me.tunnel_ipv6)])
         core = {
+            'asn':      me.asn,
             'site':     site.domain,
             'octet':    me.octet(),
             'portbase': site.portbase,
@@ -97,6 +98,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
             logger.trace(f'IPv6: {h.local_ipv6}')
             core['hosts'][h.hostname] = { 
                 'key': h.public_key,
+                'asn': h.asn,
                 'localport': h.endport(),
                 'remoteport': myport,
                 'remote': ','.join([ str(x) for x in h.local_ipv4 + h.local_ipv6 if str(x) > '' ]),

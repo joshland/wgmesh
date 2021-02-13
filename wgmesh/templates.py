@@ -9,6 +9,35 @@ def render(template, args):
     t = env.from_string(template)
     return t.render(args)
 
+bird_private = """
+log syslog { debug, trace, info, remote, warning, error, auth, fatal, bug };
+router id 1.0.{{ octet }}.1;
+
+protocol device {
+   scan time 10;
+}
+
+protocol kernel {
+   persist;
+   learn;
+   import all;
+   export all;
+   merge paths yes;
+}
+
+protocol bgp eBGP_V01 {
+   interface "wg+"
+   local as {{ asn }}
+   import all;
+   export where ifname ~ "eth*";
+   preference 160;
+   hold time 6;
+}
+{%- endfor %}
+{%- endfor %}
+
+"""
+
 namespace_start = """
 ## wgmesh - wgdeploy /usr/local/sbin/namespace_init
 #  DO NOT EDIT BY HAND
