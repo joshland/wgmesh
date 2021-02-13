@@ -23,17 +23,20 @@ ip netns exec private ip addr add 127.0.0.1/8 dev lo
 ip netns exec private ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
 ip link add {{ interface_outbound }} type veth peer name {{ interface_outbound }} netns private
 
+## Start all affected Interfaces
+ip netns exec private ip link set lo up
+ip netns exec private ip link set {{ interface_trust }} up
+ip netns exec private ip link set {{ interface_outbound }} up
+ip link set {{ interface_outbound }} up
+
 ## Establish Namespace Uplink
 ip netns exec private ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
 ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
 ip netns exec private ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
 ip netns exec private ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
 
-ip netns exec private ip link set lo up
-ip netns exec private ip link set {{ interface_trust }} up
-ip netns exec private ip link set {{ interface_outbound }} up
-ip link set {{ interface_outbound }} up
-shorewall restart
+## Activate Firewall
+systemctl start shorewall
 
 ## Enable Routing
 ip netns exec private sysctl -qw net.ipv6.conf.all.forwarding=1
