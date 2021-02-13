@@ -50,6 +50,47 @@ ip netns exec private wg-quick up {{ iface }}
 
 """
 
+vrf_start = """
+## wgmesh - wgdeploy /usr/local/sbin/vrf_init
+#  DO NOT EDIT BY HAND
+###############################################################################
+
+## NS Creation
+ip vrf add private
+
+## Add {{ interface_trust }}
+ip link set vrf private dev {{ interface_trust }}
+ip vrf exec private ip addr add 127.0.0.1/8 dev lo
+ip vrf exec private ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
+ip link add {{ interface_outbound }} type veth peer name {{ interface_outbound }} vrf private
+
+## Establish Namespace Uplink
+ip vrf exec private ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
+ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
+ip vrf exec private ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
+ip vrf exec private ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
+
+ip vrf exec private ip link set lo up
+ip vrf exec private ip link set {{ interface_trust }} up
+ip vrf exec private ip link set {{ interface_outbound }} up
+ip link set {{ interface_outbound }} up
+shorewall restart
+
+## Enable Routing
+ip vrf exec private sysctl -qw net.ipv6.conf.all.forwarding=1
+ip vrf exec private sysctl -qw net.ipv4.conf.all.forwarding=1
+
+## Start Private Routing Daemon
+## ip vrf exec 
+
+## Start Wireguard
+{% for iface in wireguard_interfaces -%}
+ip vrf exec private wg-quick down {{ iface }}
+ip vrf exec private wg-quick up {{ iface }}
+{% endfor %}
+
+"""
+
 shorewall_rules = """
 ## wgmesh - wgdeploy /etc/shorewall/rules
 #  DO NOT EDIT BY HAND

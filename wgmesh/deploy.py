@@ -15,13 +15,13 @@ from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
-from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start
+from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start, vrf_start
 from .endpointdb import *
 
 import pprint
 import base64
 
-import ipaddress
+import ipaddress   
 
 lect = """
 ---
@@ -294,10 +294,12 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
     interfaces = render(shorewall_interfaces, template_args)
     dnatrules  = render(shorewall_rules,      template_args)
     namespace  = render(namespace_start,      template_args)
+    vrf        = render(vrf_start,      template_args)
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
     check_update_file(namespace,  '/usr/local/sbin/namestart_start')
+    check_update_file(vrf,        '/usr/local/sbin/vrf_start')
 
     return 0
 
