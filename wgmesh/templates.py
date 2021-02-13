@@ -96,16 +96,19 @@ ip vrf exec private ip addr add 127.0.0.1/8 dev lo
 ip vrf exec private ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
 ip link add {{ interface_outbound }} type veth peer name {{ interface_outbound }} vrf private
 
+## Activate network links
+ip vrf exec private ip link set lo up
+ip vrf exec private ip link set {{ interface_trust }} up
+ip vrf exec private ip link set {{ interface_outbound }} up
+ip link set {{ interface_outbound }} up
+
 ## Establish Namespace Uplink
 ip vrf exec private ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
 ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
 ip vrf exec private ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
 ip vrf exec private ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
 
-ip vrf exec private ip link set lo up
-ip vrf exec private ip link set {{ interface_trust }} up
-ip vrf exec private ip link set {{ interface_outbound }} up
-ip link set {{ interface_outbound }} up
+## Activate Firewall
 shorewall restart
 
 ## Enable Routing
