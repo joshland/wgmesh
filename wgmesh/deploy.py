@@ -16,6 +16,7 @@ from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
 from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start, vrf_start
+from wgmesh.templates import bird_private
 from .endpointdb import *
 
 import pprint
@@ -161,14 +162,15 @@ def check_update_file(buffer, path):
 @click.option( '--dry-run',  '-n', default=False, is_flag=True, help="Don't write any files."  )
 @click.option( '--locus',    '-l', default='', help="Manually set Mesh Locus."      )
 @click.option( '--pubkey',   '-p', default='', help="Manually set Mesh Public Key." )
+@click.option( '--asn',      '-a', default='', help="Manually set Local ASN."       )
 @click.option( '--hostname', '-h', default='', help="Override local hostname."      )
 @click.option( '--inbound',  '-i', default='', help="Inbound interface."  )
 @click.option( '--outbound', '-o', default='', help="Outbound interface." )
 @click.option( '--trust',    '-T', default='', help="Trust interface."    )
 @click.option( '--trustip',  '-I', default='', help="Trust interface IP address."    )
 @click.argument('domain')
-def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str,
-        inbound: str, outbound: str, trust: str, trustip: str, domain: str):
+def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: str,
+        hostname: str, inbound: str, outbound: str, trust: str, trustip: str, domain: str):
     f''' Setup localhost, provide registration with master controller.
 
     wgdeploy: deploy wireguard and FRR configuration.
@@ -192,6 +194,10 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
     if pubkey == '':
         pubkey = dominfo['publickey']
         pass
+
+    #if asn == '':
+    #    asn = dominfo['asn']
+    #    pass
 
     #hostconfig
     hostconfig = CheckLocalHostConfig(domain, locus, pubkey)
@@ -297,12 +303,14 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
     interfaces = render(shorewall_interfaces, template_args)
     dnatrules  = render(shorewall_rules,      template_args)
     namespace  = render(namespace_start,      template_args)
-    vrf        = render(vrf_start,      template_args)
+    vrf        = render(vrf_start,            template_args)
+    bird_priv  = render(bird_private,         template_args)
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
     check_update_file(namespace,  '/usr/local/sbin/namestart_start')
     check_update_file(vrf,        '/usr/local/sbin/vrf_start')
+    check_update_file(bird_priv,  '/etc/bird/bird_private.conf')
 
     return 0
 

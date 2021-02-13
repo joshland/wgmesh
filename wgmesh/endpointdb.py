@@ -38,6 +38,7 @@ def validateUuid(value):
 
 @attr.s
 class Endpoint(object):
+    asn      = attr.ib(default='', kw_only=True)
     hostname = attr.ib(default=None, kw_only=True, converter=validateHostname)
     uuid     = attr.ib(default=None, kw_only=True, converter=validateUuid)
     SSK      = attr.ib(default='', kw_only=True)
@@ -123,7 +124,8 @@ def save_host_config(config: HostDB):
         pass
 
 def CheckLocalHostConfig(domain: str, locus: str, pubkey: str,
-                         public: str = '', trust: str = '', outbound: str = '',
+                         public: str = '', asn: str = '', 
+                         trust: str = '', outbound: str = '',
                          trustip: str = '') -> str:
     ''' Load/Generate local site-base config
 
@@ -131,6 +133,7 @@ def CheckLocalHostConfig(domain: str, locus: str, pubkey: str,
 
     return
     '''
+
     config = load_host_config(domain, locus, pubkey)
 
     if outbound: config.host.interface_outbound = outbound
@@ -160,6 +163,7 @@ def CheckLocalHostConfig(domain: str, locus: str, pubkey: str,
         PPK = None
         pass
 
+    #config.host.asn = 
     config.host.SSK = SSK
     config.host.PPK = PPK
     config.site.PPK = keyimport(config.site.public_key, PublicKey)

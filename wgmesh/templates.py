@@ -33,8 +33,6 @@ protocol bgp eBGP_V01 {
    preference 160;
    hold time 6;
 }
-{%- endfor %}
-{%- endfor %}
 
 """
 
