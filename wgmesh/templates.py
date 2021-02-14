@@ -17,21 +17,44 @@ protocol device {
    scan time 10;
 }
 
+protocol bfd {
+    interface "*" {
+        interval 50 ms;
+    };
+}
+
 protocol kernel {
    persist;
    learn;
-   import all;
-   export all;
+   ipv4 {
+       import all;
+       export all;
+   }
+   merge paths yes;
+}
+
+protocol kernel {
+   persist;
+   learn;
+   ipv6 {
+       import all;
+       export all;
+   }
    merge paths yes;
 }
 
 protocol bgp eBGP_V01 {
-   interface "wg+"
-   local as {{ asn }}
-   import all;
-   export where ifname ~ "eth*";
-   preference 160;
+   interface "wg+";
+   neighbor external;
+   local as {{ asn }};
+   ipv4 {
+       import all;
+       export where ifname ~ "eth*";
+   }
+   #preference 160;
    hold time 6;
+   extended next hop;
+   bfd;
 }
 
 """
