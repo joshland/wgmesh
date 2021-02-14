@@ -16,7 +16,7 @@ from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
 from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start, vrf_start
-from wgmesh.templates import bird_private
+from wgmesh.templates import bird_private, wireguard_conf
 from .endpointdb import *
 
 import pprint
@@ -43,23 +43,6 @@ lect = """
     - pubkey: {pubkey}
     - local_networks: {localnets}
     - remote_address: {remoteaddr}
-"""
-
-wire_template = """
-#
-# Peering template generated template for {myhost} => {Hostname}
-#
-[Interface]
-PrivateKey = {private_key}
-Address    = {tunnel_addresses}
-ListenPort = {local_port}
-
-# {Hostname}
-[Peer]
-PublicKey  = {public_key}
-Endpoint   = {remote_address}
-AllowedIPs = 0.0.0.0/0, ::0/0
-PersistentKeepAlive = 25
 """
 
 class MixedInterface(Exception): pass
@@ -294,15 +277,14 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         template_args['wireguard_interfaces'][f'wg{index}'] = [ remote_endpoint_addr, values['asn'] ]
         template_args['local_endpoint_addr'] = local_endpoint_addr
 
-        print()
-        print(f'writing: /etc/wireguard/wg{index}.conf')
-    
+        wgconf = render(wireguard_conf, fulfill)
+
         if dry_run:
             logger.info(f'Dry-run Mode.')
-            print(wire_template.format(**fulfill))
+            print(wgconf)
         else:
             with open(f'/etc/wireguard/wg{index}.conf', 'w') as writer:
-                writer.write(wire_template.format(**fulfill))
+                writer.write(wgconf)
                 pass
             pass
         continue

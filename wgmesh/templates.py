@@ -49,14 +49,14 @@ template bgp mesh_partner {
        import all;
        export all;
        #export where ifname ~ "eth*";
+       #preference 160;
+       #extended next hop;
    };
    ipv6 {
        import all;
        export all;
        #export where ifname ~ "eth*";
    };
-   #preference 160;
-   #extended next hop;
    hold time 6;
    bfd;
    graceful restart;
@@ -220,4 +220,23 @@ net     NET_IF      tcpflags,nosmurfs,routefilter,sourceroute=0,physical={{ inte
 loc     LOC_IF      tcpflags,routefilter,physical={{ interface_outbound }}
 #dmz    DMZ_IF      tcpflags,nosmurfs,routefilter,logmartians,physical={{ wireguard_interface | default('wg+') }}
 
+"""
+
+wireguard_conf = """
+#
+# Peering template generated template for {( myhost )} => {{ Hostname }}
+#
+[Interface]
+PrivateKey = {{ private_key }}
+Address    = {{ tunnel_addresses }}
+ListenPort = {{ local_port }}
+
+# {{ Hostname }}
+[Peer]
+PublicKey  = {{ public_key }}
+{% if remote_address > '' -%}
+Endpoint   = {{ remote_address }}
+{% endif %}
+AllowedIPs = 0.0.0.0/0, ::0/0
+PersistentKeepAlive = 25
 """
