@@ -43,19 +43,25 @@ protocol kernel {
    merge paths yes;
 }
 
-protocol bgp eBGP_V01 {
-   interface "wg+";
-   neighbor range {{ tunnel_remote }} external;
+template bgp mesh_partner {
    local as {{ asn }};
    ipv4 {
        import all;
        export where ifname ~ "eth*";
    };
    #preference 160;
+   #extended next hop;
    hold time 6;
-   extended next hop;
    bfd;
+   graceful restart;
 }
+
+{% for wg in wireguard_interfaces %}
+protocol bgp partner_{{ wg }} from mesh_partner {
+   interface "wg+";
+   neighbor range {{ tunnel_remote }} external;
+}
+{% endfor %}
 
 """
 
