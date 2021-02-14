@@ -50,6 +50,11 @@ template bgp mesh_partner {
        export all;
        #export where ifname ~ "eth*";
    };
+   ipv6 {
+       import all;
+       export all;
+       #export where ifname ~ "eth*";
+   };
    #preference 160;
    #extended next hop;
    hold time 6;
@@ -57,10 +62,10 @@ template bgp mesh_partner {
    graceful restart;
 }
 
-{% for wg, remote_endpoint_addr in wireguard_interfaces.items() %}
+{% for wg, values in wireguard_interfaces.items() %}
 protocol bgp partner_{{ wg }} from mesh_partner {
    interface "{{ wg }}";
-   neighbor {{ remote_endpoint_addr }} as {{ remote_asn }};
+   neighbor {{ values[0] }} as {{ values[1] }};
 }
 {% endfor %}
 
