@@ -255,8 +255,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
     else:
         template_args['interface_trust_ip'] = hostconfig.host.interface_trust_ip
 
-    for index, item in enumerate(o['hosts'].items()):
-        host, values = item
+    for host, values in o['hosts'].items():
+        index = values['localport'] - o['portbase']
         remotes = ''
         if len(values['remote']):
             addrs = values['remote'].split(',')
@@ -264,7 +264,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             pass
 
         portpoints = [ o['octet'] ]
-        portpoints.append( values['localport'] - o['portbase'] )
+        portpoints.append( index )
         netbits = ':'.join( [ str(x) for x in sorted(portpoints, reverse=True) ] )
         epaddr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
 
