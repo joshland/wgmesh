@@ -29,7 +29,7 @@ protocol kernel {
    ipv4 {
        import all;
        export all;
-   }
+   };
    merge paths yes;
 }
 
@@ -39,18 +39,18 @@ protocol kernel {
    ipv6 {
        import all;
        export all;
-   }
+   };
    merge paths yes;
 }
 
 protocol bgp eBGP_V01 {
    interface "wg+";
-   neighbor external;
+   neighbor range {{ tunnel_remote }} external;
    local as {{ asn }};
    ipv4 {
        import all;
        export where ifname ~ "eth*";
-   }
+   };
    #preference 160;
    hold time 6;
    extended next hop;

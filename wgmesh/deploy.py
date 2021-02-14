@@ -284,6 +284,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
         template_args['asn'] = o['asn']
         template_args['octet'] = o['octet']
+        template_args['tunnel_remote'] = o['remote']
         template_args['ports'].append( values['localport'] )
         template_args['wireguard_interfaces'].append(f'wg{index}')
 
