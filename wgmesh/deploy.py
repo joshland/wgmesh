@@ -195,6 +195,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         pubkey = dominfo['publickey']
         pass
 
+    ### Todo, we need to save these more efficiently locally.
     #if asn == '':
     #    asn = dominfo['asn']
     #    pass
@@ -254,8 +255,11 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         template_args['interface_trust_ip'] = trustip
     else:
         template_args['interface_trust_ip'] = hostconfig.host.interface_trust_ip
+        pass
 
+    template_args['wireguard_interfaces'] = {}
     for host, values in o['hosts'].items():
+
         index = values['localport'] - o['portbase']
         remotes = ''
         if len(values['remote']):
@@ -266,12 +270,13 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         portpoints = [ o['octet'] ]
         portpoints.append( index )
         netbits = ':'.join( [ str(x) for x in sorted(portpoints, reverse=True) ] )
-        epaddr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
+        local_endpoint_addr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
+        remote_endpoint_addr = f'{tunnel}{netbits}:{index}'
 
         fulfill = {
             'myhost':           hostconfig.host.hostname,
             'private_key':      mykey,
-            'tunnel_addresses': epaddr,
+            'tunnel_addresses': local_endpoint_addr,
             'local_port':       values['localport'],
             'Hostname':         host,
             'public_key':       values['key'],
@@ -282,11 +287,13 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             'interface_outbound':  template_args['interface_outbound'],
         }
 
-        template_args['asn'] = o['asn']
+        template_args['local_asn'] = o['asn']
+        template_args['remote_asn'] = o['asn']
         template_args['octet'] = o['octet']
         template_args['tunnel_remote'] = o['remote']
         template_args['ports'].append( values['localport'] )
-        template_args['wireguard_interfaces'].append(f'wg{index}')
+        template_args['wireguard_interfaces'][f'wg{index}'] = remote_endpoint_addr
+        template_args['local_endpoint_addr'] = local_endpoint_addr
 
         print()
         print(f'writing: /etc/wireguard/wg{index}.conf')

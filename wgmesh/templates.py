@@ -44,10 +44,11 @@ protocol kernel {
 }
 
 template bgp mesh_partner {
-   local as {{ asn }};
+   local as {{ local_asn }};
    ipv4 {
        import all;
-       export where ifname ~ "eth*";
+       export all;
+       #export where ifname ~ "eth*";
    };
    #preference 160;
    #extended next hop;
@@ -56,10 +57,10 @@ template bgp mesh_partner {
    graceful restart;
 }
 
-{% for wg in wireguard_interfaces %}
+{% for wg, remote_endpoint_addr in wireguard_interfaces.items() %}
 protocol bgp partner_{{ wg }} from mesh_partner {
    interface "{{ wg }}";
-   neighbor range {{ tunnel_remote }} external;
+   neighbor {{ remote_endpoint_addr }} as {{ remote_asn }};
 }
 {% endfor %}
 
@@ -102,7 +103,7 @@ ip netns exec private sysctl -qw net.ipv4.conf.all.forwarding=1
 ## ip netns exec 
 
 ## Start Wireguard
-{% for iface in wireguard_interfaces -%}
+{% for iface, addr in wireguard_interfaces.items() -%}
 ip netns exec private wg-quick down {{ iface }}
 ip netns exec private wg-quick up {{ iface }}
 {% endfor %}
@@ -146,7 +147,7 @@ ip vrf exec private sysctl -qw net.ipv4.conf.all.forwarding=1
 ## ip vrf exec 
 
 ## Start Wireguard
-{% for iface in wireguard_interfaces -%}
+{% for iface, addr in wireguard_interfaces.items() -%}
 ip vrf exec private wg-quick down {{ iface }}
 ip vrf exec private wg-quick up {{ iface }}
 {% endfor %}
