@@ -58,7 +58,7 @@ template bgp mesh_partner {
 
 {% for wg in wireguard_interfaces %}
 protocol bgp partner_{{ wg }} from mesh_partner {
-   interface "wg+";
+   interface "{{ wg }}";
    neighbor range {{ tunnel_remote }} external;
 }
 {% endfor %}
