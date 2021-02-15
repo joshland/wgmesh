@@ -18,8 +18,8 @@ roa6 table roa_v6;
 
 protocol device DEVICE { }
 protocol direct DIRECT { ipv4; ipv6; }
-protocol kernel KERNEL4 { ipv4 { export all; }; }
-protocol kernel KERNEL6 { ipv6 { export all; }; }
+protocol kernel KERNEL4 { learn; ipv4 { export all; }; merge paths; }
+protocol kernel KERNEL6 { learn; ipv6 { export all; }; merge paths; }
 
 protocol bfd {
   interface "*" {

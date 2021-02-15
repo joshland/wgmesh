@@ -4,6 +4,8 @@
  - [Bird Basic BGP](https://docs.netx.as/tutorials/bgp/basic-bgp.html)
  - [Bird 2.0 Usersguide](https://bird.network.cz/?get_doc&f=bird.html&v=20)
  - [Bird Filters Userguide](https://bird.network.cz/?get_doc&v=20&f=bird-5.html)
+ - [NaNOG Presentation](https://archive.nanog.org/meetings/nanog48/presentations/Monday/Filip_BIRD_final_N48.pdf)
+
 ## Routing Speed
 
 Update (2018-01)
