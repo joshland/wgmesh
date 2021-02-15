@@ -31,8 +31,8 @@ template bgp mesh_partner {
   local as {{ local_asn }};
   ipv4 {
     import filter {
-      if ( net ~ [ 172.16.0.0/24 ] ) then accept
-      if ( net ~ [ 10.0.0.0/8 ] ) then accept
+      if ( net ~ [ 172.16.0.0/24 ] ) then accept;
+      if ( net ~ [ 10.0.0.0/8 ] ) then accept;
       reject;
     };
     export all;
@@ -41,14 +41,10 @@ template bgp mesh_partner {
    };
    ipv6 {
      import filter {
-       if ( net !~ [ fe80::/16 ] ) then accept;
        if ( net ~ [ 0::/0 ] ) then accept;
        reject;
      };
-     export filter {
-       if ( net ~ [ 2a07:6881::/32 ] ) then accept;
-       reject;
-     };
+     export all;
   };
   hold time 6;
   bfd;
@@ -56,7 +52,7 @@ template bgp mesh_partner {
 }
 
 {% for wg, values in wireguard_interfaces.items() %}
-protocol bgp partner_{{ wg }} from mesh_partner {
+protocol bgp {{ wg }} from mesh_partner {
   interface "{{ wg }}";
   neighbor {{ values[0] }} as {{ values[1] }};
 }
