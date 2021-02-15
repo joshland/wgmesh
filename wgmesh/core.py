@@ -113,7 +113,7 @@ class Sitecfg(object):
 class Host(object):
     hostname = attr.ib()
     sitecfg  = attr.ib()
-    asn      = attr.ib(default= '', kw_only=True)
+    asn      = attr.ib(default= '', kw_only=True, converter=int)
     local_ipv4  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     local_ipv6  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
@@ -539,7 +539,11 @@ def CheckConfig(site, hosts):
         if not h.asn:
             hosts_asn_fix.append(h)
         else:
-            asn_list.append(h.asn)
+            if h.asn in asn_list:
+                logger.error(f'ASN Collision: {h.asn} {h}')
+                hosts_asn_fix.append(h)
+            else:
+                asn_list.append(int(h.asn))
             pass
         continue
         
@@ -587,7 +591,21 @@ def CheckConfig(site, hosts):
         pass
 
     for h in hosts_asn_fix:
-        h.asn = open_asn.pop(0)
+        logger.trace(f'Checkout ASN for host: {h.hostname}')
+        while len(open_asn):
+            newasn = open_asn.pop(0)
+            if newasn in asn_list:
+                logger.error(f'ASN Collision Attempt: {newasn} for host {h.hostname}')
+                newasn = None
+                continue
+            break
+        if newasn:
+            logger.trace(f'New ASN For Host: {h.hostname} => {newasn}')
+            h.asn = newasn
+        else:
+            logger.error(f'No ASN Available for host: {h.hostname}')
+            sys.exit(2)
+            pass
         continue
 
     return site, hosts

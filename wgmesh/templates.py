@@ -12,60 +12,53 @@ def render(template, args):
 bird_private = """
 log syslog { debug, trace, info, remote, warning, error, auth, fatal, bug };
 router id 1.0.{{ octet }}.1;
+roa4 table roa_v4;
+roa6 table roa_v6;
 
-protocol device {
-   scan time 10;
-}
+
+protocol device DEVICE { }
+protocol direct DIRECT { ipv4; ipv6; }
+protocol kernel KERNEL4 { ipv4 { export all; }; }
+protocol kernel KERNEL6 { ipv6 { export all; }; }
 
 protocol bfd {
-    interface "*" {
-        interval 50 ms;
-    };
-}
-
-protocol kernel {
-   persist;
-   learn;
-   ipv4 {
-       import all;
-       export all;
-   };
-   merge paths yes;
-}
-
-protocol kernel {
-   persist;
-   learn;
-   ipv6 {
-       import all;
-       export all;
-   };
-   merge paths yes;
+  interface "*" {
+    interval 50 ms;
+  };
 }
 
 template bgp mesh_partner {
-   local as {{ local_asn }};
-   ipv4 {
-       import all;
-       export all;
-       #export where ifname ~ "eth*";
-       #preference 160;
-       #extended next hop;
+  local as {{ local_asn }};
+  ipv4 {
+    import filter {
+      if ( net ~ [ 172.16.0.0/24 ] ) then accept
+      if ( net ~ [ 10.0.0.0/8 ] ) then accept
+      reject;
+    };
+    export all;
+    preference 160;
+    extended next hop;
    };
    ipv6 {
-       import all;
-       export all;
-       #export where ifname ~ "eth*";
-   };
-   hold time 6;
-   bfd;
-   graceful restart;
+     import filter {
+       if ( net !~ [ fe80::/16 ] ) then accept;
+       if ( net ~ [ 0::/0 ] ) then accept;
+       reject;
+     };
+     export filter {
+       if ( net ~ [ 2a07:6881::/32 ] ) then accept;
+       reject;
+     };
+  };
+  hold time 6;
+  bfd;
+  graceful restart;
 }
 
 {% for wg, values in wireguard_interfaces.items() %}
 protocol bgp partner_{{ wg }} from mesh_partner {
-   interface "{{ wg }}";
-   neighbor {{ values[0] }} as {{ values[1] }};
+  interface "{{ wg }}";
+  neighbor {{ values[0] }} as {{ values[1] }};
 }
 {% endfor %}
 
