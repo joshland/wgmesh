@@ -8,6 +8,7 @@ import socket
 import nacl.utils
 import attr, inspect
 import hashlib, uuid
+import netaddr
 
 from loguru import logger
 from ruamel import yaml
@@ -201,17 +202,20 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         pass
 
     message = decrypt(hostconfig.host.SSK, hostconfig.site.PPK, crypt)[2]
-    o = yaml.load(message, Loader=yaml.RoundTripLoader)
+    deploy_message = yaml.load(message, Loader=yaml.RoundTripLoader)
 
-    print("HostConfig:")
-    pprint.pprint(hostconfig.publish(), indent=2)
-    print()
-    print('Published:')
-    pprint.pprint(o, indent=2)
+    if trace:
+        print("HostConfig:")
+        pprint.pprint(hostconfig.publish(), indent=2)
+        print()
+        print('Published:')
+        pprint.pprint(deploy_message, indent=2)
+        pass
 
-    portbase = o['portbase']
-    site = o['site']
-    tunnel, cidr = o['remote'].split('/')
+    portbase = deploy_message['portbase']
+    site = deploy_message['site']
+    tunnel_network = netaddr.IPNetwork(deploy_message['remote'])
+    tunnel_net_base = str(tunnel_network.network).split('::')[0]
     mykey = open(hostconfig.host.private_key_file, 'r').read().strip()
 
     template_args = {
@@ -241,20 +245,20 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         pass
 
     template_args['wireguard_interfaces'] = {}
-    for host, values in o['hosts'].items():
+    for host, values in deploy_message['hosts'].items():
 
-        index = values['localport'] - o['portbase']
+        index = values['localport'] - deploy_message['portbase']
         remotes = ''
         if len(values['remote']):
             addrs = values['remote'].split(',')
             remotes = (',').join( [ f"{str(x)}:{values['remoteport']}" for x in addrs ] )
             pass
 
-        portpoints = [ o['octet'] ]
+        portpoints = [ deploy_message['octet'] ]
         portpoints.append( index )
         netbits = ':'.join( [ str(x) for x in sorted(portpoints, reverse=True) ] )
-        local_endpoint_addr = f'{tunnel}{netbits}:{o["octet"]}/{cidr}'
-        remote_endpoint_addr = f'{tunnel}{netbits}:{index}'
+        local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/{tunnel_network.prefixlen}'
+        remote_endpoint_addr = f'{tunnel_net_base}:{netbits}::{index}'
 
         fulfill = {
             'myhost':           hostconfig.host.hostname,
@@ -264,15 +268,15 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             'Hostname':         host,
             'public_key':       values['key'],
             'remote_address':   remotes,
-            'octet':            o['octet'],
+            'octet':            deploy_message['octet'],
             'interface_public':    template_args['interface_public'],
             'interface_trust':     template_args['interface_trust'],
             'interface_outbound':  template_args['interface_outbound'],
         }
 
-        template_args['local_asn'] = o['asn']
-        template_args['octet'] = o['octet']
-        template_args['tunnel_remote'] = o['remote']
+        template_args['local_asn'] = deploy_message['asn']
+        template_args['octet'] = deploy_message['octet']
+        template_args['tunnel_remote'] = deploy_message['remote']
         template_args['ports'].append( values['localport'] )
         template_args['wireguard_interfaces'][f'wg{index}'] = [ remote_endpoint_addr, values['asn'] ]
         template_args['local_endpoint_addr'] = local_endpoint_addr
