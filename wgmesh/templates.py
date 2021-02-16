@@ -15,11 +15,12 @@ router id 1.0.{{ octet }}.1;
 roa4 table roa_v4;
 roa6 table roa_v6;
 
-
 protocol device DEVICE { }
-protocol direct DIRECT { ipv4; ipv6; }
-protocol kernel KERNEL4 { learn; ipv4 { export all; }; merge paths; }
-protocol kernel KERNEL6 { learn; ipv6 { export all; }; merge paths; }
+protocol direct DIRECT { ipv4 { export all; }; ipv6 { export all; }; interface "*"; }
+#protocol kernel KERNEL4 { learn; ipv4 { export all; }; merge paths; }
+#protocol kernel KERNEL6 { learn; ipv6 { export all; }; merge paths; }
+protocol kernel KERNEL4 { learn; ipv4 { import all; export all; }; merge paths; }
+protocol kernel KERNEL6 { learn; ipv6 { import all; export all; }; merge paths; }
 
 protocol bfd {
   interface "*" {
@@ -31,8 +32,7 @@ template bgp mesh_partner {
   local as {{ local_asn }};
   ipv4 {
     import filter {
-      if ( net ~ [ 172.16.0.0/24 ] ) then accept;
-      if ( net ~ [ 10.0.0.0/8 ] ) then accept;
+      if ( net ~ [ 172.16.0.0/16+, 10.0.0.0/8+ ] ) then accept;
       reject;
     };
     export all;
@@ -47,7 +47,7 @@ template bgp mesh_partner {
      export all;
   };
   hold time 6;
-  bfd;
+  bfd graceful;
   graceful restart;
 }
 
