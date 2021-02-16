@@ -17,9 +17,8 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 
 ## TODO
 
- - Router IDs
- - BGP ASN configuration
  - Local Site-specific configurations integration?
+ - systemctl @ service - bird for the netns 'bird@private'
 
 ##  Getting Started
 
@@ -35,14 +34,14 @@ Example Domain: `mesh.example.com`
  ** Endpoint Config **
  - Connect to mesh endpoints, setup python virtualenv.
  - Install Wireguard tools on the local host `pip install wgmesh`
+ - Setup host registration the mesh (run as root or sudo): `wgconfig -i ens4 -o veth0 -T ens3 -I 172.16.143.22/24 mesh.erickson.is`
  - Configure the local host `wgconfig -i enp0s1 -t enp0s2 -T veth0 -I 172.16.140.21/24`
- - Setup host registration the mesh (run as root or sudo): `wghost mesh.example.com`
 
  ** Site Config **
  - Import the host by copying the output into the site controller. `wgsite -i <hash> wgfrr.yaml`
  - Once host(s) are ready, publish Host-base DNS records: `wgpub wgfrr.yaml`
  - Publish output to the `[uuid].wgfrr.example.com` TXT records.
- 
+
  ** Endpoint Config **
  - Deploy on the local hosts: `wgdeploy mesh.example.com`
 
