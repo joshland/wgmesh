@@ -1,0 +1,13 @@
+[Unit]
+Description=Wireguard Mesh Boot
+After=syslog.target network.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mesh_start.sh
+StandardOutput=journal
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

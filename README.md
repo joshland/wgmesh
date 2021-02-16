@@ -18,7 +18,8 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 ## TODO
 
  - Local Site-specific configurations integration?
- - systemctl @ service - bird for the netns 'bird@private'
+ - systemctl @ service - bird for the netns 'bird@private'.
+ - startup script should prolly be written in python.
 
 ##  Getting Started
 

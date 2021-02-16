@@ -301,8 +301,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
-    check_update_file(namespace,  '/usr/local/sbin/namestart_start')
-    check_update_file(vrf,        '/usr/local/sbin/vrf_start')
+    check_update_file(namespace,  '/usr/local/sbin/mesh_start')
     check_update_file(bird_priv,  '/etc/bird/bird_private.conf')
 
     return 0
