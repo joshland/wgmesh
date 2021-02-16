@@ -38,11 +38,16 @@ def validateUuid(value):
 
 @attr.s
 class Endpoint(object):
-    asn      = attr.ib(default='', kw_only=True)
     hostname = attr.ib(default=None, kw_only=True, converter=validateHostname)
     uuid     = attr.ib(default=None, kw_only=True, converter=validateUuid)
-    SSK      = attr.ib(default='', kw_only=True)
-    PPK      = attr.ib(default='', kw_only=True)
+    asn      = attr.ib(default='',   kw_only=True)
+    SSK      = attr.ib(default='',   kw_only=True)
+    PPK      = attr.ib(default='',   kw_only=True)
+    cmdiproute2 = attr.ib(default="/usr/sbin/ip",       kw_only=True, converter=str)
+    cmdwg       = attr.ib(default="/usr/bin/wg",        kw_only=True, converter=str)
+    cmdwgquick  = attr.ib(default="/usr/bin/wg-quick",  kw_only=True, converter=str)
+    cmdsystemd  = attr.ib(default="/usr/bin/systemctl", kw_only=True, converter=str)
+    cmdfping    = attr.ib(default="/usr/sbin/fping",    kw_only=True, converter=str)
     private_key_file = attr.ib(default='', kw_only=True, converter=nonone)
     public_key_file  = attr.ib(default='', kw_only=True, converter=nonone)
     interface_public = attr.ib(default='', kw_only=True, converter=nonone)

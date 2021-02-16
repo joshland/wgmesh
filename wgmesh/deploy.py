@@ -16,8 +16,8 @@ from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
-from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start, vrf_start
-from wgmesh.templates import bird_private, wireguard_conf
+from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, bird_private, wireguard_conf
+from wgmesh.templates import namespace_start, mesh_start
 from .endpointdb import *
 
 import pprint
@@ -186,6 +186,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
     #hostconfig
     hostconfig = CheckLocalHostConfig(domain, locus, pubkey)
+
     import pprint
     print(f'|-----------------------------------|')
     pprint.pprint(hostconfig)
@@ -245,8 +246,20 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         pass
 
     template_args['wireguard_interfaces'] = {}
-    for host, values in deploy_message['hosts'].items():
+    template_args['cmds'] = {
+        'binip':   hostconfig.host.cmdiproute2,
+        'binwg':   hostconfig.host.cmdwg,
+        'binwgq':  hostconfig.host.cmdwgquick,
+        'binsys':  hostconfig.host.cmdsystemd,
+        'binfping': hostconfig.host.cmdfping,
+    }
 
+    template_args['myhost']    = hostconfig.host.hostname
+    template_args['local_asn'] = deploy_message['asn']
+    template_args['octet']     = deploy_message['octet']
+    template_args['tunnel_remote'] = deploy_message['remote']
+
+    for host, values in deploy_message['hosts'].items():
         index = values['localport'] - deploy_message['portbase']
         remotes = ''
         if len(values['remote']):
@@ -274,9 +287,6 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             'interface_outbound':  template_args['interface_outbound'],
         }
 
-        template_args['local_asn'] = deploy_message['asn']
-        template_args['octet'] = deploy_message['octet']
-        template_args['tunnel_remote'] = deploy_message['remote']
         template_args['ports'].append( values['localport'] )
         template_args['wireguard_interfaces'][f'wg{index}'] = [ remote_endpoint_addr, values['asn'] ]
         template_args['local_endpoint_addr'] = local_endpoint_addr
@@ -296,12 +306,13 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
     interfaces = render(shorewall_interfaces, template_args)
     dnatrules  = render(shorewall_rules,      template_args)
     namespace  = render(namespace_start,      template_args)
-    vrf        = render(vrf_start,            template_args)
+    meshstart  = render(mesh_start,           template_args)
     bird_priv  = render(bird_private,         template_args)
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
-    check_update_file(namespace,  '/usr/local/sbin/mesh_start')
+    check_update_file(namespace,  '/usr/local/sbin/mesh_ns_init')
+    check_update_file(meshstart,  '/usr/local/sbin/mesh_wg_restart')
     check_update_file(bird_priv,  '/etc/bird/bird_private.conf')
 
     return 0

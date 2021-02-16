@@ -17,8 +17,6 @@ roa6 table roa_v6;
 
 protocol device DEVICE { }
 protocol direct DIRECT { ipv4 { export all; }; ipv6 { export all; }; interface "*"; }
-#protocol kernel KERNEL4 { learn; ipv4 { export all; }; merge paths; }
-#protocol kernel KERNEL6 { learn; ipv6 { export all; }; merge paths; }
 protocol kernel KERNEL4 { learn; ipv4 { import all; export all; }; merge paths; }
 protocol kernel KERNEL6 { learn; ipv6 { import all; export all; }; merge paths; }
 
@@ -63,28 +61,14 @@ protocol bgp {{ wg }} from mesh_partner {
 namespace_start = """
 #!/bin/bash
 
-## wgmesh - wgdeploy /usr/local/sbin/namespace_init
+## wgmesh - wgdeploy /usr/local/sbin/mesh_ns_init
 #  DO NOT EDIT BY HAND
 ###############################################################################
-binip="/usr/sbin/ip"
-binwg="/usr/bin/wg"
-binwgq="/usr/bin/wg-quick"
-binsys="/usr/bin/systemctl"
-binbird="/usr/sbin/bird"
-binfping="/usr/sbin/fping"
-
+{% for k, v in cmds.items() -%}
+{{ k }}={{ v }}
+{% endfor %}
 etcbird="/etc/bird"
 etcwg="/etc/wireguard"
-
-loop=0
-while [ $loop -eq 0 ]; do
-    ${binfping} 8.8.8.8 > /dev/null
-    if [ $? ]; then
-        loop=1
-        echo "mesh startup: internet is alive."
-    fi
-    sleep 5
-done
 
 ## NS Creation
 ${binip} netns add private
@@ -117,12 +101,34 @@ ${binip} netns exec private sysctl -qw net.ipv4.conf.all.forwarding=1
 ## Start Private Routing Daemon
 ## ${binip} netns exec
 
+"""
+
+mesh_start = """
+#!/bin/bash
+
+## wgmesh - wgdeploy /usr/local/sbin/mesh_wg_restart
+#  DO NOT EDIT BY HAND
+###############################################################################
+{% for k, v in cmds.items() -%}
+{{ k }}={{ v }}
+{% endfor %}
+
+
+loop=0
+while [ $loop -eq 0 ]; do
+    ${binfping} 8.8.8.8 > /dev/null
+    if [ $? ]; then
+        loop=1
+        echo "mesh startup: internet is alive."
+    fi
+    sleep 5
+done
+
 ## Start Wireguard
 {% for iface, addr in wireguard_interfaces.items() -%}
 ${binip} netns exec private ${binwgq} down {{ iface }}
 ${binip} netns exec private ${binwgq} up {{ iface }}
 {% endfor %}
-
 ${binip} netns exec private ${binbird} -c ${etcbird}/bird_private.conf -s ${etcwg}/bird_private.sock
 
 # Start bird in the private netns
@@ -194,7 +200,7 @@ loc     LOC_IF      tcpflags,routefilter,physical={{ interface_outbound }}
 
 wireguard_conf = """
 #
-# Peering template generated template for {( myhost )} => {{ Hostname }}
+# Peering template generated template for {{ myhost }} => {{ Hostname }}
 #
 [Interface]
 PrivateKey = {{ private_key }}

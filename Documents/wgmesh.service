@@ -1,7 +1,6 @@
 [Unit]
 Description=Wireguard Mesh Boot
 After=syslog.target network.target
-Conflicts=shutdown.target
 
 [Service]
 Type=oneshot
