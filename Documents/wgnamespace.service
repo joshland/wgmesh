@@ -1,10 +1,11 @@
 [Unit]
-Description=Wireguard Mesh Boot
+Description=Wireguard Mesh Namespace Setup Boot
 After=syslog.target network.target
+Before=wgmesh.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/mesh_wg_restart
+ExecStart=/usr/local/bin/mesh_ns_init
 StandardOutput=journal
 RemainAfterExit=true
 

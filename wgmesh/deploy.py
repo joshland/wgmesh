@@ -179,17 +179,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         pubkey = dominfo['publickey']
         pass
 
-    ### Todo, we need to save these more efficiently locally.
-    #if asn == '':
-    #    asn = dominfo['asn']
-    #    pass
-
-    #hostconfig
     hostconfig = CheckLocalHostConfig(domain, locus, pubkey)
-
-    import pprint
-    print(f'|-----------------------------------|')
-    pprint.pprint(hostconfig)
 
     #Get UUID
     target = f'{hostconfig.host.uuid}.{domain}'
