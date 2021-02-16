@@ -61,10 +61,11 @@ protocol bgp {{ wg }} from mesh_partner {
 """
 
 namespace_start = """
+#!/bin/bash
+
 ## wgmesh - wgdeploy /usr/local/sbin/namespace_init
 #  DO NOT EDIT BY HAND
 ###############################################################################
-
 binip="/usr/sbin/ip"
 binwg="/usr/bin/wg"
 binwgq="/usr/bin/wg-quick"
