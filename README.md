@@ -10,10 +10,11 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 
 ## Requirements
 
- - Fedora
- - Wireguard
- - Python
- - FRR w/ BGP
+ - [Fedora](https://getfedora.org/en/server/#:~:text=Fedora%20Server%20is%20a%20short,in%20the%20open%20source%20community.) _prolly any modern linux will work_
+ - [Wireguard](https://www.wireguard.com/) _included with Fedora (wireguard-tools)_
+ - [Python](https://www.python.org/) _included with almost all modern linux_
+ - [BIRD](https://bird.network.cz/) _modular protocol routing daemon_
+ - [GIT](https://git-scm.com/) _Source Control_
 
 ## TODO
 
