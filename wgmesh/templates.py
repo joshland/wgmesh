@@ -114,6 +114,8 @@ ${binip} netns exec private ${binwgq} up {{ iface }}
 
 ${binip} netns exec private ${binbird} -c ${etcbird}/bird_private.conf -s ${etcwg}/bird_private.sock
 
+# Start bird in the private netns
+${binsys} start bird@private
 """
 
 vrf_start = """
@@ -157,7 +159,6 @@ ip vrf exec private sysctl -qw net.ipv4.conf.all.forwarding=1
 ip vrf exec private wg-quick down {{ iface }}
 ip vrf exec private wg-quick up {{ iface }}
 {% endfor %}
-
 """
 
 shorewall_rules = """
