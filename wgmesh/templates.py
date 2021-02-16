@@ -65,42 +65,53 @@ namespace_start = """
 #  DO NOT EDIT BY HAND
 ###############################################################################
 
+binip="/usr/sbin/ip"
+binwg="/usr/bin/wg"
+binwgq="/usr/bin/wg-quick"
+binsys="/usr/bin/systemctl"
+binbird="/usr/sbin/bird"
+
+etcbird="/etc/bird"
+etcwg="/etc/wireguard"
+
 ## NS Creation
-ip netns add private
+${binip} netns add private
 
 ## Add {{ interface_trust }}
-ip link set netns private dev {{ interface_trust }}
-ip netns exec private ip addr add 127.0.0.1/8 dev lo
-ip netns exec private ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
-ip link add {{ interface_outbound }} type veth peer name {{ interface_outbound }} netns private
+${binip} link set netns private dev {{ interface_trust }}
+${binip} netns exec private ${binip} addr add 127.0.0.1/8 dev lo
+${binip} netns exec private ${binip} addr add {{ interface_trust_ip }} dev {{ interface_trust }}
+${binip} link add {{ interface_outbound }} type veth peer name {{ interface_outbound }} netns private
 
 ## Start all affected Interfaces
-ip netns exec private ip link set lo up
-ip netns exec private ip link set {{ interface_trust }} up
-ip netns exec private ip link set {{ interface_outbound }} up
-ip link set {{ interface_outbound }} up
+${binip} netns exec private ${binip} link set lo up
+${binip} netns exec private ${binip} link set {{ interface_trust }} up
+${binip} netns exec private ${binip} link set {{ interface_outbound }} up
+${binip} link set {{ interface_outbound }} up
 
 ## Establish Namespace Uplink
-ip netns exec private ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
-ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
-ip netns exec private ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
-ip netns exec private ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
+${binip} netns exec private ${binip} addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
+${binip} addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
+${binip} netns exec private ${binip} route add 0.0.0.0/1 via 169.254.{{ octet }}.1
+${binip} netns exec private ${binip} route add 128.0.0.0/1 via 169.254.{{ octet }}.1
 
 ## Activate Firewall
-systemctl start shorewall
+${binsys} start shorewall
 
 ## Enable Routing
-ip netns exec private sysctl -qw net.ipv6.conf.all.forwarding=1
-ip netns exec private sysctl -qw net.ipv4.conf.all.forwarding=1
+${binip} netns exec private sysctl -qw net.ipv6.conf.all.forwarding=1
+${binip} netns exec private sysctl -qw net.ipv4.conf.all.forwarding=1
 
 ## Start Private Routing Daemon
-## ip netns exec 
+## ${binip} netns exec
 
 ## Start Wireguard
 {% for iface, addr in wireguard_interfaces.items() -%}
-ip netns exec private wg-quick down {{ iface }}
-ip netns exec private wg-quick up {{ iface }}
+${binip} netns exec private ${binwgq} down {{ iface }}
+${binip} netns exec private ${binwgq} up {{ iface }}
 {% endfor %}
+
+${binip} netns exec private ${binbird} -c ${etcbird}/bird_private.conf -s ${etcwg}/bird_private.sock
 
 """
 
