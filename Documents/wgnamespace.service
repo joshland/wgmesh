@@ -5,7 +5,7 @@ Before=wgmesh.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/mesh_ns_init
+ExecStart=/usr/local/sbin/mesh_ns_init
 StandardOutput=journal
 RemainAfterExit=true
 
