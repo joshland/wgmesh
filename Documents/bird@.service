@@ -5,7 +5,7 @@ After=wgmesh.service wgnamespace.service
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/ip netns exec %i /usr/sbin/bird -u bird -g bird -s /var/run/bird-%s.sock -c /etc/bird/bird_%i.conf
+ExecStart=/usr/sbin/ip netns exec %i /usr/sbin/bird -f -u bird -g bird -s /var/run/bird-%i.sock -c /etc/bird/bird_%i.conf
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 
