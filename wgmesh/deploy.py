@@ -305,6 +305,12 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
     check_update_file(meshstart,  '/usr/local/sbin/mesh_wg_restart')
     check_update_file(bird_priv,  '/etc/bird/bird_private.conf')
 
+    for x in ('/usr/local/sbin/mesh_ns_init', '/usr/local/sbin/mesh_wg_restart'):
+        os.chmod(x, 0o750)
+
+    for x in ('/etc/shorewall/rules', '/etc/shorewall/interfaces', '/etc/bird/bird_private.conf'):
+        os.chmod(x, 0o640)
+
     return 0
 
 if __name__ == "__main__":
