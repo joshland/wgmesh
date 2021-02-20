@@ -124,10 +124,10 @@ done
 
 ## Start Wireguard
 {% for iface, addr in wireguard_interfaces.items() -%}
+echo "VPN: ${iface}"
 ${binip} netns exec private ${binwgq} down {{ iface }}
 ${binip} netns exec private ${binwgq} up {{ iface }}
 {% endfor %}
-
 # Start bird in the private netns
 ${binsys} start bird@private
 """
