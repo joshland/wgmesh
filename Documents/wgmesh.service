@@ -1,6 +1,6 @@
 [Unit]
 Description=Wireguard Mesh Boot
-After=syslog.target network.target
+After=syslog.target network.target wgnamespace.service
 
 [Service]
 Type=oneshot

@@ -129,7 +129,6 @@ done
 ${binip} netns exec private ${binwgq} down {{ iface }}
 ${binip} netns exec private ${binwgq} up {{ iface }}
 {% endfor %}
-${binip} netns exec private ${binbird} -c ${etcbird}/bird_private.conf -s ${etcwg}/bird_private.sock
 
 # Start bird in the private netns
 ${binsys} start bird@private
