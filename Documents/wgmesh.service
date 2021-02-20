@@ -4,7 +4,7 @@ After=syslog.target network.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/mesh_wg_restart
+ExecStart=/bin/bash /usr/local/sbin/mesh_wg_restart
 StandardOutput=journal
 RemainAfterExit=true
 
