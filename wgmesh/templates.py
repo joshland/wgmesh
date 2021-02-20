@@ -112,8 +112,6 @@ mesh_start = """
 {% for k, v in cmds.items() -%}
 {{ k }}={{ v }}
 {% endfor %}
-
-
 loop=0
 while [ $loop -eq 0 ]; do
     ${binfping} 8.8.8.8 > /dev/null
