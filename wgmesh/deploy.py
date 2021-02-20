@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Create the host basics locally
-import sys, os
+import sys, os, pwd
 import click
 import loguru
 import socket
@@ -10,8 +10,8 @@ import attr, inspect
 import hashlib, uuid
 import netaddr
 
-from loguru import logger
 from ruamel import yaml
+from loguru import logger
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
@@ -24,27 +24,6 @@ import pprint
 import base64
 
 import ipaddress   
-
-lect = """
----
-site: <domain>
-hosts:
-  [hostname]:
-    - pubkey: XXXXXXyyyyyyyyyZZZZZ
-    - local_networks: 10.1.1.0/24,11.1.1.0/24,2006::/64
-    - remote_address: 5.5.5.5
-  [hostname]:
-    - pubkey: XXXXXXyyyyyyyyyZZZZZ
-    - local_networks: 20.1.1.0/24,21.1.1.0/24,2006:1::/64
-    - remote_address: 6.6.6.6
-"""
-
-lect = """
-  {hostname}:
-    - pubkey: {pubkey}
-    - local_networks: {localnets}
-    - remote_address: {remoteaddr}
-"""
 
 class MixedInterface(Exception): pass
 class NoInterface(Exception): pass
@@ -311,6 +290,9 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
     for x in ('/etc/shorewall/rules', '/etc/shorewall/interfaces', '/etc/bird/bird_private.conf'):
         os.chmod(x, 0o640)
 
+    buser  = pwd.getpwnam('bird').pw_uid
+    bgroup = pwd.getpwnam('bird').pw_gid
+    os.chown('/etc/bird/bird_private.conf', buser, bgroup)
     return 0
 
 if __name__ == "__main__":
