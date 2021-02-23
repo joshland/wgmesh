@@ -96,9 +96,10 @@ def check_update_file(buffer, path):
     try:
         current = open(path, 'r').read()
         if current == buffer:
-            logger.trace(f'buffer matches {path}, no update needed.')
+            logger.trace(f'skip file {path}, no update needed.')
             update = False
-        update = True
+        else:
+            update = True
     except FileNotFoundError:
         logger.trace(f'Unable to load file {path}')
         update = True
