@@ -294,7 +294,10 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
     buser  = pwd.getpwnam('bird').pw_uid
     bgroup = pwd.getpwnam('bird').pw_gid
-    os.chown('/etc/bird/bird_private.conf', buser, bgroup)
+    try:
+        os.chown('/etc/bird/bird_private.conf', buser, bgroup)
+    except PermissionError:
+        logger.warning(f'Failed to set ownership of /etc/bird/bird_private.conf.')
     return 0
 
 if __name__ == "__main__":

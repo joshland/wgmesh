@@ -1,0 +1,27 @@
+[Unit]
+Description=Named network namespace %I
+Documentation=https://github.com/openstack/ansible-role-systemd_service
+After=syslog.target network.target systemd-netns@%i.service
+Before=%i.service
+BindsTo=systemd-netns@%i.service
+
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+
+# Create system process
+ExecStartPre=-/usr/bin/env ip link add veth0 type veth peer name veth0 netns %i
+ExecStartPre=-/usr/bin/env ip netns exec %i ip link set lo up
+ExecStartPre=-/usr/bin/env ip netns exec %i ip link set veth0 up
+ExecStartPre=-/usr/bin/env sysctl -w net.ipv4.ip_forward=1
+ExecStartPre=-/usr/bin/env sysctl -w net.ipv6.conf.all.forwarding=1
+ExecStartPre=-/usr/bin/env ip netns exec %i ip addr add 127.0.0.1/8 dev lo
+
+# Configure link
+ExecStop=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i start %i; fi
+ExecStop=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i stop %i; fi
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=network-online.target
