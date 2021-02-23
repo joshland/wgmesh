@@ -80,7 +80,7 @@ function start(){
   /usr/bin/env ip netns exec $1 ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
   /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} up
   /usr/bin/env ip netns exec $1 ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
-  /usr/bin/envv sytemctl start shorewall --no-ask-password
+  /usr/bin/env systemctl start shorewall --no-ask-password
 }
 
 function stop(){
