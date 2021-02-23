@@ -73,15 +73,15 @@ function start(){
   echo "Setup namespace $1"
 
   ## default namespace
-  /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
+  /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 brd + dev {{ interface_outbound }}
   /usr/bin/env ip link set netns $1 dev {{ interface_trust }}
 
   ## $1 namespace
-  /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
+  /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 brd + dev {{ interface_outbound }}
   /usr/bin/env ip netns exec $1 ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
   /usr/bin/env ip netns exec $1 ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
   /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} up
-  /usr/bin/env ip netns exec $1 ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
+  /usr/bin/env ip netns exec $1 ip addr add {{ interface_trust_ip }} brd + dev {{ interface_trust }}
   /usr/bin/env systemctl start shorewall --no-ask-password
 }
 
