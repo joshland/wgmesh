@@ -140,7 +140,7 @@ function start(){
     ## Start Wireguard
     {% for iface, addr in wireguard_interfaces.items() -%}
     echo "Starting: ${iface}"
-    /usr/bin/env ip netns exec $1 /usr/sbin/env wg-quick up {{ iface }}
+    /usr/bin/env ip netns exec $1 /usr/bin/env wg-quick up {{ iface }}
     {% endfor %}
 }
 
@@ -148,7 +148,7 @@ function stop(){
     shift
     {% for iface, addr in wireguard_interfaces.items() -%}
     echo "Stopping: ${iface}"
-    /usr/bin/env ip netns exec $1 /usr/sbin/env wg-quick down {{ iface }}
+    /usr/bin/env ip netns exec $1 /usr/bin/env wg-quick down {{ iface }}
     {% endfor %}
 }
 
