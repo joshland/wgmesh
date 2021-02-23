@@ -275,14 +275,12 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
     interfaces = render(shorewall_interfaces, template_args)
     dnatrules  = render(shorewall_rules,      template_args)
-    namespace  = render(namespace_start,      template_args)
     nssysvinit = render(ns_private,           template_args)
     meshstart  = render(mesh_start,           template_args)
     bird_priv  = render(bird_private,         template_args)
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
-    #check_update_file(namespace,  '/usr/local/sbin/mesh_ns_init')
     check_update_file(nssysvinit, '/usr/local/sbin/ns-private')
     check_update_file(meshstart,  '/usr/local/sbin/mesh_wg_restart')
     check_update_file(bird_priv,  '/etc/bird/bird_private.conf')

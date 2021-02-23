@@ -16,7 +16,6 @@ from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
-from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, namespace_start
 from .endpointdb import *
 
 import pprint
