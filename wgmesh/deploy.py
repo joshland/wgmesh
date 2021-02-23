@@ -217,10 +217,6 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
     template_args['wireguard_interfaces'] = {}
     template_args['cmds'] = {
-        'binip':   hostconfig.host.cmdiproute2,
-        'binwg':   hostconfig.host.cmdwg,
-        'binwgq':  hostconfig.host.cmdwgquick,
-        'binsys':  hostconfig.host.cmdsystemd,
         'binfping': hostconfig.host.cmdfping,
     }
 
