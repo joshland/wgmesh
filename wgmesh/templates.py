@@ -58,6 +58,51 @@ protocol bgp {{ wg }} from mesh_partner {
 
 """
 
+ns_private = """
+#!/bin/bash
+
+## wgmesh - wgdeploy /usr/local/sbin/ns-private
+#  GENERATED FILE - DO NOT EDIT BY HAND
+###############################################################################
+etcbird="/etc/bird"
+etcwg="/etc/wireguard"
+
+function start(){
+  shift
+  /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
+  /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
+  /usr/bin/env ip netns exec $1 ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
+  /usr/bin/env ip netns exec $1 ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
+  /usr/bin/env ip link set netns %i dev {{ interface_trust }}
+  /usr/bin/env ip netns exec %i ip link set {{ interface_trust }} up
+  /usr/bin/env ip netns exec %i ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
+  /usr/bin/envv sytemctl start shorewall --no-ask-password
+}
+
+function stop(){
+    shift
+    /usr/bin/env ip netns exec %i ip addr del {{ interface_trust_ip }} dev {{ interface_trust }}
+    /usr/bin/env ip netns exec %i ip link set {{ interface_trust }} down
+    /usr/bin/env ip netns exec %i ip link set netns 1 dev {{ interface_trust }}
+}
+
+case "$1" in
+   start)
+      start
+   ;;
+   stop)
+      stop
+   ;;
+   restart)
+      stop
+      start
+   ;;
+   *)
+      echo "Usage: $0 {start|stop|restart}"
+esac
+
+"""
+
 namespace_start = """
 #!/bin/bash
 
