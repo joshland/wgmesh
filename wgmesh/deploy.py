@@ -106,7 +106,7 @@ def check_update_file(buffer, path):
 
     try:
         if update:
-            logger.trace(f'Write file: {path}.')
+            logger.trace(f'Write file: {path}')
             with open(path,'w') as ifacefile:
                 ifacefile.write(buffer)
                 pass

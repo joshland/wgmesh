@@ -176,6 +176,7 @@ case "$1" in
 esac
 """
 
+## Tab align in rendered template.  (important for readability.)
 shorewall_rules = """
 ## wgmesh - wgdeploy /etc/shorewall/rules
 #  DO NOT EDIT BY HAND
@@ -190,22 +191,22 @@ shorewall_rules = """
 ?SECTION NEW
 
 # Don't allow connection pickup from the net
-Invalid(DROP)	net		all		tcp
+Invalid(DROP)	net	all	tcp
 
 # Accept DNS connections from the firewall to the Internet
-DNS(ACCEPT)	    $FW		net
-NTP(ACCEPT)	    $FW		net
-SSH(ACCEPT)	    $FW		net
+DNS(ACCEPT)	$FW		net
+NTP(ACCEPT)	$FW		net
+SSH(ACCEPT)	$FW		net
 
 # Accept SSH connections from the local network to the firewall and DMZ
-SSH(ACCEPT)     net             $FW
-SSH(ACCEPT)     loc             $FW
+SSH(ACCEPT)	net		$FW
+SSH(ACCEPT)	loc		$FW
 ## We don't need any 
-#BGP(ACCEPT)     loc             $FW
-#BGP(ACCEPT)     $FW		        loc
+#BGP(ACCEPT)	loc		$FW
+#BGP(ACCEPT)	$FW		loc
 
 {% for port in ports -%}
-DNAT            net             loc:169.254.{{ octet }}.2  udp     {{ port }}
+DNAT		net		loc:169.254.{{ octet }}.2	udp	{{ port }}
 {% endfor %}
 # Drop Ping from the "bad" net zone.
 Ping(ACCEPT)   	net             $FW
@@ -218,11 +219,11 @@ Ping(ACCEPT)    $FW             loc
 SNMP(ACCEPT) 	loc		$FW
 
 Ping(ACCEPT)	$FW		net		icmp
-ACCEPT		    $FW		loc		icmp
-ACCEPT		    $FW		loc
+ACCEPT		$FW		loc		icmp
+ACCEPT		$FW		loc
 
-ACCEPT		    $FW		net		tcp		https
-ACCEPT		    $FW		net		tcp		http
+ACCEPT		$FW		net		tcp	https
+ACCEPT		$FW		net		tcp	http
 
 """
 
