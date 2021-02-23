@@ -16,10 +16,10 @@ ExecStartPre=-/usr/bin/env ip netns exec %i ip link set lo up
 ExecStartPre=-/usr/bin/env ip netns exec %i ip link set veth0 up
 ExecStartPre=-/usr/bin/env sysctl -w net.ipv4.ip_forward=1
 ExecStartPre=-/usr/bin/env sysctl -w net.ipv6.conf.all.forwarding=1
-ExecStartPre=-/usr/bin/env ip netns exec %i ip addr add 127.0.0.1/8 dev lo
+#ExecStartPre=-/usr/bin/env ip netns exec %i ip addr add 127.0.0.1/8 dev lo
 
 # Configure link
-ExecStop=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i start %i; fi
+ExecStart=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i start %i; fi
 ExecStop=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i stop %i; fi
 
 [Install]
