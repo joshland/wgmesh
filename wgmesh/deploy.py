@@ -17,7 +17,7 @@ from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
 from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, bird_private, wireguard_conf
-from wgmesh.templates import namespace_start, ns_private, mesh_start
+from wgmesh.templates import    ns_private, mesh_start
 from .endpointdb import *
 
 import pprint
@@ -282,7 +282,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
-    check_update_file(namespace,  '/usr/local/sbin/mesh_ns_init')
+    #check_update_file(namespace,  '/usr/local/sbin/mesh_ns_init')
     check_update_file(nssysvinit, '/usr/local/sbin/ns-private')
     check_update_file(meshstart,  '/usr/local/sbin/mesh_wg_restart')
     check_update_file(bird_priv,  '/etc/bird/bird_private.conf')

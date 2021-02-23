@@ -1,0 +1,14 @@
+[Unit]
+Description=Wireguard Mesh Startup
+BindsTo = systemd-netns@%i.service
+JoinsNamespaceOf = systemd-netns@%i.service
+After = systemd-netns@%i.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/sbin/mesh_wg_restart
+StandardOutput=journal
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
