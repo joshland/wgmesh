@@ -1,7 +1,8 @@
 [Unit]
 Description=BIRD Internet Routing Daemon
-Wants=network.target
-After=wgmesh.service wgnamespace.service
+BindsTo = systemd-netns@%i.service
+JoinsNamespaceOf = systemd-netns@%i.service
+After = systemd-netns@%i.service
 
 [Service]
 Type=simple
