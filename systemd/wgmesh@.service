@@ -6,7 +6,8 @@ After = systemd-netns@%i.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash /usr/local/sbin/mesh_wg_restart
+ExecStart=/usr/bin/env bash /usr/local/sbin/mesh_wg_restart start %i
+ExecStop=/usr/bin/env bash /usr/local/sbin/mesh_wg_restart stop %i
 StandardOutput=journal
 RemainAfterExit=true
 

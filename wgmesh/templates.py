@@ -116,7 +116,7 @@ esac
 """
 
 mesh_start = """
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## wgmesh - wgdeploy /usr/local/sbin/mesh_wg_restart
 #  DO NOT EDIT BY HAND
@@ -125,23 +125,49 @@ mesh_start = """
 {{ k }}={{ v }}
 {% endfor %}
 loop=0
-while [ $loop -eq 0 ]; do
-    ${binfping} 8.8.8.8 > /dev/null
-    if [ $? ]; then
-        loop=1
-        echo "mesh startup: internet is alive."
-    fi
-    sleep 5
-done
 
-## Start Wireguard
-{% for iface, addr in wireguard_interfaces.items() -%}
-echo "VPN: ${iface}"
-${binip} netns exec private ${binwgq} down {{ iface }}
-${binip} netns exec private ${binwgq} up {{ iface }}
-{% endfor %}
-# Start bird in the private netns
-${binsys} start bird@private
+function start(){
+    shift
+    while [ $loop -eq 0 ]; do
+	${binfping} 8.8.8.8 > /dev/null
+	if [ $? ]; then
+            loop=1
+            echo "mesh startup: internet is alive."
+	fi
+	sleep 5
+    done
+
+    ## Start Wireguard
+    {% for iface, addr in wireguard_interfaces.items() -%}
+    echo "VPN: ${iface}"
+    /usr/bin/env ip netns exec $1 /usr/sbin/env wg-quick up {{ iface }}
+    {% endfor %}
+}
+
+function stop(){
+    shift
+    /usr/bin/env ip netns exec $1 /usr/sbin/env wg-quick down {{ iface }}
+}
+
+if [ -z "$2" ]; then
+    echo "Error! namespace name required!"
+    exit 1
+fi
+
+case "$1" in
+   start)
+      start $*
+   ;;
+   stop)
+      stop $*
+   ;;
+   restart)
+      stop $*
+      start $*
+   ;;
+   *)
+      echo "Usage: $0 {start|stop|restart}"
+esac
 """
 
 shorewall_rules = """
