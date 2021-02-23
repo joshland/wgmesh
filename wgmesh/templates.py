@@ -70,6 +70,8 @@ etcwg="/etc/wireguard"
 function start(){
   shift
 
+  echo "Setup namespace $1"
+
   ## default namespace
   /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
   /usr/bin/env ip link set netns $1 dev {{ interface_trust }}
@@ -98,14 +100,14 @@ fi
 
 case "$1" in
    start)
-      start
+      start $*
    ;;
    stop)
-      stop
+      stop $*
    ;;
    restart)
-      stop
-      start
+      stop $*
+      start $*
    ;;
    *)
       echo "Usage: $0 {start|stop|restart}"
