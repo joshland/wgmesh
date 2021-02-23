@@ -69,11 +69,15 @@ etcwg="/etc/wireguard"
 
 function start(){
   shift
-  /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
+
+  ## default namespace
   /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 dev {{ interface_outbound }}
+  /usr/bin/env ip link set netns $1 dev {{ interface_trust }}
+
+  ## $1 namespace
+  /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 dev {{ interface_outbound }}
   /usr/bin/env ip netns exec $1 ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
   /usr/bin/env ip netns exec $1 ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
-  /usr/bin/env ip link set netns $1 dev {{ interface_trust }}
   /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} up
   /usr/bin/env ip netns exec $1 ip addr add {{ interface_trust_ip }} dev {{ interface_trust }}
   /usr/bin/envv sytemctl start shorewall --no-ask-password
@@ -81,10 +85,16 @@ function start(){
 
 function stop(){
     shift
+
     /usr/bin/env ip netns exec $1 ip addr del {{ interface_trust_ip }} dev {{ interface_trust }}
     /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} down
     /usr/bin/env ip netns exec $1 ip link set netns 1 dev {{ interface_trust }}
 }
+
+if [ -z "$2" ]; then
+    echo "Error! namespace name required!"
+    exit 1
+fi
 
 case "$1" in
    start)
