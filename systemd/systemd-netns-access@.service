@@ -12,6 +12,7 @@ RemainAfterExit=true
 
 # Create system process
 ExecStartPre=-/usr/bin/env ip link add veth0 type veth peer name veth0 netns %i
+ExecStartPre=-/usr/bin/env ip link set veth0 up
 ExecStartPre=-/usr/bin/env ip netns exec %i ip link set lo up
 ExecStartPre=-/usr/bin/env ip netns exec %i ip link set veth0 up
 ExecStartPre=-/usr/bin/env sysctl -w net.ipv4.ip_forward=1
