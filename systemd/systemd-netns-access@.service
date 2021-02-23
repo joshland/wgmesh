@@ -19,8 +19,8 @@ ExecStartPre=-/usr/bin/env sysctl -w net.ipv6.conf.all.forwarding=1
 #ExecStartPre=-/usr/bin/env ip netns exec %i ip addr add 127.0.0.1/8 dev lo
 
 # Configure link
-ExecStart=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i start %i; fi
-ExecStop=/usr/bin/env if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i stop %i; fi
+ExecStart=/usr/bin/bash -c 'if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i start %i; fi'
+ExecStop=/usr/bin/bash -c  'if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i stop %i; fi'
 
 [Install]
 WantedBy=multi-user.target
