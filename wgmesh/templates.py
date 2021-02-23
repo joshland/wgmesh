@@ -20,11 +20,11 @@ protocol direct DIRECT { ipv4 { export all; }; ipv6 { export all; }; interface "
 protocol kernel KERNEL4 { learn; ipv4 { import all; export all; }; merge paths; }
 protocol kernel KERNEL6 { learn; ipv6 { import all; export all; }; merge paths; }
 
-protocol bfd {
-  interface "*" {
-    interval 50 ms;
-  };
-}
+#protocol bfd {
+#  interface "*" {
+#    interval 50 ms;
+#  };
+#}
 
 template bgp mesh_partner {
   local as {{ local_asn }};
@@ -45,7 +45,7 @@ template bgp mesh_partner {
      export all;
   };
   hold time 6;
-  bfd graceful;
+  #bfd graceful;
   graceful restart;
 }
 
