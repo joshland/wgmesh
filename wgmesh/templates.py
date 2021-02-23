@@ -198,6 +198,7 @@ Invalid(DROP)	loc	net:172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
 # Accept DNS connections from the firewall to the Internet
 DNS(ACCEPT)	$FW		net
 NTP(ACCEPT)	$FW		net
+SNMP(ACCEPT)	$FW		net
 SSH(ACCEPT)	$FW		net
 
 # Accept SSH connections from the local network to the firewall and DMZ
