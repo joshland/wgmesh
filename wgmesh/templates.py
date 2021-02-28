@@ -39,7 +39,7 @@ template bgp mesh_partner {
    };
    ipv6 {
      import filter {
-       if ( net ~ [ 0::/0 ] ) then accept;
+       if ( net ~ [ 0::/0+ ] ) then accept;
        reject;
      };
      export all;
