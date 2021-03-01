@@ -157,10 +157,10 @@ function start(){
 
   /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
 
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/4 brd + dev tester1
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/4 brd + dev tester1
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/4 brd + dev tester1
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/4 brd + dev tester1
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/4 brd + dev lo
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/4 brd + dev lo
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/4 brd + dev lo
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/4 brd + dev lo
 
 }
 
@@ -188,6 +188,8 @@ case "$1" in
    ;;
    *)
       echo "Usage: $0 {start|stop|restart}"
+esac
+
 """[1:]
 
 mesh_start = """
@@ -246,6 +248,7 @@ case "$1" in
    *)
       echo "Usage: $0 {start|stop|restart}"
 esac
+
 """[1:]
 
 ## Tab align in rendered template.  (important for readability.)
