@@ -56,7 +56,7 @@ protocol bgp {{ wg }} from mesh_partner {
 }
 {% endfor %}
 
-"""
+"""[1:]
 
 ns_private = """
 #!/bin/bash
@@ -116,7 +116,79 @@ case "$1" in
       echo "Usage: $0 {start|stop|restart}"
 esac
 
-"""
+"""[1:]
+
+ns_tester = """
+#!/bin/bash
+
+## wgmesh - wgdeploy /usr/local/sbin/ns-private
+#  GENERATED FILE - DO NOT EDIT BY HAND
+###############################################################################
+etcbird="/etc/bird"
+etcwg="/etc/wireguard"
+
+function start(){
+  shift
+
+  echo "stopping namespace: $1"
+
+  #/usr/bin/env ip netns delete tester
+  #/usr/bin/env ip netns add tester
+  #/usr/bin/env ip netns exec tester ip link set lo up
+  #/usr/bin/env umount /var/run/netns/tester
+  #/usr/bin/env mount --bind /proc/self/ns/net /var/run/netns/tester
+
+  /usr/bin/env ip netns exec private ip link add tester1 type veth peer name tester1 netns tester
+  /usr/bin/env ip netns exec private ip link set tester1 up
+  /usr/bin/env ip netns exec tester ip link set lo up
+  /usr/bin/env ip netns exec tester ip link set tester1 up
+  /usr/bin/env ip netns exec tester sysctl -w net.ipv4.ip_forward=1
+  /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
+
+  ## default namespace
+  /usr/bin/env ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
+
+  ## $1 namespace
+  /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
+  /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
+
+  /usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
+  /usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
+
+  /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
+
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/4 brd + dev tester1
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/4 brd + dev tester1
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/4 brd + dev tester1
+  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/4 brd + dev tester1
+
+}
+
+function stop(){
+    shift
+    echo "stopping namespace: $1"
+
+}
+
+if [ -z "$2" ]; then
+    echo "Error! namespace name required!"
+    exit 1
+fi
+
+case "$1" in
+   start)
+      start $*
+   ;;
+   stop)
+      stop $*
+   ;;
+   restart)
+      stop $*
+      start $*
+   ;;
+   *)
+      echo "Usage: $0 {start|stop|restart}"
+"""[1:]
 
 mesh_start = """
 #!/usr/bin/env bash
@@ -174,7 +246,7 @@ case "$1" in
    *)
       echo "Usage: $0 {start|stop|restart}"
 esac
-"""
+"""[1:]
 
 ## Tab align in rendered template.  (important for readability.)
 shorewall_rules = """
@@ -228,7 +300,7 @@ ACCEPT		$FW		loc
 ACCEPT		$FW		net		tcp	https
 ACCEPT		$FW		net		tcp	http
 
-"""
+"""[1:]
 
 shorewall_interfaces = """
 ## wgmesh - wgdeploy /etc/shorewall/interfaces
@@ -241,7 +313,7 @@ net     NET_IF      tcpflags,nosmurfs,routefilter,sourceroute=0,physical={{ inte
 loc     LOC_IF      tcpflags,routefilter,physical={{ interface_outbound }}
 #dmz    DMZ_IF      tcpflags,nosmurfs,routefilter,logmartians,physical={{ wireguard_interface | default('wg+') }}
 
-"""
+"""[1:]
 
 wireguard_conf = """
 #
@@ -261,4 +333,4 @@ Endpoint   = {{ remote_address }}
 AllowedIPs = 0.0.0.0/0, ::0/0
 PersistentKeepAlive = 25
 
-"""
+"""[1:]

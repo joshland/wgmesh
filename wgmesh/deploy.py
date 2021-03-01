@@ -17,7 +17,7 @@ from nacl.public import PrivateKey, Box, PublicKey
 from wgmesh.core import *
 from wgmesh import HostDB
 from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, bird_private, wireguard_conf
-from wgmesh.templates import    ns_private, mesh_start
+from wgmesh.templates import ns_private, ns_tester, mesh_start
 from .endpointdb import *
 
 import pprint
@@ -272,16 +272,22 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
     interfaces = render(shorewall_interfaces, template_args)
     dnatrules  = render(shorewall_rules,      template_args)
     nssysvinit = render(ns_private,           template_args)
+    tssysvinit = render(ns_tester,            template_args)
     meshstart  = render(mesh_start,           template_args)
     bird_priv  = render(bird_private,         template_args)
 
     check_update_file(dnatrules,  '/etc/shorewall/rules')
     check_update_file(interfaces, '/etc/shorewall/interfaces')
     check_update_file(nssysvinit, '/usr/local/sbin/ns-private')
+    check_update_file(tssysvinit, '/usr/local/sbin/ns-tester')
     check_update_file(meshstart,  '/usr/local/sbin/mesh_wg_restart')
     check_update_file(bird_priv,  '/etc/bird/bird_private.conf')
 
-    for x in ('/usr/local/sbin/mesh_ns_init', '/usr/local/sbin/mesh_wg_restart', '/usr/local/sbin/ns-private'):
+    for x in (
+        '/usr/local/sbin/mesh_ns_init',
+        '/usr/local/sbin/mesh_wg_restart',
+        '/usr/local/sbin/ns-private',
+        '/usr/local/sbin/ns-tester'):
         os.chmod(x, 0o750)
 
     for x in ('/etc/shorewall/rules', '/etc/shorewall/interfaces', '/etc/bird/bird_private.conf'):
