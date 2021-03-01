@@ -35,7 +35,6 @@ template bgp mesh_partner {
     };
     export all;
     preference 160;
-    extended next hop;
    };
    ipv6 {
      import filter {
@@ -43,6 +42,7 @@ template bgp mesh_partner {
        reject;
      };
      export all;
+     extended next hop;
   };
   hold time 6;
   #bfd graceful;
