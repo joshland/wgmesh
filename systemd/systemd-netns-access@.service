@@ -11,17 +11,17 @@ Type=oneshot
 RemainAfterExit=true
 
 # Create system process
-ExecStartPre=-/usr/bin/env ip link add veth0 type veth peer name veth0 netns %i
-ExecStartPre=-/usr/bin/env ip link set veth0 up
-ExecStartPre=-/usr/bin/env ip netns exec %i ip link set lo up
-ExecStartPre=-/usr/bin/env ip netns exec %i ip link set veth0 up
+ExecStartPre=-/usr/bin/env ip link add %I0 type veth peer name %I0 netns %I
+ExecStartPre=-/usr/bin/env ip link set %I0 up
+ExecStartPre=-/usr/bin/env ip netns exec %I ip link set lo up
+ExecStartPre=-/usr/bin/env ip netns exec %I ip link set %I0 up
 ExecStartPre=-/usr/bin/env sysctl -w net.ipv4.ip_forward=1
 ExecStartPre=-/usr/bin/env sysctl -w net.ipv6.conf.all.forwarding=1
 #ExecStartPre=-/usr/bin/env ip netns exec %i ip addr add 127.0.0.1/8 dev lo
 
 # Configure link
-ExecStart=/usr/bin/bash -c 'if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i start %i; fi'
-ExecStop=/usr/bin/bash -c  'if [[ -e "/usr/local/sbin/ns-%i" ]]; then bash /usr/local/sbin/ns-%i stop %i; fi'
+ExecStart=/usr/bin/bash -c 'if [[ -e "/usr/local/sbin/ns-%I" ]]; then bash /usr/local/sbin/ns-%I start %I; fi'
+ExecStop=/usr/bin/bash -c  'if [[ -e "/usr/local/sbin/ns-%I" ]]; then bash /usr/local/sbin/ns-%I stop %I; fi'
 
 [Install]
 WantedBy=multi-user.target
