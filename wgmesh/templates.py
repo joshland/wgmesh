@@ -149,12 +149,11 @@ function start(){
   /usr/bin/env ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
 
   ## $1 namespace
-  /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
+  /usr/bin/env ip netns exec private ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
   /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
 
   /usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
   /usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
-
   /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
 
   /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/24 brd + dev lo
