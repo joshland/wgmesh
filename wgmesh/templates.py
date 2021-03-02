@@ -30,7 +30,7 @@ template bgp mesh_partner {
   local as {{ local_asn }};
   ipv4 {
     import filter {
-      if ( net ~ [ 172.16.0.0/16+, 10.0.0.0/8+ ] ) then accept;
+      if ( net ~ [ 172.16.0.0/16+, 10.0.0.0/8+, 192.168.0.0/16+ ] ) then accept;
       reject;
     };
     export all;
