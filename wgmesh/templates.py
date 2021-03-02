@@ -128,7 +128,8 @@ etcbird="/etc/bird"
 etcwg="/etc/wireguard"
 
 function cmd(){
-   $* || echo "FAILED: $*"
+   echo "RUNCMD: $*"
+   $* || echo "FAILED"
    return $?
 }
 
