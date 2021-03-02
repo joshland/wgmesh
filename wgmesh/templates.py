@@ -121,11 +121,16 @@ esac
 ns_tester = """
 #!/bin/bash
 
-## wgmesh - wgdeploy /usr/local/sbin/ns-private
+## wgmesh - wgdeploy /usr/local/sbin/ns-tester
 #  GENERATED FILE - DO NOT EDIT BY HAND
 ###############################################################################
 etcbird="/etc/bird"
 etcwg="/etc/wireguard"
+
+function cmd(){
+   $* || echo "FAILED: $*"
+   return $?
+}
 
 function start(){
   shift
@@ -133,31 +138,31 @@ function start(){
   echo "stopping namespace: $1"
 
   ## Private Setup
-  /usr/bin/env ip netns exec private ip link add tester1 type veth peer name tester1 netns tester
-  /usr/bin/env ip netns exec private ip link set tester1 up
+  cmd /usr/bin/env ip netns exec private ip link add tester1 type veth peer name tester1 netns tester
+  cmd /usr/bin/env ip netns exec private ip link set tester1 up
 
   ## Tester Setup
-  /usr/bin/env ip netns exec tester ip link set lo up
-  /usr/bin/env ip netns exec tester ip link set tester1 up
-  /usr/bin/env ip netns exec tester sysctl -w net.ipv4.ip_forward=1
-  /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
+  cmd /usr/bin/env ip netns exec tester ip link set lo up
+  cmd /usr/bin/env ip netns exec tester ip link set tester1 up
+  cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv4.ip_forward=1
+  cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
 
   ## IPv4 Address
-  /usr/bin/env ip netns exec private ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
-  /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
+  cmd /usr/bin/env ip netns exec private ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
+  cmd /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
 
   ## Test Addresses (lo)
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/24 brd + dev lo
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/24 brd + dev lo
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/24 brd + dev lo
-  /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/24 brd + dev lo
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/24 brd + dev lo
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/24 brd + dev lo
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/24 brd + dev lo
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/24 brd + dev lo
 
   ## Test Routes
-  /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
-  /usr/bin/env ip netns exec tester ip route add default via 169.254.{{ 100 + octet }}.1
+  cmd /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
+  cmd /usr/bin/env ip netns exec tester ip route add default via 169.254.{{ 100 + octet }}.1
 
-  #/usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
-  #/usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
+  #cmd /usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
+  #cmd /usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
 }
 
 function stop(){
