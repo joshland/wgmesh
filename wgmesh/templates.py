@@ -132,35 +132,32 @@ function start(){
 
   echo "stopping namespace: $1"
 
-  #/usr/bin/env ip netns delete tester
-  #/usr/bin/env ip netns add tester
-  #/usr/bin/env ip netns exec tester ip link set lo up
-  #/usr/bin/env umount /var/run/netns/tester
-  #/usr/bin/env mount --bind /proc/self/ns/net /var/run/netns/tester
-
+  ## Private Setup
   /usr/bin/env ip netns exec private ip link add tester1 type veth peer name tester1 netns tester
   /usr/bin/env ip netns exec private ip link set tester1 up
+
+  ## Tester Setup
   /usr/bin/env ip netns exec tester ip link set lo up
   /usr/bin/env ip netns exec tester ip link set tester1 up
   /usr/bin/env ip netns exec tester sysctl -w net.ipv4.ip_forward=1
   /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
 
-  ## default namespace
-  /usr/bin/env ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
-
-  ## $1 namespace
+  ## IPv4 Address
   /usr/bin/env ip netns exec private ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
   /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
 
-  /usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
-  /usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
-  /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
-
+  ## Test Addresses (lo)
   /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/24 brd + dev lo
   /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/24 brd + dev lo
   /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/24 brd + dev lo
   /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/24 brd + dev lo
 
+  ## Test Routes
+  /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
+  /usr/bin/env ip netns exec tester ip route add default via 169.254.{{ 100 + octet }}.1
+
+  #/usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
+  #/usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
 }
 
 function stop(){
