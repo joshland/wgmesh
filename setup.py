@@ -3,7 +3,7 @@
 # Copyright (C) 2017 Joshua Schmidlkofer <joshua.schmidlkofer@erickson.is>
 # All rights reserved.
 #
-# This software is licensed as described in the file COPYING, which
+# This software is licensed as described in the file LICENSE, which
 # you should have received as part of this distribution.
 #
 # Author: Joshua M. Schmidlkofer <joshua.schmidlkofer@erickson.is>

@@ -19,7 +19,8 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 ## TODO
 
  - Local Site-specific configurations integration?
- - systemctl @ service - bird for the netns 'bird@private'.
+    - 1/2 done, calls `-local` scripts.
+ - Rename netns "private" to a mesh-specific names.
  - startup script should prolly be written in python.
  - Non-dns method of transmitting deploy_messages.
  - Warning command:
@@ -74,3 +75,10 @@ Example Domain: `mesh.example.com`
  ## Changelog
 
   - 2020-12-04: Joshua Schmidlkofer - project setup
+  - 2021-03-03: 0.5 - functional test release.
+
+## Contributing
+
+Pull requests and feature requests gladly accepted.
+
+_wgmesh_ is licensed under the MIT/Expat license.
