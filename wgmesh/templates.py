@@ -346,7 +346,8 @@ PublicKey  = {{ public_key }}
 {%- if remote_address > '' %}
 Endpoint   = {{ remote_address }}
 {% endif %}
-AllowedIPs = 0.0.0.0/0, ::0/0
+#AllowedIPs = 0.0.0.0/0, ::0/0
+AllowedIPs = ::0/0
 PersistentKeepAlive = 25
 
 """[1:]
