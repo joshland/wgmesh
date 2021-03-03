@@ -15,8 +15,8 @@ ExecStartPre=-/usr/bin/env ip link add %I0 type veth peer name %I0 netns %I
 ExecStartPre=-/usr/bin/env ip link set %I0 up
 ExecStartPre=-/usr/bin/env ip netns exec %I ip link set lo up
 ExecStartPre=-/usr/bin/env ip netns exec %I ip link set %I0 up
-ExecStartPre=-/usr/bin/env sysctl -w net.ipv4.ip_forward=1
-ExecStartPre=-/usr/bin/env sysctl -w net.ipv6.conf.all.forwarding=1
+ExecStartPre=-/usr/bin/env ip netns exec %I sysctl -w net.ipv4.ip_forward=1
+ExecStartPre=-/usr/bin/env ip netns exec %I sysctl -w net.ipv6.conf.all.forwarding=1
 #ExecStartPre=-/usr/bin/env ip netns exec %i ip addr add 127.0.0.1/8 dev lo
 
 # Configure link

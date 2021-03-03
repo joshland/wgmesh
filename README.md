@@ -22,6 +22,13 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
  - systemctl @ service - bird for the netns 'bird@private'.
  - startup script should prolly be written in python.
  - Non-dns method of transmitting deploy_messages.
+ - Warning command:
+  - check default and private for forwarding
+  - check for addresses on WG interfaces
+  - Check for wg up
+  - Check for veth device presence
+  - Check veth addressed
+  
 
 ##  Getting Started
 
