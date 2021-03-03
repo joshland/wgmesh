@@ -71,14 +71,13 @@ Example Domain: `mesh.example.com`
   - local shorewall deployment
   - local frr deployment
 
- 
- ## Changelog
-
-  - 2020-12-04: Joshua Schmidlkofer - project setup
-  - 2021-03-03: 0.5 - functional test release.
-
 ## Contributing
 
 Pull requests and feature requests gladly accepted.
 
 _wgmesh_ is licensed under the MIT/Expat license.
+
+ ## Changelog
+
+  - 2020-12-04: Joshua Schmidlkofer - project setup
+  - 2021-03-03: 0.5 - functional test release.
