@@ -93,9 +93,12 @@ function start(){
   cmd /usr/bin/env systemctl restart shorewall --no-ask-password
 
   ## Start Routing
-  cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv4.ip_forward=1
-  cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
+  cmd /usr/bin/env ip netns exec $1 sysctl -w net.ipv4.ip_forward=1
+  cmd /usr/bin/env ip netns exec $1 sysctl -w net.ipv6.conf.all.forwarding=1
 
+  if [[ -e "/usr/local/sbin/ns-${1}-local" ]]; then
+      cmd /usr/bin/env ip netns exec tester /usr/local/sbin/ns-${1}-local start $1;
+  fi
 }
 
 function stop(){
@@ -173,8 +176,9 @@ function start(){
   cmd /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
   cmd /usr/bin/env ip netns exec tester ip route add default via 169.254.{{ 100 + octet }}.1
 
-  #cmd /usr/bin/env ip netns exec tester ip route add 10.0.0.0/8 via 169.254.{{ 100 + octet }}.1
-  #cmd /usr/bin/env ip netns exec tester ip route add 172.126 via 169.254.{{ 100 + octet }}.1
+  if [[ -e "/usr/local/sbin/ns-tester-local" ]]; then
+      cmd /usr/bin/env ip netns exec tester /usr/local/sbin/ns-tester-local start tester;
+  fi
 }
 
 function stop(){
