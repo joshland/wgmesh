@@ -67,33 +67,44 @@ ns_private = """
 etcbird="/etc/bird"
 etcwg="/etc/wireguard"
 
+function cmd(){
+   echo "RUNCMD: $*"
+   $* || echo "FAILED"
+   return $?
+}
+
 function start(){
   shift
 
   echo "stopping namespace: $1"
 
   ## default namespace
-  /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 brd + dev {{ interface_outbound }}
-  /usr/bin/env ip link set netns $1 dev {{ interface_trust }}
+  cmd /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 brd + dev {{ interface_outbound }}
+  cmd /usr/bin/env ip link set netns $1 dev {{ interface_trust }}
 
   # up {{ interface_trust }}
-  /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} up
-  /usr/bin/env ip netns exec $1 ip addr add {{ interface_trust_ip }} brd + dev {{ interface_trust }}
+  cmd /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} up
+  cmd /usr/bin/env ip netns exec $1 ip addr add {{ interface_trust_ip }} brd + dev {{ interface_trust }}
 
   ## $1 namespace
-  /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 brd + dev {{ interface_outbound }}
-  /usr/bin/env ip netns exec $1 ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
-  /usr/bin/env ip netns exec $1 ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
-  /usr/bin/env systemctl restart shorewall --no-ask-password
+  cmd /usr/bin/env ip netns exec $1 ip addr add 169.254.{{ octet }}.2/24 brd + dev {{ interface_outbound }}
+  cmd /usr/bin/env ip netns exec $1 ip route add 0.0.0.0/1 via 169.254.{{ octet }}.1
+  cmd /usr/bin/env ip netns exec $1 ip route add 128.0.0.0/1 via 169.254.{{ octet }}.1
+  cmd /usr/bin/env systemctl restart shorewall --no-ask-password
+
+  ## Start Routing
+  cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv4.ip_forward=1
+  cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
+
 }
 
 function stop(){
     shift
     echo "stopping namespace: $1"
 
-    /usr/bin/env ip netns exec $1 ip addr del {{ interface_trust_ip }} dev {{ interface_trust }}
-    /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} down
-    /usr/bin/env ip netns exec $1 ip link set netns 1 dev {{ interface_trust }}
+    cmd /usr/bin/env ip netns exec $1 ip addr del {{ interface_trust_ip }} dev {{ interface_trust }}
+    cmd /usr/bin/env ip netns exec $1 ip link set {{ interface_trust }} down
+    cmd /usr/bin/env ip netns exec $1 ip link set netns 1 dev {{ interface_trust }}
 }
 
 if [ -z "$2" ]; then
