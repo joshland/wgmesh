@@ -114,11 +114,10 @@ class Sitecfg(object):
 class Host(object):
     hostname = attr.ib()
     sitecfg  = attr.ib()
-    asn      = attr.ib(default= 0, kw_only=True, converter=int)
+    asn      = attr.ib(default=0, kw_only=True, converter=int)
+    octet    = attr.ib(default=0, kw_only=True, converter=int)
     local_ipv4  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     local_ipv6  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
-    tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
-    tunnel_ipv6 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
     public_key  = attr.ib(default=f'', kw_only=True)
     local_networks   = attr.ib(default = '', kw_only=True)
     public_key_file  = attr.ib(default=f'', kw_only=True)
@@ -126,15 +125,9 @@ class Host(object):
     uuid = attr.ib()
 
     def endport(self):
-        ''' returns the last octet of the tunnel_ipv6 address as a decimal number, added to the site.portbase '''
-        retval = self.sitecfg.portbase + self.octet()
+        ''' returns the octet added to the site.portbase '''
+        retval = self.sitecfg.portbase + self.octet
         return retval
-
-    def octet(self):
-        ''' returns the last octet of the tunnel_ipv6 address as a decimal number, added to the site.portbase '''
-        octet = str(self.tunnel_ipv6).split(':')[-1]
-        base = int(octet, 16)
-        return base
 
     def publish(self):
         if self.private_key_file == '':
@@ -144,15 +137,11 @@ class Host(object):
         m2['local_ipv6'] = [ str(x) for x in self.local_ipv6 ]
         del m2['hostname']
         del m2['sitecfg']
-        del m2['tunnel_ipv4']
-        del m2['tunnel_ipv6']
         logger.trace(pprint.pformat(m2))
         return self.hostname, m2
 
     def update(self, host):
         ''' update host from a new record 
-        
-        blocked: tunnel_ipv4, tunnel_ipv6
         '''
         if self.uuid != host.uuid:
             raise HostMismatch
@@ -165,8 +154,6 @@ class Host(object):
             pass
 
         for k, v in hdict.items():
-            if k == 'tunnel_ipv4': continue
-            if k == 'tunnel_ipv6': continue
             if k == 'asn' and v in (0, '0'): continue
             logger.trace(f'host update: {k}: {getattr(self, k)} => {v}')
             setattr(self, k, v)
@@ -270,59 +257,6 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
         pass
     return
 
-def gen_local_config(publickey: str, site: Sitecfg, hosts: list):
-    ''' look for port collisions in configuration '''
-    me = None
-    for x in hosts:
-        if x.publickey == publickey:
-            logger.trace(f'Located host using public key. {x.hostname}')
-            me = x
-            break
-        continue
-
-    if me:
-        retval = {}
-        count = 1
-        my_octet = int(str(me.tunnel_ipv4).split('.')[-1])
-
-        for h in hosts:
-            if me.hostname == h.hostname: continue
-            this_octet = int(str(this.tunnel_ipv4).split('.')[-1])
-            retval = { 
-                'device': f'wg{count}',
-                'port': site.portbase + int(this_octet),
-                'key': me.private_key_file,
-                'peer': h,
-            }
-            count += 1
-            logger.trace(f'Yield: wg{count}')
-            yield retval
-        pass
-    pass
-
-def post_check(publickey, site, hosts):
-    ''' look for port collisions in configuration '''
-    taken = []
-    closed = []
-    for me in hosts:
-        pb = site.portbase
-        my_octet = int(str(me.tunnel_ipv4).split('.')[-1])
-        for this in hosts:
-            if me.hostname == this.hostname: continue
-            this_octet = int(str(this.tunnel_ipv4).split('.')[-1])
-            sideA = f'{this.hostname}:{pb + my_octet}'
-            sideB = f'{me.hostname}:{pb + this_octet}'
-            temp = [ sideA, sideB ]
-            temp.sort()
-            if sideA in taken or sideB in taken:
-                if temp not in closed:
-                    print(f'ERROR: {temp} Collsion but something WRONG.')
-                    pass
-            else:
-                closed.append(temp)
-            continue
-        continue
-
 def genkey(keyfile):
     ''' create a key, and save it to file {keyfile} '''
     newKey = PrivateKey.generate()
@@ -381,14 +315,6 @@ def decrypt(secret: Union[PrivateKey, str, bytes], public: Union[PublicKey, str,
     sBox = Box(SSK, PPK)
     output = sBox.decrypt(cipher)
     return (SSK, PPK, output)
-
-def encrypt(host, ydata):
-    ''' encrypt a host blob target '''
-    SSK = loadkey(host.sitecfg.privatekey, PrivateKey)
-    SPK = SSK.public_key
-    hpk = host.public_key
-    mybox = Box(SSK, hpk)
-    return mybox.encrypt(ydata)
 
 def splitOrderedList(data):
     ''' take incoming encoded text, look for split order markers '''
@@ -518,8 +444,19 @@ def CheckConfig(site, hosts):
     asn_list    = []
     hosts_asn_fix = []
 
+    octet_list      = []
+    hosts_octet_fix = []
+
     # log the existing IPs
     for h in hosts:
+        if not h.octet or h.octet == 0 or h.octet in octet_list:
+            logger.warning(f"{h.hostname} invalid / missing / duplicate octet.")
+            hosts_octet_fix.append(h)
+        else:
+            logger.trace(f'{h.hostname} octet normal. {h.octet}')
+            octet_list.append(h.octet)
+            pass
+
         if not h.asn or h.asn == 0:
             hosts_asn_fix.append(h)
         else:
@@ -529,6 +466,18 @@ def CheckConfig(site, hosts):
             else:
                 asn_list.append(int(h.asn))
             pass
+        continue
+
+    try:
+        octet_base = max(octet_list) + 1
+    except ValueError:
+        octet_base = 1
+        pass
+
+    for h in hosts_octet_fix:
+        logger.trace(f"{h.hostname} octet: {h.octet} => {octet_base}")
+        h.octet = octet_base
+        octet_base += 1
         continue
 
     sset = set(site.asn_range)

@@ -81,11 +81,10 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
     for me in hosts:
         uuid = me.uuid
         myport = me.endport()
-        myaddrs = ','.join([str(me.tunnel_ipv4), str(me.tunnel_ipv6)])
         core = {
             'asn':      me.asn,
             'site':     site.domain,
-            'octet':    me.octet(),
+            'octet':    me.octet,
             'portbase': site.portbase,
             'remote':   str(site.ipv6),
             'hosts': {},
