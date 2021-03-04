@@ -47,7 +47,7 @@ template bgp mesh_partner {
   hold time 6;
   #bfd graceful;
   graceful restart;
-  ecmp yes limit 16;
+  enable extended messages;
 }
 
 {% for wg, values in wireguard_interfaces.items() %}
