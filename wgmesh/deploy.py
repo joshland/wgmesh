@@ -235,8 +235,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
 
         portpoints = [ deploy_message['octet'] ]
         portpoints.append( index )
-        netbits = ':'.join( [ str(x) for x in sorted(portpoints, reverse=True) ] )
-        local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/{80}'
+        netbits = ''.join([ '{:02X}'.format(a) for a in sorted(portpoints, reverse=True) ])
+        local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/64'
         remote_endpoint_addr = f'{tunnel_net_base}:{netbits}::{index}'
 
         fulfill = {

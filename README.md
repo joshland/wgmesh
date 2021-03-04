@@ -42,6 +42,7 @@ Example Domain: `mesh.example.com`
  **Site Config**
  - Copy wgmesh-example.yaml to `wgmesh.yaml`
  - Edit the file and set the primitives.
+    - The ipv6 segment should be a 48bit ULA subnet.
  - Execute site publisher: `wgsite wgmesh.yaml`
  - Publish the DNS Information. (TXT record 'mesh.example.com')
 
