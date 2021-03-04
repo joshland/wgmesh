@@ -36,13 +36,19 @@ protocol kernel KERNEL6 {
 protocol kernel {{ wgname }} {
    learn; merge paths; persist;
    kernel table {{ table.id }};
-   ipv4 { import all; export all; };
+   ipv4 {
+      table {{ table.name }};
+      export all;
+   };
 }
 
 protocol kernel {{ wgname }} {
    learn; merge paths; persist;
    kernel table {{ table.id }};
-   ipv6 { import all; export all; };
+   ipv6 {
+      table {{ table.name }};
+      export all;
+   };
 }
 
 {% endfor %}
