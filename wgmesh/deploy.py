@@ -225,6 +225,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
     template_args['local_asn'] = deploy_message['asn']
     template_args['octet']     = deploy_message['octet']
     template_args['tunnel_remote'] = deploy_message['remote']
+    template_args['routing_tables'] = {}
 
     for host, values in deploy_message['hosts'].items():
         index = values['localport'] - deploy_message['portbase']
@@ -241,6 +242,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         remote_endpoint_addr = f'{tunnel_net_base}:{netbits}::{index}'
         route_table_id  = hostconfig.host.route_table_base + index
         route_table_name = f'{hostconfig.site.locus}_wg{index}'
+        template_args['routing_tables'][f'wg{index}'] = { 'name': route_table_name, 'id': route_table_id}
 
         fulfill = {
             'myhost':           hostconfig.host.hostname,
