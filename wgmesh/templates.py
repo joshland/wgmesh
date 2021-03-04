@@ -358,7 +358,7 @@ wireguard_conf = """
 PrivateKey = {{ private_key }}
 Address    = {{ tunnel_addresses }}
 ListenPort = {{ local_port }}
-Tables     = {{ route_table_name }}
+Table      = {{ route_table_name }}
 
 # {{ Hostname }}
 [Peer]
