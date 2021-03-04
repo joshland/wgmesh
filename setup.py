@@ -18,7 +18,6 @@ if os.path.exists(readme_path):
     with open(readme_path) as f:
         README = f.read()
 
-# Load version from version module (this might be a bad idea, not sure)
 v = import_module('version')
 
 requires = [

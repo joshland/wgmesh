@@ -7,7 +7,7 @@
   - private / 127.0.0.1
   - private / inner interface
   - shorewall port forwarding
-  - shorewall NAT for 168.254.[port] to internet.
+  - shorewall NAT for 169.254.[port] to internet.
   - schedule startup.
   - bird6/Point-to-Point eBGP
   - bird/bird6 internal process for local network

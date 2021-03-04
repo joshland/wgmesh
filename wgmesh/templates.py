@@ -331,7 +331,6 @@ shorewall_interfaces = """
 #ZONE	INTERFACE	OPTIONS
 net     NET_IF      tcpflags,nosmurfs,routefilter,sourceroute=0,physical={{ interface_public }}
 loc     LOC_IF      tcpflags,routefilter,physical={{ interface_outbound }}
-#dmz    DMZ_IF      tcpflags,nosmurfs,routefilter,logmartians,physical={{ wireguard_interface | default('wg+') }}
 
 """[1:]
 
