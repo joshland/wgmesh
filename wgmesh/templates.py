@@ -15,21 +15,23 @@ router id 1.0.{{ octet }}.1;
 roa4 table roa_v4;
 roa6 table roa_v6;
 
-protocol device DEVICE { import all; }
+protocol device DEVICE { }
 protocol direct DIRECT { ipv4 { export all; }; ipv6 { export all; }; interface "*"; }
 protocol kernel KERNEL4 { learn; ipv4 { import all; export all; }; merge paths; persist; }
 protocol kernel KERNEL6 { learn; ipv6 { import all; export all; }; merge paths; persist; }
 
 {% for wgname, table in routing_tables.items() %}
-table {{ table.name }};
+#table {{ table.name }};
 protocol kernel KERNEL4_{{ wgname }} {
    learn; merge paths; persist;
    kernel table {{ table.id }};
    ipv4 { import all; export all; }; }
+
 protocol kernel KERNEL6_{{ wgname }} {
    learn; merge paths; persist;
    kernel table {{ table.id }};
    ipv6 { import all; export all; }; }
+
 {% endfor %}
 
 #protocol bfd {
