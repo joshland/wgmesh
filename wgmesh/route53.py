@@ -56,7 +56,6 @@ class Route53(object):
                 logger.debug(f'No update needed {hostname}')
                 pass
             record.records = newvalues
-            print('Would')
             if commit:
                 record.save()
             else:

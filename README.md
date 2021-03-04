@@ -48,8 +48,17 @@ Example Domain: `mesh.example.com`
  **Endpoint Config**
  - Connect to mesh endpoints, setup python virtualenv if desired.
  - Install wgmesh package; `pip install wgmesh`
- - Setup host registration the mesh (run as root or sudo): `wgconfig -i ens4 -T ens3 -I 172.16.143.22/24 mesh.example.com`
- - Configure the local host `wgconfig -i enp0s1 -T veth0 -I 172.16.140.21/24`
+ - Setup host registration the mesh (run as root or sudo):
+
+        wgconfig mesh.example.com
+
+ - Configure the local host:
+
+        wgconfig -i ens3 -T ens4 -I 172.22.15.243/24  mesh.example.com
+
+  - Publish Site import data:
+
+        wghost mesh.erickson.is
 
  **Site Config**
  - Import the host by copying the output into the site controller. `wgsite -i <hash> wgmesh.yaml`
