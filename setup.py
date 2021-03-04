@@ -68,7 +68,6 @@ setup(name='wgmesh',
       install_requires=requires,
       entry_points="""\
       [console_scripts]
-      wgfrr    = wgmesh:frr_cli
       wgconfig = wgmesh:config_cli
       wgdeploy = wgmesh:deploy_cli
       wghost   = wgmesh:host_cli
