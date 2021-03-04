@@ -94,7 +94,7 @@ class Sitecfg(object):
     aws_secret_access_key = attr.ib(default='', kw_only=True, converter=nonone)
     domain = attr.ib(default='', kw_only=True)
     locus = attr.ib(default='', kw_only=True)
-    ipv4 = attr.ib(default = '192.168.2.1/24', kw_only=True, converter=validateNetworkAddress)
+    ipv4 = attr.ib(default = '192.168.2.0/24', kw_only=True, converter=validateNetworkAddress)
     ipv6 = attr.ib(default = 'fd86:ea04:1116::/64', kw_only=True, converter=validateNetworkAddress)
     portbase = attr.ib(default = 58822, kw_only=True, converter=int)
     publickey = attr.ib(default='', kw_only=True, converter=nonone)

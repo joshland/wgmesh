@@ -42,6 +42,7 @@ setup(name='wgmesh',
       version=v.VERSION,
       description='Wireguard Mesh Maker',
       long_description=README,
+      long_description_content_type = 'text/markdown',
       classifiers=[
           "Environment :: Console",
           "Intended Audience :: Information Technology",
