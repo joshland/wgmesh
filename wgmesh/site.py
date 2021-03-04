@@ -146,7 +146,7 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
         hosts.append(host)
         pass
 
-    return site, hosts
+    return CheckConfig(site, hosts)
 
 @click.command()
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")

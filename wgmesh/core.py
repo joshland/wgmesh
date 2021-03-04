@@ -114,7 +114,7 @@ class Sitecfg(object):
 class Host(object):
     hostname = attr.ib()
     sitecfg  = attr.ib()
-    asn      = attr.ib(default= '', kw_only=True, converter=int)
+    asn      = attr.ib(default= 0, kw_only=True, converter=int)
     local_ipv4  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     local_ipv6  = attr.ib(default= '', kw_only=True, converter=validateLocalAddresses)
     tunnel_ipv4 = attr.ib(default= '', kw_only=True, converter=validateIpAddress)
@@ -167,6 +167,7 @@ class Host(object):
         for k, v in hdict.items():
             if k == 'tunnel_ipv4': continue
             if k == 'tunnel_ipv6': continue
+            if k == 'asn' and v in (0, '0'): continue
             logger.trace(f'host update: {k}: {getattr(self, k)} => {v}')
             setattr(self, k, v)
             continue
@@ -514,32 +515,12 @@ def CheckConfig(site, hosts):
     ''' verify Wireguard Core YAML Config, Subnets, etc '''
     maxcount = len(hosts) + 5
 
-    ipv4_master = []
-    ipv6_master = []
     asn_list    = []
-
-    hosts4_to_be_adjusted = []
-    hosts6_to_be_adjusted = []
     hosts_asn_fix = []
 
     # log the existing IPs
     for h in hosts:
-        if h.tunnel_ipv4 == '' or h.tunnel_ipv4 not in site.ipv4:
-            logger.trace(f'Host needs ipv4 address: {h}')
-            hosts4_to_be_adjusted.append(h)
-        else:
-            logger.trace(f'Host ipv4 address: {h}')
-            ipv4_master.append(h.tunnel_ipv4)
-            pass
-
-        if h.tunnel_ipv6 == '' or h.tunnel_ipv6 not in site.ipv6:
-            logger.trace(f'Host needs ipv6 address: {h}')
-            hosts6_to_be_adjusted.append(h)
-        else:
-            logger.trace(f'Host ipv6 address: {h}')
-            ipv6_master.append(h.tunnel_ipv6)
-            pass
-        if not h.asn:
+        if not h.asn or h.asn == 0:
             hosts_asn_fix.append(h)
         else:
             if h.asn in asn_list:
@@ -548,42 +529,6 @@ def CheckConfig(site, hosts):
             else:
                 asn_list.append(int(h.asn))
             pass
-        continue
-        
-    for host in hosts4_to_be_adjusted:
-        logger.debug(f'{host.hostname} needs ipv4 address.')
-
-        for x in range(1, maxcount):
-            addr = site.ipv4[x]
-            if addr in ipv4_master:
-                logger.trace(f'{addr} exists in the master list, rejecting.')
-                continue
-            break
-        if x == maxcount:
-            logger.error(f'ipv6 calculation failed for {host.hostname}.')
-            sys.exit(1)
-            pass
-
-        logger.trace(f'Assign ipv{addr.version} address: {host.hostname} => {addr}')
-        host.tunnel_ipv4 = addr
-        ipv4_master.append(addr)
-        continue
-
-    for host in hosts6_to_be_adjusted:
-        logger.debug(f'{host.hostname} needs ipv6 address.')
-        for x in range(1, maxcount):
-            addr = site.ipv6[x]
-            if addr in ipv6_master:
-                logger.trace(f'{addr} exists in the master list, rejecting.')
-                continue
-            break
-        if x == maxcount:
-            logger.error(f'ipv6 calculation failed for {host.hostname}.')
-            sys.exit(1)
-            pass
-        logger.trace(f'Assign ipv{addr.version} address: {host.hostname} => {addr}')
-        host.tunnel_ipv6 = addr
-        ipv6_master.append(addr)
         continue
 
     sset = set(site.asn_range)
