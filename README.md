@@ -18,6 +18,8 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 
 ## TODO
 
+ - build node removal workflow.
+ - wgconfig should perform the initial wghost configuration.
  - Local Site-specific configurations integration?
     - 1/2 done, calls `-local` scripts.
  - Rename netns "private" to a mesh-specific _locus_.
@@ -37,24 +39,24 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 Example config: `wgmesh.yaml`
 Example Domain: `mesh.example.com`
 
- ** Site Config **
+ **Site Config**
  - Copy wgmesh-example.yaml to `wgmesh.yaml`
  - Edit the file and set the primitives.
  - Execute site publisher: `wgsite wgmesh.yaml`
  - Publish the DNS Information. (TXT record 'mesh.example.com')
 
- ** Endpoint Config **
+ **Endpoint Config**
  - Connect to mesh endpoints, setup python virtualenv.
  - Install Wireguard tools on the local host `pip install wgmesh`
- - Setup host registration the mesh (run as root or sudo): `wgconfig -i ens4 -o veth0 -T ens3 -I 172.16.143.22/24 mesh.example.com`
- - Configure the local host `wgconfig -i enp0s1 -t enp0s2 -T veth0 -I 172.16.140.21/24`
+ - Setup host registration the mesh (run as root or sudo): `wgconfig -i ens4 -T ens3 -I 172.16.143.22/24 mesh.example.com`
+ - Configure the local host `wgconfig -i enp0s1 -T veth0 -I 172.16.140.21/24`
 
- ** Site Config **
+ **Site Config**
  - Import the host by copying the output into the site controller. `wgsite -i <hash> wgmesh.yaml`
  - Once host(s) are ready, publish Host-base DNS records: `wgpub wgmesh.yaml`
  - Publish output to the `[uuid].wgmesh.example.com` TXT records.
 
- ** Endpoint Config **
+ **Endpoint Config**
  - Deploy on the local hosts: `wgdeploy mesh.example.com`
 
  Publish and deploy processes can be automated.
@@ -62,6 +64,17 @@ Example Domain: `mesh.example.com`
 ## Warnings:
 
  `wghost` setup, and `wgsite -i` must be a human-approved process, because this adds nodes (e.g. trusted keys) to the mesh.
+
+ ## Route53 Integration
+
+ If you are using Route53 for DNS hosting, you *may* setup automated DNS posting from the site configurator.  This causes `wgsite`, and `wgpub` to automatically update records in DNS.
+
+ Add the `aws_access_key_id` and `aws_secret_access_key` to the Site Mesh file in the `global` section.
+
+    global:
+      aws_access_key_id: XXXXXXXXXXXXXXXXXX
+      aws_secret_access_key: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
 
 ## Mesh Endpoints
 

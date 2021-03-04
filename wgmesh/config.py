@@ -96,10 +96,10 @@ def find_public():
 @click.option( '--locus',    '-l', default='', help="Manually set Mesh Locus."      )
 @click.option( '--pubkey',   '-p', default='', help="Manually set Mesh Public Key." )
 @click.option( '--hostname', '-h', default='', help="Override local hostname."      )
-@click.option( '--inbound',  '-i', default='', help="Inbound interface."  )
-@click.option( '--outbound', '-o', default='', help="Outbound interface." )
-@click.option( '--trust',    '-T', default='', help="Trust interface."    )
-@click.option( '--trustip',  '-I', default='', help="Trust interface Ip Address + CIDR."    )
+@click.option( '--inbound',  '-i', default='', help="Inbound interface."            )
+@click.option( '--outbound', '-o', default='', help="Outbound Veth interface."      )
+@click.option( '--trust',    '-T', default='', help="Trusted interface."            )
+@click.option( '--trustip',  '-I', default='', help="Trusted interface Ip Address + CIDR." )
 @click.argument('domain')
 def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str,
         inbound: str, outbound: str, trust: str, trustip: str, domain: str):
