@@ -35,7 +35,7 @@ protocol kernel KERNEL6 {
 ipv4 table {{ table.name }}_4;
 ipv6 table {{ table.name }}_6;
 
-protocol kernel {{ wgname }} {
+protocol kernel {{ wgname }}_4 {
    learn; merge paths; persist;
    kernel table {{ table.id }};
    ipv4 {
@@ -44,7 +44,7 @@ protocol kernel {{ wgname }} {
    };
 }
 
-protocol kernel {{ wgname }} {
+protocol kernel {{ wgname }}_6 {
    learn; merge paths; persist;
    kernel table {{ table.id }};
    ipv6 {
