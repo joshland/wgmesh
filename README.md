@@ -14,7 +14,7 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
  - [Wireguard](https://www.wireguard.com/) _included with Fedora (wireguard-tools)_
  - [Python](https://www.python.org/) _included with almost all modern linux_
  - [BIRD](https://bird.network.cz/) _modular protocol routing daemon_
- - [GIT](https://git-scm.com/) _Source Control_
+ - [Shorewall](https://shorewall.org/) _local linux firewall configuration, with the simple two-interface setup_
 
 ## TODO
 
@@ -29,19 +29,18 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
     - Check for wg up
     - Check for veth device presence
     - Check veth addressed
-  - Remove tunnel_ipv4 attributes.
   - Examine ifaddr dependency.
   - Simplify `wgconfig`, remove `wgdeploy` redundant code blocks.
 
 ##  Getting Started
 
-Example config: `wgfrr.yaml`
+Example config: `wgmesh.yaml`
 Example Domain: `mesh.example.com`
 
  ** Site Config **
- - Copy wgfrr-example.yaml to `wgfrr.yaml`
+ - Copy wgmesh-example.yaml to `wgmesh.yaml`
  - Edit the file and set the primitives.
- - Execute site publisher: `wgsite wgfrr.yaml`
+ - Execute site publisher: `wgsite wgmesh.yaml`
  - Publish the DNS Information. (TXT record 'mesh.example.com')
 
  ** Endpoint Config **
@@ -51,9 +50,9 @@ Example Domain: `mesh.example.com`
  - Configure the local host `wgconfig -i enp0s1 -t enp0s2 -T veth0 -I 172.16.140.21/24`
 
  ** Site Config **
- - Import the host by copying the output into the site controller. `wgsite -i <hash> wgfrr.yaml`
- - Once host(s) are ready, publish Host-base DNS records: `wgpub wgfrr.yaml`
- - Publish output to the `[uuid].wgfrr.example.com` TXT records.
+ - Import the host by copying the output into the site controller. `wgsite -i <hash> wgmesh.yaml`
+ - Once host(s) are ready, publish Host-base DNS records: `wgpub wgmesh.yaml`
+ - Publish output to the `[uuid].wgmesh.example.com` TXT records.
 
  ** Endpoint Config **
  - Deploy on the local hosts: `wgdeploy mesh.example.com`
@@ -62,7 +61,15 @@ Example Domain: `mesh.example.com`
 
 ## Warnings:
 
- `wghost` setup, and `wgsite -i` must be a human-approved process, because this adds nodes to the mesh.
+ `wghost` setup, and `wgsite -i` must be a human-approved process, because this adds nodes (e.g. trusted keys) to the mesh.
+
+## Mesh Endpoints
+
+The Mesh endpoints expect a VM (or machine) with two attached interfaces.  One interface should be configured for Internet access. The other interface must connect to the local LAN.
+
+Mesh BGP Configuration is setup for exchanging routes between Mesh Endpoints across the wireguard links.  Local routing configuration can be attached using [BIRD's modular configuration](https://bird.network.cz/?get_doc&v=20&f=bird-3.html#ss3.2) capability. 
+
+  ![image](Documents/vmconfig.png)
 
 ## Process Flow
 
