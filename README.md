@@ -75,7 +75,6 @@ Example Domain: `mesh.example.com`
       aws_access_key_id: XXXXXXXXXXXXXXXXXX
       aws_secret_access_key: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 
-
 ## Mesh Endpoints
 
 The Mesh endpoints expect a VM (or machine) with two attached interfaces.  One interface should be configured for Internet access. The other interface must connect to the local LAN.
