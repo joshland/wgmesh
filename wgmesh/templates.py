@@ -163,18 +163,19 @@ function start(){
   cmd /usr/bin/env ip netns exec tester sysctl -w net.ipv6.conf.all.forwarding=1
 
   ## IPv4 Address
-  cmd /usr/bin/env ip netns exec private ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
-  cmd /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
+  #cmd /usr/bin/env ip netns exec private ip addr add 169.254.{{ 100 + octet }}.1/24 brd + dev tester1
+  #cmd /usr/bin/env ip netns exec tester ip addr add 169.254.{{ 100 + octet }}.2/24 brd + dev tester1
 
   ## Test Addresses (lo)
-  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.1/24 brd + dev lo
-  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/24 brd + dev lo
-  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/24 brd + dev lo
-  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/24 brd + dev lo
+  cmd /usr/bin/env ip netns exec private ip addr add 192.168.{{ 100 + octet }}.1/24 brd + dev tester1
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.10/24 brd + dev tester1
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.100/24 brd + dev tester1
+  cmd /usr/bin/env ip netns exec tester ip addr add 192.168.{{ 100 + octet }}.200/24 brd + dev tester1
+  cmd /usr/bin/env ip netns exec tester ip route add default via 192.168.{{ 100 + octet }}.1
 
   ## Test Routes
-  cmd /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
-  cmd /usr/bin/env ip netns exec tester ip route add default via 169.254.{{ 100 + octet }}.1
+  #cmd /usr/bin/env ip netns exec private ip route add 192.168.{{ 100 + octet }}.0/24 via 169.254.{{ 100 + octet }}.2
+  #cmd /usr/bin/env ip netns exec tester ip route add default via 169.254.{{ 100 + octet }}.1
 
   if [[ -e "/usr/local/sbin/ns-tester-local" ]]; then
       cmd /usr/bin/env ip netns exec tester /usr/local/sbin/ns-tester-local start tester;
