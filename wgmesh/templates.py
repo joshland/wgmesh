@@ -32,12 +32,14 @@ protocol kernel KERNEL6 {
 }
 
 {% for wgname, table in routing_tables.items() %}
-#table {{ table.name }};
+ipv4 table {{ table.name }}_4;
+ipv6 table {{ table.name }}_6;
+
 protocol kernel {{ wgname }} {
    learn; merge paths; persist;
    kernel table {{ table.id }};
    ipv4 {
-      table {{ table.name }};
+      table {{ table.name }}_4;
       export all;
    };
 }
@@ -46,7 +48,7 @@ protocol kernel {{ wgname }} {
    learn; merge paths; persist;
    kernel table {{ table.id }};
    ipv6 {
-      table {{ table.name }};
+      table {{ table.name }}_6;
       export all;
    };
 }
