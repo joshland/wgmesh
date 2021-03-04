@@ -1,6 +1,6 @@
-# FRR Alignment
+# Wgmesh Overview
 
-Configures basic details for sites.  The essential goal is to use FRR to locally configure wireguard for tunnel deployment.
+Configures basic details for sites.  The essential goal is to use `wgmesh` to locally configure wireguard and BIRD for tunnel deployment and route exchange.
 
 Bootstrapping
   TXT Records:

@@ -106,6 +106,7 @@ class Sitecfg(object):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
         logger.trace(f'publish dict: {m2}')
         del m2['MSK']
+        del m2['ipv4']
         return m2
     pass
 
@@ -143,6 +144,8 @@ class Host(object):
         m2['local_ipv6'] = [ str(x) for x in self.local_ipv6 ]
         del m2['hostname']
         del m2['sitecfg']
+        del m2['tunnel_ipv4']
+        del m2['tunnel_ipv6']
         logger.trace(pprint.pformat(m2))
         return self.hostname, m2
 

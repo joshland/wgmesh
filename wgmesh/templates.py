@@ -347,11 +347,10 @@ ListenPort = {{ local_port }}
 # {{ Hostname }}
 [Peer]
 PublicKey  = {{ public_key }}
-{%- if remote_address > '' %}
+{% if remote_address > '' %}
 Endpoint   = {{ remote_address }}
-{% endif %}
+{% endif -%}
 AllowedIPs = 0.0.0.0/0, ::0/0
-#AllowedIPs = ::0/0
 PersistentKeepAlive = 25
 
 """[1:]

@@ -20,7 +20,7 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 
  - Local Site-specific configurations integration?
     - 1/2 done, calls `-local` scripts.
- - Rename netns "private" to a mesh-specific names.
+ - Rename netns "private" to a mesh-specific _locus_.
  - startup script should prolly be written in python.
  - Non-dns method of transmitting deploy_messages.
  - Warning command:
@@ -29,7 +29,9 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
     - Check for wg up
     - Check for veth device presence
     - Check veth addressed
-
+  - Remove tunnel_ipv4 attributes.
+  - Examine ifaddr dependency.
+  - Simplify `wgconfig`, remove `wgdeploy` redundant code blocks.
 
 ##  Getting Started
 

@@ -236,7 +236,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         portpoints = [ deploy_message['octet'] ]
         portpoints.append( index )
         netbits = ':'.join( [ str(x) for x in sorted(portpoints, reverse=True) ] )
-        local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/{tunnel_network.prefixlen}'
+        local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/{80}'
         remote_endpoint_addr = f'{tunnel_net_base}:{netbits}::{index}'
 
         fulfill = {
@@ -263,9 +263,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             logger.info(f'Dry-run Mode.')
             print(wgconf)
         else:
-            with open(f'/etc/wireguard/wg{index}.conf', 'w') as writer:
-                writer.write(wgconf)
-                pass
+            check_update_file(wgconf, f'/etc/wireguard/wg{index}.conf')
             pass
         continue
 
