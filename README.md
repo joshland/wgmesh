@@ -33,6 +33,7 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
     - Check veth addressed
   - Examine ifaddr dependency.
   - Simplify `wgconfig`, remove `wgdeploy` redundant code blocks.
+  - Fix deploy template args structure so that wg/table/ifdetails are portable throughout the templates
 
 ##  Getting Started
 

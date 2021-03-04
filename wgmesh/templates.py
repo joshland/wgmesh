@@ -47,12 +47,14 @@ template bgp mesh_partner {
   hold time 6;
   #bfd graceful;
   graceful restart;
+  ecmp yes limit 16;
 }
 
 {% for wg, values in wireguard_interfaces.items() %}
 protocol bgp {{ wg }} from mesh_partner {
   interface "{{ wg }}";
   neighbor {{ values[0] }} as {{ values[1] }};
+  table {{locus}}_{{ wg }};
 }
 {% endfor %}
 
@@ -343,6 +345,7 @@ wireguard_conf = """
 PrivateKey = {{ private_key }}
 Address    = {{ tunnel_addresses }}
 ListenPort = {{ local_port }}
+Tables     = {{ route_table_name }}
 
 # {{ Hostname }}
 [Peer]

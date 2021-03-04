@@ -220,6 +220,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         'binfping': hostconfig.host.cmdfping,
     }
 
+    template_args['locus']     = hostconfig.site.locus
     template_args['myhost']    = hostconfig.host.hostname
     template_args['local_asn'] = deploy_message['asn']
     template_args['octet']     = deploy_message['octet']
@@ -238,19 +239,23 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         netbits = ''.join([ '{:02X}'.format(a) for a in sorted(portpoints, reverse=True) ])
         local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/64'
         remote_endpoint_addr = f'{tunnel_net_base}:{netbits}::{index}'
+        route_table_id  = hostconfig.host.route_table_base + index
+        route_table_name = f'{hostconfig.site.locus}_wg{index}'
 
         fulfill = {
             'myhost':           hostconfig.host.hostname,
-            'private_key':      mykey,
-            'tunnel_addresses': local_endpoint_addr,
-            'local_port':       values['localport'],
             'Hostname':         host,
-            'public_key':       values['key'],
-            'remote_address':   remotes,
-            'octet':            deploy_message['octet'],
+            'interface_outbound':  template_args['interface_outbound'],
             'interface_public':    template_args['interface_public'],
             'interface_trust':     template_args['interface_trust'],
-            'interface_outbound':  template_args['interface_outbound'],
+            'local_port':       values['localport'],
+            'octet':            deploy_message['octet'],
+            'private_key':      mykey,
+            'public_key':       values['key'],
+            'remote_address':   remotes,
+            'route_table_id':   route_table_id,
+            'route_table_name': route_table_name,
+            'tunnel_addresses': local_endpoint_addr,
         }
 
         template_args['ports'].append( values['localport'] )
@@ -258,6 +263,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         template_args['local_endpoint_addr'] = local_endpoint_addr
 
         wgconf = render(wireguard_conf, fulfill)
+        check_update_route_table(route_table_id, route_table_name)
 
         if dry_run:
             logger.info(f'Dry-run Mode.')

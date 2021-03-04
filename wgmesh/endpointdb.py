@@ -50,6 +50,7 @@ class Endpoint(object):
     interface_trust  = attr.ib(default='', kw_only=True, converter=nonone)
     interface_trust_ip = attr.ib(default='', kw_only=True, converter=nonone)
     interface_outbound = attr.ib(default='', kw_only=True, converter=nonone)
+    route_table_base   = attr.ib(default=50, kw_only=True, converter=int)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
@@ -123,6 +124,37 @@ def save_host_config(config: HostDB):
     with open(filename, 'w') as yamlfile:
         yamlfile.write( yaml.dump(data, Dumper=yaml.RoundTripDumper) )
         pass
+    pass
+
+def check_update_route_table(rt_id: int, name: str) -> bool:
+    ''' check that rt_table {number} exists in /etc/iproute2/rt_tables '''
+    rt_id = str(rt_id)
+    with open('/etc/iproute2/rt_tables', 'r') as rtfile:
+        content = rtfile.read().split('\n')
+        pass
+
+    decoded = [ x.split('\t') for x in content ]
+    tables  = [ x[0] for x in decoded ]
+    if rt_id in tables:
+        idx = tables.index(rt_id)
+        if decoded[idx][1] == name:
+            logger.trace(f'Located {rt_id}=>{name} in rt_tables.')
+            return False
+        else:
+            logger.trace(f'Updating name for {rt_id} - {decoded[idx][1]}=>{name}')
+            decoded[idx][1] = name
+            pass
+    else:
+        logger.trace(f'Adding route table: {rt_id} ({name})')
+        decoded.insert(-1, (rt_id, name))
+        pass
+
+    content = [ '\t'.join(line) for line in decoded ]
+    with open('/etc/iproute2/rt_tables', 'w') as rtfile:
+        rtfile.write("\n".join(content))
+        pass
+
+    return True
 
 def CheckLocalHostConfig(domain: str, locus: str, pubkey: str,
                          public: str = '', asn: str = '', 

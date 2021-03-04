@@ -96,13 +96,14 @@ def find_public():
 @click.option( '--locus',    '-l', default='', help="Manually set Mesh Locus."      )
 @click.option( '--pubkey',   '-p', default='', help="Manually set Mesh Public Key." )
 @click.option( '--hostname', '-h', default='', help="Override local hostname."      )
+@click.option( '--rt_base',  '-r', default=0,  help='Starting number for entries to the linux rt_tables.')
 @click.option( '--inbound',  '-i', default='', help="Inbound interface."            )
 @click.option( '--outbound', '-o', default='', help="Outbound Veth interface."      )
 @click.option( '--trust',    '-T', default='', help="Trusted interface."            )
 @click.option( '--trustip',  '-I', default='', help="Trusted interface Ip Address + CIDR." )
 @click.argument('domain')
 def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostname: str,
-        inbound: str, outbound: str, trust: str, trustip: str, domain: str):
+        rt_base: int, inbound: str, outbound: str, trust: str, trustip: str, domain: str):
     f''' Setup localhost, provide registration with master controller.
 
     wgconfig: apply local configuration settings.
@@ -130,6 +131,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, hostna
     #Guess or not?
     guess = False
     kwargs = {}
+    if rt_base:
+        kwargs['route_table_base'] = rt_base
     if guess:
         if not inbound:
             try:

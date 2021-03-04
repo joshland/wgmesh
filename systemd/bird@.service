@@ -9,7 +9,8 @@ Type=simple
 User=root
 Group=root
 ExecStart=/usr/sbin/ip netns exec %i /usr/sbin/bird -f -u bird -g bird -s /var/run/bird-%i.sock -c /etc/bird/bird_%i.conf
-ExecReload=/usr/sbin/ip netns exec %i /bin/kill -HUP $MAINPID
+ExecReload=/usr/bin/env birdc -s /var/run/bird-%i.sock configure
+ExecStop=/usr/bin/env /usr/sbin/birdc -s /var/run/bird-%i.sock down
 Restart=on-failure
 
 [Install]
