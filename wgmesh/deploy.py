@@ -250,6 +250,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             'interface_outbound':  template_args['interface_outbound'],
             'interface_public':    template_args['interface_public'],
             'interface_trust':     template_args['interface_trust'],
+            'interface_trust_ip':  template_args['interface_trust_ip'],
             'local_port':       values['localport'],
             'octet':            deploy_message['octet'],
             'private_key':      mykey,
