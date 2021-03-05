@@ -25,11 +25,17 @@ protocol direct DIRECT {
 }
 
 protocol kernel KERNEL4 {
-   learn; merge paths yes limit; persist; ipv4 { import all; export all; };
+   learn;
+   merge paths;
+   persist;
+   ipv4 { import all; export all; };
 }
 
 protocol kernel KERNEL6 {
-   learn; merge paths yes limit; persist; ipv6 { import all; export all; };
+   learn;
+   merge paths;
+   persist;
+   ipv6 { import all; export all; };
 }
 
 {% for wgname, table in routing_tables.items() %}
@@ -378,16 +384,15 @@ wireguard_conf = """
 # Peering template generated template for {{ myhost }} => {{ Hostname }}
 #
 [Interface]
-PrivateKey = {{ private_key }}
 Address    = {{ tunnel_addresses }}
-ListenAddress = {{ listen_address }}
 ListenPort = {{ local_port }}
+PrivateKey = {{ private_key }}
 Table      = {{ route_table_id }}  #{{ route_table_name }}
 
 # {{ Hostname }}
 [Peer]
 PublicKey  = {{ public_key }}
-{% if remote_address > '' %}
+{% if remote_address > '' -%}
 Endpoint   = {{ remote_address }}
 {% endif -%}
 AllowedIPs = 0.0.0.0/0, ::0/0
