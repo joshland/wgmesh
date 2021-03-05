@@ -89,7 +89,7 @@ template bgp mesh_partner {
 {% for wg, values in wireguard_interfaces.items() %}
 protocol bgp {{ wg }} from mesh_partner {
   interface "{{ wg }}";
-  neighbor {{ values[0] }} as {{ values[1] }};
+  neighbor {{ values[0] }} as {{ values[1] }} external;
 }
 {% endfor %}
 
