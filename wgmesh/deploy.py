@@ -96,7 +96,7 @@ def check_update_file(buffer, path):
     try:
         current = open(path, 'r').read()
         if current == buffer:
-            logger.trace(f'skip file {path}, no update needed.')
+            logger.debug(f'skip file {path}, no update needed.')
             update = False
         else:
             update = True
@@ -106,7 +106,7 @@ def check_update_file(buffer, path):
 
     try:
         if update:
-            logger.trace(f'Write file: {path}')
+            logger.debug(f'Write file: {path}')
             with open(path,'w') as ifacefile:
                 ifacefile.write(buffer)
                 pass
