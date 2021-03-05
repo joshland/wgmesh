@@ -55,11 +55,11 @@ protocol kernel {{ wgname }}_6 {
 
 {% endfor %}
 
-#protocol bfd {
-#  interface "*" {
-#    interval 50 ms;
-#  };
-#}
+protocol bfd {
+  interface "*" {
+    interval 50 ms;
+  };
+}
 
 template bgp mesh_partner {
   local as {{ local_asn }};
@@ -80,7 +80,7 @@ template bgp mesh_partner {
      export all;
   };
   hold time 6;
-  #bfd graceful;
+  bfd graceful;
   graceful restart;
   enable extended messages;
 }
