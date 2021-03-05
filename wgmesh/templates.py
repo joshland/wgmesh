@@ -339,6 +339,10 @@ SSH(ACCEPT)	loc		$FW
 #BGP(ACCEPT)	$FW		loc
 
 {% for port in ports -%}
+ACCEPT		net		$FW	udp	{{ port }}
+{% endfor %}
+
+{% for port in ports -%}
 DNAT		net		loc:169.254.{{ octet }}.2	udp	{{ port }}
 {% endfor %}
 # Drop Ping from the "bad" net zone.
