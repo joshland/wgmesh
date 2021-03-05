@@ -324,7 +324,7 @@ shorewall_rules = """
 #ACCEPT		net		$FW	udp	{{ port }}
 {% endfor %}
 
-DNAT		net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
+DNAT:info		net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
 
 
 # Don't allow connection pickup from the net
