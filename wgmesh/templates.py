@@ -342,9 +342,8 @@ SSH(ACCEPT)	loc		$FW
 #ACCEPT		net		$FW	udp	{{ port }}
 {% endfor %}
 
-{% for port in ports -%}
-DNAT		net		loc:169.254.{{ octet }}.2:{{ port }}	udp	{{ port }}
-{% endfor %}
+DNAT		net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
+
 # Drop Ping from the "bad" net zone.
 Ping(ACCEPT)   	net             $FW
 
