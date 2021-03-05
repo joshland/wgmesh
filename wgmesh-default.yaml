@@ -1,12 +1,10 @@
 global:
   alerts: alerts@example.com
   domain: example.com
-  ipv4: 172.16.44.0/24
-  # https://www.google.com/search?q=rfc1918&oq=rfc1918&aqs=chrome..69i57.5804j0j1&sourceid=chrome&ie=UTF-8
   ipv6: fd86:ea04:1116::/64
-  # https://simpledns.plus/private-ipv6
-  locus: eis_frr
-  portbase: 49900
+  # Examples: https://simpledns.plus/private-ipv6
+  locus: wgmesh
+  portbase: 21100
   asn_range: 65151:65171
   publickey: ''
   privatekey: site.key

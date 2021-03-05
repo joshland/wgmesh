@@ -31,6 +31,7 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
     - Check for wg up
     - Check for veth device presence
     - Check veth addressed
+    - Monitor/Warn on UDP port conflicts on startup.
   - Examine ifaddr dependency.
   - Simplify `wgconfig`, remove `wgdeploy` redundant code blocks.
   - Fix deploy template args structure so that wg/table/ifdetails are portable throughout the templates
@@ -98,11 +99,34 @@ Mesh BGP Configuration is setup for exchanging routes between Mesh Endpoints acr
 
   ![image](Documents/workflow.png)
 
- ## Ansible
+ ## Troubleshooting
 
-  - local shorewall deployment
-  - local frr deployment
+**UDP Ports**
 
+Check for UDP Port conflicts.  Other elements on the system may conflict with the UDP ports.  UDP Ports are assigned from the base port in an ascending fashion. Reliable reports have come in and high-end (49900+) ports have caused OS-related interference.
+
+Lowering the ports resolved the issue.
+
+**BIRD Status**
+
+BFD Is enabled to make troubleshooting easier.  The endpoints are all known at wgdeploy time, and this neatly describes the config when monitoring.  Use this script to watch bird on an endpoint, and to see changes in status as nodes are up'd and down'd.
+
+_util/birdwatch.sh_
+
+    watch -n1 "birdc -s /var/run/bird-private.sock show prot;echo '';birdc -s /var/run/bird-private.sock show bfd session;echo '';birdc -s /var/run/bird-private.sock show route count"
+
+**Testing Subnet**
+
+If you're experimenting with the MESH, and just want to send packets racing around, start the tester namespace:
+
+    sudo systemctl start systemd-netns-access@tester systemd-netns@tester
+
+From within the namespace, you can ping the other nodes. (Taken from a 3-node test setup.)
+
+    [root@vpn-nodea eis]# ip netns exec tester fping 192.168.101.1 192.168.102.100 192.168.103.10
+    192.168.101.1 is alive
+    192.168.102.100 is alive
+    192.168.103.10 is alive
 ## Contributing
 
 Pull requests and feature requests gladly accepted.
