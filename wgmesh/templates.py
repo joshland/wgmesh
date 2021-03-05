@@ -20,6 +20,7 @@ protocol device DEVICE { }
 protocol direct DIRECT {
    ipv4 { export all; };
    ipv6 { export all; };
+   interface "-private*";
    interface "*";
 }
 
