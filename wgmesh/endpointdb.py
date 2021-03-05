@@ -57,6 +57,7 @@ class Endpoint(object):
         logger.trace(f'publish dict: {m2}')
         del m2['SSK']
         del m2['PPK']
+        del m2['route_table_base'] ## tables disabled
         return m2
     pass
 

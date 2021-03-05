@@ -267,7 +267,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         template_args['local_endpoint_addr'] = local_endpoint_addr
 
         wgconf = render(wireguard_conf, fulfill)
-        check_update_route_table(route_table_id, route_table_name)
+        # diable rt_tables for now
+        #check_update_route_table(route_table_id, route_table_name)
 
         if dry_run:
             logger.info(f'Dry-run Mode.')
