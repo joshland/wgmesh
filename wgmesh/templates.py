@@ -25,11 +25,11 @@ protocol direct DIRECT {
 }
 
 protocol kernel KERNEL4 {
-   learn; merge paths; persist; ipv4 { import all; export all; };
+   learn; merge paths yes limit; persist; ipv4 { import all; export all; };
 }
 
 protocol kernel KERNEL6 {
-   learn; merge paths; persist; ipv6 { import all; export all; };
+   learn; merge paths yes limit; persist; ipv6 { import all; export all; };
 }
 
 {% for wgname, table in routing_tables.items() %}
