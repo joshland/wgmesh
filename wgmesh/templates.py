@@ -380,7 +380,7 @@ wireguard_conf = """
 [Interface]
 PrivateKey = {{ private_key }}
 Address    = {{ tunnel_addresses }}
-ListenAddress = {{ interface_trust_ip }}
+ListenAddress = {{ listen_address }}
 ListenPort = {{ local_port }}
 Table      = {{ route_table_id }}  #{{ route_table_name }}
 

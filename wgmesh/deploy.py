@@ -243,6 +243,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         route_table_id  = hostconfig.host.route_table_base + index
         route_table_name = f'{hostconfig.site.locus}_wg{index}'
         template_args['routing_tables'][f'wg{index}'] = { 'name': route_table_name, 'id': route_table_id}
+        listen_address = template_args['interface_trust_ip'].split('/')[0]
 
         fulfill = {
             'myhost':           hostconfig.host.hostname,
@@ -250,7 +251,7 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             'interface_outbound':  template_args['interface_outbound'],
             'interface_public':    template_args['interface_public'],
             'interface_trust':     template_args['interface_trust'],
-            'interface_trust_ip':  template_args['interface_trust_ip'],
+            'listen_address':  listen_address,
             'local_port':       values['localport'],
             'octet':            deploy_message['octet'],
             'private_key':      mykey,
