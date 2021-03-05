@@ -320,12 +320,8 @@ shorewall_rules = """
 ?SECTION UNTRACKED
 ?SECTION NEW
 
-{% for port in ports -%}
-#ACCEPT		net		$FW	udp	{{ port }}
-{% endfor %}
-
-DNAT:info		net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
-
+ACCEPT		net		$FW		udp	{{ ports | join(',') }}
+DNAT-:info	net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
 
 # Don't allow connection pickup from the net
 Invalid(DROP)	net	all	tcp
