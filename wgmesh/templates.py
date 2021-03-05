@@ -38,30 +38,6 @@ protocol kernel KERNEL6 {
    ipv6 { import all; export all; };
 }
 
-{% for wgname, table in routing_tables.items() %}
-ipv4 table {{ table.name }}_4;
-ipv6 table {{ table.name }}_6;
-
-protocol kernel {{ wgname }}_4 {
-   learn; merge paths; persist;
-   kernel table {{ table.id }};
-   ipv4 {
-      table {{ table.name }}_4;
-      export all;
-   };
-}
-
-protocol kernel {{ wgname }}_6 {
-   learn; merge paths; persist;
-   kernel table {{ table.id }};
-   ipv6 {
-      table {{ table.name }}_6;
-      export all;
-   };
-}
-
-{% endfor %}
-
 protocol bfd {
   interface "*" {
     interval 50 ms;
@@ -387,7 +363,6 @@ wireguard_conf = """
 Address    = {{ tunnel_addresses }}
 ListenPort = {{ local_port }}
 PrivateKey = {{ private_key }}
-Table      = {{ route_table_id }}  #{{ route_table_name }}
 
 # {{ Hostname }}
 [Peer]
