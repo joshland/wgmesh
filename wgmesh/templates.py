@@ -339,7 +339,7 @@ SSH(ACCEPT)	loc		$FW
 #BGP(ACCEPT)	$FW		loc
 
 {% for port in ports -%}
-ACCEPT		net		$FW	udp	{{ port }}
+#ACCEPT		net		$FW	udp	{{ port }}
 {% endfor %}
 
 {% for port in ports -%}
