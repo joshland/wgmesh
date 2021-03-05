@@ -320,6 +320,13 @@ shorewall_rules = """
 ?SECTION UNTRACKED
 ?SECTION NEW
 
+{% for port in ports -%}
+#ACCEPT		net		$FW	udp	{{ port }}
+{% endfor %}
+
+DNAT		net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
+
+
 # Don't allow connection pickup from the net
 Invalid(DROP)	net	all	tcp
 Invalid(DROP)	net	all	udp
@@ -337,12 +344,6 @@ SSH(ACCEPT)	loc		$FW
 ## We don't need any 
 #BGP(ACCEPT)	loc		$FW
 #BGP(ACCEPT)	$FW		loc
-
-{% for port in ports -%}
-#ACCEPT		net		$FW	udp	{{ port }}
-{% endfor %}
-
-DNAT		net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
 
 # Drop Ping from the "bad" net zone.
 Ping(ACCEPT)   	net             $FW
