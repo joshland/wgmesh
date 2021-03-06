@@ -23,7 +23,7 @@ from loguru import logger
 from ruamel import yaml
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import *
+from .core import *
 
 # Site generation / Maintenance
 # Generates a python dictionary with UUENCODE to support host inculcation

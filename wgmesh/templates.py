@@ -75,6 +75,8 @@ protocol bgp {{ wg }} from mesh_partner {
 }
 {% endfor %}
 
+include "/etc/bird/bird_private_local.d/*.conf";
+
 """[1:]
 
 ns_private = """
@@ -302,9 +304,8 @@ shorewall_rules = """
 ?SECTION UNTRACKED
 ?SECTION NEW
 
+# NAT Ports for Wireguard Interfaces
 DNAT:info	net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
-#ACCEPT		net		loc		udp	{{ ports | join(',') }}
-#ACCEPT		net		$FW		udp	{{ ports | join(',') }}
 
 # Don't allow connection pickup from the net
 Invalid(DROP)	net	all	tcp

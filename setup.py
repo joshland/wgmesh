@@ -18,7 +18,7 @@ if os.path.exists(readme_path):
     with open(readme_path) as f:
         README = f.read()
 
-v = import_module('version')
+v = import_module('wgmesh.version')
 
 requires = [
     'wheel',
@@ -69,10 +69,10 @@ setup(name='wgmesh',
       install_requires=requires,
       entry_points="""\
       [console_scripts]
-      wgconfig = wgmesh:config_cli
-      wgdeploy = wgmesh:deploy_cli
-      wghost   = wgmesh:host_cli
-      wgpub    = wgmesh:pub_cli
-      wgsite   = wgmesh:site_cli
+      wgconfig = wgmesh.config:cli
+      wgdeploy = wgmesh.deploy:cli
+      wghost   = wgmesh.host:cli
+      wgpub    = wgmesh.pub:cli
+      wgsite   = wgmesh.site:cli
       """,
       )

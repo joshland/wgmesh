@@ -40,7 +40,6 @@ def validateUuid(value):
 class Endpoint(object):
     hostname = attr.ib(default=None, kw_only=True, converter=validateHostname)
     uuid     = attr.ib(default=None, kw_only=True, converter=validateUuid)
-    asn      = attr.ib(default='',   kw_only=True)
     SSK      = attr.ib(default='',   kw_only=True)
     PPK      = attr.ib(default='',   kw_only=True)
     cmdfping    = attr.ib(default="/usr/sbin/fping",    kw_only=True, converter=str)
@@ -50,14 +49,12 @@ class Endpoint(object):
     interface_trust  = attr.ib(default='', kw_only=True, converter=nonone)
     interface_trust_ip = attr.ib(default='', kw_only=True, converter=nonone)
     interface_outbound = attr.ib(default='', kw_only=True, converter=nonone)
-    route_table_base   = attr.ib(default=50, kw_only=True, converter=int)
 
     def publish(self):
         m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
         logger.trace(f'publish dict: {m2}')
         del m2['SSK']
         del m2['PPK']
-        del m2['route_table_base'] ## tables disabled
         return m2
     pass
 

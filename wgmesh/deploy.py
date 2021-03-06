@@ -14,10 +14,9 @@ from ruamel import yaml
 from loguru import logger
 from ruamel.yaml import RoundTripLoader, RoundTripDumper
 from nacl.public import PrivateKey, Box, PublicKey
-from wgmesh.core import *
-from wgmesh import HostDB
-from wgmesh.templates import render, shorewall_interfaces, shorewall_rules, bird_private, wireguard_conf
-from wgmesh.templates import ns_private, ns_tester, mesh_start
+from .core import *
+from .templates import render, shorewall_interfaces, shorewall_rules, bird_private, wireguard_conf
+from .templates import ns_private, ns_tester, mesh_start
 from .endpointdb import *
 
 import pprint
@@ -240,9 +239,9 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         netbits = ''.join([ '{:02X}'.format(a) for a in sorted(portpoints, reverse=True) ])
         local_endpoint_addr = f'{tunnel_net_base}:{netbits}::{deploy_message["octet"]}/64'
         remote_endpoint_addr = f'{tunnel_net_base}:{netbits}::{index}'
-        route_table_id  = hostconfig.host.route_table_base + index
-        route_table_name = f'{hostconfig.site.locus}_wg{index}'
-        template_args['routing_tables'][f'wg{index}'] = { 'name': route_table_name, 'id': route_table_id}
+        #route_table_id  = hostconfig.host.route_table_base + index
+        #route_table_name = f'{hostconfig.site.locus}_wg{index}'
+        #template_args['routing_tables'][f'wg{index}'] = { 'name': route_table_name, 'id': route_table_id}
         listen_address = template_args['interface_trust_ip'].split('/')[0]
 
         fulfill = {
@@ -257,8 +256,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
             'private_key':      mykey,
             'public_key':       values['key'],
             'remote_address':   remotes,
-            'route_table_id':   route_table_id,
-            'route_table_name': route_table_name,
+            #'route_table_id':   route_table_id,
+            #'route_table_name': route_table_name,
             'tunnel_addresses': local_endpoint_addr,
         }
 
@@ -298,16 +297,21 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         '/usr/local/sbin/ns-private',
         '/usr/local/sbin/ns-tester'):
         os.chmod(x, 0o750)
+        continue
 
     for x in ('/etc/shorewall/rules', '/etc/shorewall/interfaces', '/etc/bird/bird_private.conf'):
         os.chmod(x, 0o640)
+        continue
+
+    os.makedirs('/etc/bird/bird_private_local.d')
 
     buser  = pwd.getpwnam('bird').pw_uid
     bgroup = pwd.getpwnam('bird').pw_gid
     try:
+        os.chown('/etc/bird/bird_private_local.d', buser, bgroup)
         os.chown('/etc/bird/bird_private.conf', buser, bgroup)
     except PermissionError:
-        logger.warning(f'Failed to set ownership of /etc/bird/bird_private.conf.')
+        logger.warning(f'Failed to set ownership of /etc/bird/bird_private.conf')
     return 0
 
 if __name__ == "__main__":
