@@ -16,6 +16,8 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
  - [BIRD](https://bird.network.cz/) _modular protocol routing daemon_
  - [Shorewall](https://shorewall.org/) _local linux firewall configuration, with the simple two-interface setup_
 
+ See INSTALL.md
+
 ## TODO
 
  - build node removal workflow.
@@ -61,7 +63,7 @@ Example Domain: `mesh.example.com`
 
   - Publish Site import data:
 
-        wghost mesh.erickson.is
+        wghost mesh.example.com
 
  **Site Config**
  - Import the host by copying the output into the site controller. `wgsite -i <hash> wgmesh.yaml`
