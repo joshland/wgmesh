@@ -154,7 +154,8 @@ class Host(object):
             pass
 
         for k, v in hdict.items():
-            if k == 'asn' and v in (0, '0'): continue
+            if k == 'asn': continue
+            if k == 'octet': continue
             logger.trace(f'host update: {k}: {getattr(self, k)} => {v}')
             setattr(self, k, v)
             continue
