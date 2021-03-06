@@ -120,7 +120,6 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         if r53:
             logger.debug('commit to route53')
             print('   (using AWS API to save changes...) ')
-            print('\n'.join(rr_data))
             r53.save_txt_record(rr_name, rr_data, commit)
             pass
         if debug or not r53:
