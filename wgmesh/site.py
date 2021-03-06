@@ -83,7 +83,8 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
         found = True
     else:
         print()
-        print(f"  Check:\n    DNS Records Incorrect: ({site.domain})")
+        print(f"  Check:\n\n    DNS Records Incorrect: ({site.domain})")
+        print('\n  Please update the TXT Record before attempting to configure hosts.')
         print()
 
         if len(current):
@@ -102,8 +103,7 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
 
     if debug or trace or not found:
         print() 
-        print(f)
-        print(f'New DNS Text record:\n{site.domain}')
+        print(f'New DNS Text record:\n\n{site.domain}')
         print()
         print('Content of Text Record:\n')
         for x, l in enumerate(message.split('\n')):

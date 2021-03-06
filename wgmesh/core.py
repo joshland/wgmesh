@@ -248,7 +248,7 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
                 'hosts': dumphosts }
 
     if fn:
-        logger.info(f'Writing file: {fn}')
+        logger.debug(f'Writing file: {fn}')
         with open(fn, 'w') as outfile:
             yaml.dump(publish, outfile, Dumper=yaml.RoundTripDumper)
     else:

@@ -104,13 +104,10 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
                 }
             continue
 
-        #MPK = PublicKey(base64.decodebytes(me.public_key.encode('ascii')))
         MPK = keyimport(me.public_key, PublicKey)
         MBox = Box(site.MSK, MPK)
 
         host_package  = yaml.dump(core, Dumper=yaml.RoundTripDumper)
-        # yamldump core
-        # uuencode core
         message = base64.encodebytes( MBox.encrypt( host_package.encode('ascii') ) ).decode()
         logger.debug(f'Plain Data: {host_package}')
 
@@ -122,6 +119,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
 
         if r53:
             logger.debug('commit to route53')
+            print('   (using AWS API to save changes...) ')
+            print('\n'.join(rr_data))
             r53.save_txt_record(rr_name, rr_data, commit)
             pass
         if debug or not r53:
