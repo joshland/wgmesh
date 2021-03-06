@@ -101,16 +101,16 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
         pass
 
     if debug or trace or not found:
+        print() 
+        print(f)
+        print(f'New DNS Text record:\n{site.domain}')
         print()
-        print(f'Site: {site.domain} DNS TXT Record for {site.domain}:')
-        print()
-        print(f'Diversified Holdings')
-        print('"""')
+        print('Content of Text Record:\n')
         for x, l in enumerate(message.split('\n')):
             if l.strip() == "": continue
             print(f'{x}:{l.strip()}')
             continue
-        print('"""')
+        print('')
         pass
 
     return site, hosts
