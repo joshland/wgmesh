@@ -303,12 +303,20 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         os.chmod(x, 0o640)
         continue
 
-    os.makedirs('/etc/bird/bird_private_local.d')
-
     buser  = pwd.getpwnam('bird').pw_uid
     bgroup = pwd.getpwnam('bird').pw_gid
+
+    bird_d_conf = '/etc/bird/bird_private_local.d'
+    if not os.path.exists(bird_d_conf):
+        os.makedirs(bird_d_conf)
+        try:
+            os.chown(bird_d_conf, buser, bgroup)
+        except PermissionError:
+            logger.warning(f'Failed to set ownership of {bird_d_conf}')
+            pass
+        pass
+
     try:
-        os.chown('/etc/bird/bird_private_local.d', buser, bgroup)
         os.chown('/etc/bird/bird_private.conf', buser, bgroup)
     except PermissionError:
         logger.warning(f'Failed to set ownership of /etc/bird/bird_private.conf')
