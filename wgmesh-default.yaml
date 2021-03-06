@@ -5,7 +5,7 @@ global:
   # Examples: https://simpledns.plus/private-ipv6
   locus: wgmesh
   portbase: 21100
-  asn_range: 65151:65171
+  asn_range: 64512:64525
   publickey: ''
   privatekey: site.key
 

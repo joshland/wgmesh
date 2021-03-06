@@ -74,23 +74,26 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
         logger.debug(f"Calculated Records: {publish}.")
         pass
 
+    print(f'Site: {site.domain}')
     found = False
     if publish == current:
         print()
-        print(f"Check: DNS Records OK! ({site.domain})")
+        print(f"  Check:\n    DNS Records OK! ({site.domain})")
         print()
         found = True
     else:
         print()
-        print(f"Check: DNS Records Incorrect: ({site.domain})")
+        print(f"  Check:\n    DNS Records Incorrect: ({site.domain})")
         print()
 
-        print(f'Existing Records:')
-        for k, v in current.items():
-            print(f'   {k}: {v}')
-            continue
+        if len(current):
+            print(f'  Decoded TXT Records: (current)')
+            for k, v in current.items():
+                print(f'   {k}: {v}')
+                continue
+            pass
 
-        print(f'Corrected Records:')
+        print(f'  Decoded TXT Record: (proposed)')
         for k, v in publish.items():
             print(f'   {k}: {v}')
             continue
@@ -99,7 +102,7 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
 
     if debug or trace or not found:
         print()
-        print(f'DNS TXT Record for {site.domain}:')
+        print(f'Site: {site.domain} DNS TXT Record for {site.domain}:')
         print()
         print(f'Diversified Holdings')
         print('"""')
