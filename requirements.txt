@@ -10,3 +10,4 @@ pynacl
 ruamel.yaml
 six
 jinja2
+ansible<4

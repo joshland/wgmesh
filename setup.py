@@ -33,7 +33,8 @@ requires = [
     'route53',
     'ruamel.yaml',
     'six',
-    'jinja2'
+    'jinja2',
+    'ansible<4'
 ]
 
 test_requires = requires
