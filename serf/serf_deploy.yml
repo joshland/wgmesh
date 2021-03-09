@@ -7,6 +7,8 @@
     serf_bin_path: /usr/local/bin
     serf_bin: /usr/local/bin/serf
     serf_bin_sum: dac0f8b70b5a441eff6e6ae94d96f03a248c06ed
+    serf_units:
+      - serf-agent@.service
   tasks:
     - name: ensure "{{ serf_bin_path }}"
       ansible.builtin.stat:
@@ -51,15 +53,11 @@
         (not stat_bin_path.stat.exists) or
         ((stat_bin_path is defined) and (stat_bin_path != serf_bin_sum  ))
 
-    - name: certbot systemd config(s)
+    - name: systemd unit
       copy:
-        src: files/"{{ item }}"
+        src: "files/{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
         mode: '0644'
         owner: root
         group: root
-        seuser: system_u
-        setype: systemd_unit_file_t
-      loop: "{{ certbot_systemd_units }}"
-      tags:
-        - serf@.service
+      loop: "{{ serf_units }}"
