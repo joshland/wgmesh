@@ -1,0 +1,65 @@
+---
+- name: update web servers
+  hosts: localhost
+  remote_user: root
+  vars:
+    serf_bin_source: https://releases.hashicorp.com/serf/0.8.2/serf_0.8.2_linux_amd64.zip
+    serf_bin_path: /usr/local/bin
+    serf_bin: /usr/local/bin/serf
+    serf_bin_sum: dac0f8b70b5a441eff6e6ae94d96f03a248c06ed
+  tasks:
+    - name: ensure "{{ serf_bin_path }}"
+      ansible.builtin.stat:
+        path: "{{ serf_bin_path }}"
+      register: bin_path_result
+
+    - name: create "{{ serf_bin_path }}"
+      file:
+        path: "{{ serf_bin_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0750'
+        seuser: system_u
+        serole: object_r
+        setype: etc_t
+      when: not bin_path_result.stat.exists
+      tags:
+        - certbot
+
+    - name: check existence of serf_bin
+      ansible.builtin.stat:
+        path: "{{ serf_bin_path }}"
+      register: stat_bin_path
+      when: 1 != 0
+
+    - name: serf file integrity check
+      ansible.builtin.stat:
+        path: "{{ serf_bin }}"
+        checksum_algorithm: sha1
+      register: serf_bin_sha_result
+      delegate_to: localhost
+      run_once: true
+      when: stat_bin_path
+
+    - name: acquire and deliver serf
+      ansible.builtin.unarchive:
+        src: "{{ serf_bin_source }}"
+        dest: "{{ serf_bin_path }}"
+        remote_src: yes
+      when: 
+        (not stat_bin_path.stat.exists) or
+        ((stat_bin_path is defined) and (stat_bin_path != serf_bin_sum  ))
+
+    - name: certbot systemd config(s)
+      copy:
+        src: files/"{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        mode: '0644'
+        owner: root
+        group: root
+        seuser: system_u
+        setype: systemd_unit_file_t
+      loop: "{{ certbot_systemd_units }}"
+      tags:
+        - serf@.service
