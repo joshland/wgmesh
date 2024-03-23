@@ -1,6 +1,6 @@
 
 import route53
-import attr, inspect
+import attr
 from loguru import logger
 
 CR="\n"

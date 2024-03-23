@@ -5,25 +5,20 @@
 ##
 
 # Create the host basics locally
-import sys, os
+import sys
 import click
-import loguru
-import attr, inspect
-import socket
-import pprint
 import base64
 import binascii
-import hashlib, uuid
-import nacl.utils
 import nacl.utils
 import dns.resolver
 
 from wgmesh import core
 from loguru import logger
-from ruamel import yaml
-from ruamel.yaml import RoundTripLoader, RoundTripDumper
-from nacl.public import PrivateKey, Box, PublicKey
+from ruamel.yaml import YAML
+
+from nacl.public import Box, PublicKey
 from .core import *
+from .version import VERSION
 
 # Site generation / Maintenance
 # Generates a python dictionary with UUENCODE to support host inculcation
@@ -51,7 +46,8 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
         'publickey': keyexport(site.publickey),
     }
 
-    y = yaml.dump(publish, Dumper=yaml.RoundTripDumper)
+    yaml = StringYaml(typ='rt')
+    y = yaml.dumps(publish)
     message = base64.encodebytes(y.encode('ascii')).decode()
 
     try:
@@ -120,7 +116,8 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
 
     outer_message = base64.decodebytes( data.encode('ascii') ).decode()
     logger.debug(f'Host import: {data}')
-    outer = yaml.load(outer_message, Loader=yaml.RoundTripLoader)
+    yaml = YAML(typ='rt')
+    outer = yaml.load(outer_message)
     logger.trace(f'Outer message: {outer}')
     HPub = keyimport( outer['public_key'], PublicKey)
     logger.trace(f'HPub/{HPub} -- SKey/{site.MSK}')
@@ -128,7 +125,7 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
 
     inner_decoded = base64.decodebytes( outer['message'] )
     inner_message = SBox.decrypt( inner_decoded )
-    inner = yaml.load (inner_message, Loader=yaml.RoundTripLoader)
+    inner = yaml.load (inner_message)
     logger.debug(f'Host Decode: {inner}')
     
     key = inner['public_key'].lower()
@@ -152,6 +149,7 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
     return CheckConfig(site, hosts)
 
 @click.command()
+@click.version_option(VERSION)
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
 @click.option('--hostimport','-i', default='', help="Import Hostfile.")

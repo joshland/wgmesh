@@ -12,21 +12,20 @@ import sys
 import ast
 import click
 import base64
-import loguru
 import ifaddr
 import pprint
-import socket
 import ipaddress
-import nacl.utils
 import dns.resolver
-import attr, inspect
-import hashlib, uuid
-from typing import Union
+import attr
 
-from ruamel import yaml
+from io import StringIO
+from typing import Union
+from ruamel.yaml import YAML
 from loguru import logger
 from natsort import natsorted
 from nacl.public import PrivateKey, Box, PublicKey
+
+from .version import VERSION
 
 class HostMismatch(Exception): pass
 
@@ -79,6 +78,12 @@ def validateAsnRange(arg):
             retval = ast.literal_eval(arg)
         pass
     return retval
+
+class StringYaml(YAML):
+    def dumps(self, data, **kw):
+        stream = StringIO()
+        YAML.dump(self, data, stream, **kw)
+        return stream.getvalue()
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
@@ -163,6 +168,14 @@ class Host(object):
         return True
     pass
 
+def load_private_key(keyfile: str) -> PrivateKey
+    ''' read key from a keyfile '''
+    return loadkey(keyfile, PrivateKey)
+
+def load_public_key(keyfile: str) -> PublicKey
+    ''' read key from a keyfile '''
+    return loadkey(keyfile, PublicKey)
+
 def loadkey(keyfile: str, method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' read key from a keyfile '''
     content = open(keyfile, 'r').read()
@@ -196,8 +209,9 @@ def loadconfig(fn: str) -> list:
         
         fn: YAML file.
     '''
+    yaml = YAML(typ='rt')
     with open(fn) as yamlfile:
-        y = yaml.load(yamlfile, Loader=yaml.RoundTripLoader)
+        y = yaml.load(yamlfile)
         pass
 
     logger.trace(f'Global: {y.get("global")}')
@@ -207,7 +221,7 @@ def loadconfig(fn: str) -> list:
 
     if sitecfg.privatekey > '':
         if os.path.exists(sitecfg.privatekey):
-            sitecfg.MSK = loadkey(sitecfg.privatekey, PrivateKey)
+            sitecfg.MSK = load_private_key(sitecfg.privatekey)
         else:
             sitecfg.MSK = genkey(sitecfg.privatekey)
             pass
@@ -248,13 +262,15 @@ def saveconfig(site: Sitecfg, hosts: list, fn: str):
     publish = { 'global': site.publish(),
                 'hosts': dumphosts }
 
+    yaml=StringYaml(typ='rt')
+
     if fn:
         logger.debug(f'Writing file: {fn}')
         with open(fn, 'w') as outfile:
-            yaml.dump(publish, outfile, Dumper=yaml.RoundTripDumper)
+            yaml.dump(publish, outfile)
     else:
         logger.info(f'Dumping to screen.')
-        print(yaml.dump(publish, Dumper=yaml.RoundTripDumper))
+        print(yaml.dumps(publish))
         pass
     return
 
@@ -358,7 +374,8 @@ def fetch_domain(domain: str) -> str:
     logger.trace(f'{type(output)}')
     text = base64.decodebytes(str(output).encode('ascii'))
     logger.trace(f'Output: {text} // {type(text)}')
-    retval = yaml.load(text, Loader=yaml.RoundTripLoader )
+    yaml=YAML(typ='rt')
+    retval = yaml.load(text)
     for k, v in retval.items():
         if isinstance(v, bytes):
             retval[k] = v.decode()
@@ -517,6 +534,7 @@ def CheckConfig(site, hosts):
 ##
 
 @click.command()
+@click.version_option(VERSION)
 @click.option('--debug','-d', is_flag=True, default=False)
 @click.option('--trace','-t', is_flag=True, default=False)
 @click.argument('infile')

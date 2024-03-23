@@ -1,24 +1,13 @@
-import os
-import re
-import sys
-import ast
-import click
-import base64
-import loguru
-import pprint
 import socket
-import ipaddress
-import nacl.utils
-import attr, inspect
-import hashlib, uuid
+import attr
+import uuid
 
-import dns.resolver
 from loguru import logger
-from ruamel import yaml
-from typing import Union
-from nacl.public import PrivateKey, Box, PublicKey
+from ruamel.yaml import YAML
+from nacl.public import PublicKey
 
-from .core import loadkey, keyimport
+from .core import load_public_key, load_private_key, keyimport
+from .version import VERSION
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
@@ -95,10 +84,11 @@ def load_host_config(domain: str, locus: str, pubkey: str) -> str:
     return
     '''
     fn = f'/etc/wireguard/{domain}.yaml'
+    yaml = YAML(typ='rt')
 
     try:
         with open(fn) as yamlfile:
-            config = yaml.load(yamlfile, Loader=yaml.RoundTripLoader )
+            config = yaml.load(yamlfile)
         baseconfig = False
     except FileNotFoundError:
         baseconfig = True
@@ -118,9 +108,10 @@ def save_host_config(config: HostDB):
     ''' commit hostdb to disk '''
     filename = config.filename
     data = config.publish()
+    yaml = YAML(typ='rt')
     ##leftoff - leave a way to update the file
     with open(filename, 'w') as yamlfile:
-        yamlfile.write( yaml.dump(data, Dumper=yaml.RoundTripDumper) )
+        yaml.dump(data, yamlfile)
         pass
     pass
 
@@ -181,14 +172,14 @@ def CheckLocalHostConfig(domain: str, locus: str, pubkey: str,
         pass
 
     try:
-        SSK = loadkey(config.host.private_key_file, PrivateKey)
+        SSK = load_private_key(config.host.private_key_file)
     except FileNotFoundError:
         logger.debug(f'Private key does not exist. {config.host.private_key_file}')
         SSK = None
         pass
 
     try:
-        PPK = loadkey(config.host.public_key_file, PublicKey)
+        PPK = load_public_key(config.host.public_key_file)
     except FileNotFoundError:
         logger.debug(f'Public key does not exist. {config.host.public_key_file}')
         PPK = None
@@ -208,3 +199,5 @@ if __name__ == "__main__":
     testkey = '2V4qw+wVPNlATGFE8DSc7S4FW+3p3AivgFBdQdKjkyY='
     hostdata = load_host_config('test.local.example', 'exampletest', testkey)
     save_host_config(hostdata)
+    pass
+

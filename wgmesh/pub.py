@@ -1,26 +1,15 @@
 #!/usr/bin/env python3
 
 # Create the host basics locally
-import sys, os
+import sys
 import click
-import loguru
-import socket
-import nacl.utils
-import attr, inspect
-import hashlib, uuid
-
-from loguru import logger
-from ruamel import yaml
-from ruamel.yaml import RoundTripLoader, RoundTripDumper
-from nacl.public import PrivateKey, Box, PublicKey
-from .core import *
-from .route53 import Route53
-
-import pprint
 import base64
 
-import ipaddress
-
+from loguru import logger
+from nacl.public import Box, PublicKey
+from .core import *
+from .version import VERSION
+from .route53 import Route53
 
 lect = """
 ---
@@ -44,6 +33,7 @@ lect = """
 """
 
 @click.command()
+@click.version_option(VERSION)
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
 @click.option('--dry-run','-n', is_flag=True, default=False, help="Do not commit changes.")
@@ -79,7 +69,6 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         pass
 
     for me in hosts:
-        uuid = me.uuid
         myport = me.endport()
         core = {
             'asn':      me.asn,
@@ -107,7 +96,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
         MPK = keyimport(me.public_key, PublicKey)
         MBox = Box(site.MSK, MPK)
 
-        host_package  = yaml.dump(core, Dumper=yaml.RoundTripDumper)
+        yaml = StringYaml()
+        host_package  = yaml.dumps(core)
         message = base64.encodebytes( MBox.encrypt( host_package.encode('ascii') ) ).decode()
         logger.debug(f'Plain Data: {host_package}')
 

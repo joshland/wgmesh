@@ -3,21 +3,16 @@
 # Create the host basics locally
 import sys, os, pwd
 import click
-import loguru
-import socket
-import nacl.utils
-import attr, inspect
-import hashlib, uuid
 import netaddr
 
-from ruamel import yaml
+from ruamel.yaml import YAML
 from loguru import logger
-from ruamel.yaml import RoundTripLoader, RoundTripDumper
-from nacl.public import PrivateKey, Box, PublicKey
+
 from .core import *
 from .templates import render, shorewall_interfaces, shorewall_rules, bird_private, wireguard_conf
 from .templates import ns_private, ns_tester, mesh_start
 from .endpointdb import *
+from .version import VERSION
 
 import pprint
 import base64
@@ -120,6 +115,7 @@ def check_update_file(buffer, path):
         pass
 
 @click.command()
+@click.version_option(VERSION)
 @click.option( '--debug',    '-d', default=False, is_flag=True, help="Activate Debug Logging." )
 @click.option( '--trace',    '-t', default=False, is_flag=True, help="Activate Trace Logging." )
 @click.option( '--dry-run',  '-n', default=False, is_flag=True, help="Don't write any files."  )
@@ -171,8 +167,9 @@ def cli(debug: bool, trace: bool, dry_run: bool, locus: str, pubkey: str, asn: s
         sys.exit(1)
         pass
 
+    yaml=YAML(typ='rt')
     message = decrypt(hostconfig.host.SSK, hostconfig.site.PPK, crypt)[2]
-    deploy_message = yaml.load(message, Loader=yaml.RoundTripLoader)
+    deploy_message = yaml.load(message)
 
     if trace:
         print("HostConfig:")

@@ -1,24 +1,15 @@
 #!/usr/bin/env python3
 
 # Create the host basics locally
-import sys, os
+import sys
 import click
-import loguru
-import socket
-import nacl.utils
-import attr, inspect
-import hashlib, uuid
 import netaddr
 
 from loguru import logger
-from ruamel import yaml
-from ruamel.yaml import RoundTripLoader, RoundTripDumper
-from nacl.public import PrivateKey, Box, PublicKey
-from .core import *
-from .endpointdb import *
 
-import pprint
-import base64
+from .core import *
+from .version import VERSION
+from .endpointdb import *
 
 import ipaddress
 
@@ -89,6 +80,7 @@ def find_public():
         raise NoInterface
 
 @click.command()
+@click.version_option(VERSION)
 @click.option( '--debug',    '-d', default=False, is_flag=True, help="Activate Debug Logging." )
 @click.option( '--trace',    '-t', default=False, is_flag=True, help="Activate Trace Logging." )
 @click.option( '--dry-run',  '-n', default=False, is_flag=True, help="Don't write any files."  )

@@ -3,18 +3,14 @@
 # Create the host basics locally
 import sys, os
 import click
-import loguru
 import socket
-import nacl.utils
-import attr, inspect
-import hashlib, uuid
 
 from loguru import logger
-from ruamel import yaml
-from ruamel.yaml import RoundTripLoader, RoundTripDumper
+
 from nacl.public import PrivateKey, Box, PublicKey
 from .core import *
 from .endpointdb import *
+from .version import VERSION
 
 import pprint
 import base64
@@ -54,6 +50,7 @@ def qualifyAddress(addr):
     pass
 
 @click.command()
+@click.version_option(VERSION)
 @click.option('--force','-f',     is_flag=True, default=False, help="Overwrite key files (if needed).")
 @click.option('--debug','-d',     is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t',     is_flag=True, default=False, help="Activate Trace Logging.")
@@ -102,7 +99,7 @@ def cli(force, debug, trace, no_locals, locus, addr, pubkey, hostname, domain):
         try:
             #lsk = PrivateKey(base64.decodebytes(open(hostconfig.host.private_key_file, 'r').read().encode('ascii')))
             #lsk = PrivateKey( keyimport(open(hostconfig.host.private_key_file, 'r').read() ))
-            lsk = loadkey(hostconfig.host.private_key_file, PrivateKey)
+            lsk = load_private_key(hostconfig.host.private_key_file)
             logger.debug(f'Private keyfile loaded successfully.')
             lpk = lsk.public_key
         except:
@@ -187,7 +184,8 @@ def cli(force, debug, trace, no_locals, locus, addr, pubkey, hostname, domain):
         'local_ipv6': ','.join(local_ipv6),
     }
 
-    inner_crypt  = yaml.dump(inner_plain, Dumper=yaml.RoundTripDumper)
+    yaml = StringYaml(typ='rt')
+    inner_crypt  = yaml.dumps(inner_plain)
     logger.debug(f'Dump Yaml String {len(inner_crypt)}')
     logger.trace(f'Dump Yaml String {inner_crypt}')
     inner_hidden = base64.encodebytes( MBox.encrypt( inner_crypt.encode('ascii') ) )
@@ -204,7 +202,7 @@ def cli(force, debug, trace, no_locals, locus, addr, pubkey, hostname, domain):
         print(f'\nCheck output:')
         pprint.pprint(outer, indent=5)
 
-    outer_plain   = yaml.dump(outer, Dumper=yaml.RoundTripDumper)
+    outer_plain   = yaml.dumps(outer)
     output_hidden = base64.encodebytes( outer_plain.encode('ascii') ).decode().replace('\n','')
 
     print()
