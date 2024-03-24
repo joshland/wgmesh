@@ -20,6 +20,20 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
 
 ## TODO
 
+ - Build init workflow
+ - init route53 workflow
+ - add hooks for other DNS model
+ 
+ Serious Bugs
+  - lack of coherent documentation about how to configure the meshes
+  - the key names are arbitrary and poorly handled
+  - the instructions suck for setting up the nodes/site/etc.
+  - The wgmesh.yaml needs to be properly defined
+  - the wgconfig needs to be clearer
+  - the wgsite needs to be clearer.
+  - the wgpub 
+
+
  - build node removal workflow.
  - wgconfig should perform the initial wghost configuration.
  - Local Site-specific configurations integration?

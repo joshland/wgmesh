@@ -56,7 +56,7 @@ def qualifyAddress(addr):
 @click.option('--trace','-t',     is_flag=True, default=False, help="Activate Trace Logging.")
 @click.option('--no-locals','-n', is_flag=True, default=False, help="No local addresses.")
 @click.option('--locus','-l', default='', help="Manually set Mesh Locus.")
-@click.option('--addr','-a', default='', help="Endpoint Address(es) - hostname, ipv4, or ipv6.", multiple=True)
+@click.option('--addr','-a', default=[], help="Endpoint Address(es) - hostname, ipv4, or ipv6.", multiple=True)
 @click.option('--pubkey','-P', default='', help="Manually set Mesh Public Key.")
 @click.option('--hostname','-h', default='', help="Override local hostname.")
 @click.argument('domain')
