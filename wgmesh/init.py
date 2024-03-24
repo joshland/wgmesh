@@ -55,11 +55,13 @@ def keygen(debug: bool, trace: bool, dry_run: bool, pub: str, key: str, force: b
         sys.exit(1)
         pass
 
-    with open(filename, 'w') as keyfile:
+    with open(f'{filename}.key', 'w') as keyfile:
+        logger.info(f'Writing file {filename}.key...')
         keyfile.write(private)
         pass
 
     with open(f'{filename}.pub', 'w') as keyfile:
+        logger.info(f'Writing file {filename}.pub...')
         keyfile.write(public)
         pass
 
