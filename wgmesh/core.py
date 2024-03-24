@@ -28,6 +28,7 @@ from nacl.public import PrivateKey, Box, PublicKey
 from .version import VERSION
 
 class HostMismatch(Exception): pass
+class MissingAsnConfig(Exception): pass
 
 ## Validators must be loaded first
 def validateNetworkAddress(arg):
@@ -68,9 +69,12 @@ def validateIpAddress(arg):
 
 def validateAsnRange(arg):
     ''' Check format, and expand the ASNs '''
+    if arg == '':
+        raise MissingAsnConfig
     if isinstance(arg, tuple) or isinstance(arg, list):
         retval = [ int(x) for x in arg ]
     else:
+        logger.trace(f'trace: {arg}')
         try:
             low, high = [ int(x) for x in arg.split(':') ]
             retval = list(range(low, high + 1))
@@ -84,6 +88,13 @@ class StringYaml(YAML):
         stream = StringIO()
         YAML.dump(self, data, stream, **kw)
         return stream.getvalue()
+
+def validatePublicKey(arg):
+    ''' check format of public key, probably warn if it's not correct '''
+    if arg in [ None, '' ]:
+        logger.error(f'Project has no public key.')
+        return ''
+    return arg
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
@@ -168,11 +179,11 @@ class Host(object):
         return True
     pass
 
-def load_private_key(keyfile: str) -> PrivateKey
+def load_private_key(keyfile: str) -> PrivateKey:
     ''' read key from a keyfile '''
     return loadkey(keyfile, PrivateKey)
 
-def load_public_key(keyfile: str) -> PublicKey
+def load_public_key(keyfile: str) -> PublicKey:
     ''' read key from a keyfile '''
     return loadkey(keyfile, PublicKey)
 
@@ -225,6 +236,10 @@ def loadconfig(fn: str) -> list:
         else:
             sitecfg.MSK = genkey(sitecfg.privatekey)
             pass
+        pass
+    else:
+        logger.error(f'No private key in config: "{sitecfg.privatekey}"')
+        sys.exit(4)
         pass
 
     if sitecfg.publickey > '':

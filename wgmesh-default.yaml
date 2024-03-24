@@ -1,7 +1,8 @@
 global:
   alerts: alerts@example.com
   domain: example.com
-  ipv6: fd86:ea04:1116::/64
+  #local_ipv4: 172.16.42.0/24
+  local_ipv6: fd86:ea04:1116::/64
   # Examples: https://simpledns.plus/private-ipv6
   locus: wgmesh
   portbase: 21100
