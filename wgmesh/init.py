@@ -38,9 +38,14 @@ def keygen(debug: bool, trace: bool, dry_run: bool, pub: str, key: str, force: b
     path = os.path.dirname(filename)
     fname = os.path.basename(filename)
     if path:
-        if not os.path.exist(path):
+        if not os.path.exists(path):
             logger.error(f'{path} does not exist')
             sys.exit(4)
+        elif not os.path.isdir(path):
+            logger.error(f'{path} is not a directory')
+            sys.exit(4)
+            pass
+        pass
     if os.path.exists(filename) and not force:
         logger.error(f'{filename} exists, abort')
         sys.exit(3)
