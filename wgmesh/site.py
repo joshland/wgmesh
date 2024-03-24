@@ -19,6 +19,7 @@ from ruamel.yaml import YAML
 from nacl.public import Box, PublicKey
 from .core import *
 from .version import VERSION
+from .route53 import Route53
 
 # Site generation / Maintenance
 # Generates a python dictionary with UUENCODE to support host inculcation
