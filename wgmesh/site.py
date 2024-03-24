@@ -111,7 +111,7 @@ def siteActivation(debug: bool, trace: bool, publish: bool, site: core.Sitecfg, 
         if r53:
             logger.debug('commit to route53')
             print('   (using AWS API to save changes...) ')
-            r53.save_txt_record(rr_name, rr_data, commit)
+            r53.save_txt_record(rr_name, rr_data, publish)
             pass
         pass
 
