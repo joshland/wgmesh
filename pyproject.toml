@@ -60,4 +60,5 @@ wgdeploy = "wgmesh.deploy:cli"
 wghost   = "wgmesh.host:cli"
 wgpub    = "wgmesh.pub:cli"
 wgsite   = "wgmesh.site:cli"
+wgkeys   = "wgmesh.init:keygen"
 

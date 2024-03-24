@@ -193,6 +193,11 @@ def loadkey(keyfile: str, method: Union[PrivateKey, PublicKey]) -> Union[Private
     pk = keyimport(content, method)
     return pk
 
+def generate_key() -> PrivateKey:
+    ''' generate a key '''
+    retval = PrivateKey.generate()
+    return retval
+
 def keyimport(key: Union[str, bytes],  method: Union[PrivateKey, PublicKey]) -> Union[PrivateKey, PublicKey]:
     ''' uudecode a key '''
     logger.trace(f'keyimport: {type(key)}-{repr(key)}')
