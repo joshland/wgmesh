@@ -29,7 +29,7 @@ from .version import VERSION
 #
 
 CR="\n"
-def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Host) -> list:
+def siteActivation(debug: bool, trace: bool, publish: bool, site: core.Sitecfg, hosts: core.Host) -> list:
     '''
 
     Check and publish mesh domain activation.
