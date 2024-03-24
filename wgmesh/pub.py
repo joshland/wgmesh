@@ -67,7 +67,8 @@ def cli(debug: bool, trace: bool, dry_run: bool, infile: str):
     else:
         commit = True
         pass
-
+    if not len(hosts):
+        logger.warn(f'No hosts exists')
     for me in hosts:
         myport = me.endport()
         core = {

@@ -70,6 +70,15 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
         logger.debug(f"Calculated Records: {publish}.")
         pass
 
+    r53 = None
+    if publish:
+        if site.route53:
+            r53 = Route53(site)
+        else:
+            logger.info(f'Publishing disabled, no route53 configuration.')
+            pass
+        pass
+
     print(f'Site: {site.domain}')
     found = False
     if publish == current:
@@ -95,6 +104,14 @@ def siteActivation(debug: bool, trace: bool, site: core.Sitecfg, hosts: core.Hos
             print(f'   {k}: {v}')
             continue
         print()
+
+        rr_name =  f'{site.domain}'
+        rr_data = [ f'{i}:{x.strip()}' for i, x in enumerate(message.split('\n')) if x > '' ]
+        if r53:
+            logger.debug('commit to route53')
+            print('   (using AWS API to save changes...) ')
+            r53.save_txt_record(rr_name, rr_data, commit)
+            pass
         pass
 
     if debug or trace or not found:
@@ -152,9 +169,10 @@ def hostImport(data: str, site: core.Sitecfg, hosts: list) -> list:
 @click.version_option(VERSION)
 @click.option('--debug','-d', is_flag=True, default=False, help="Activate Debug Logging.")
 @click.option('--trace','-t', is_flag=True, default=False, help="Activate Trace Logging.")
+@click.option('--publish','-p', is_flag=True, default=False, help="Publish changes to route53.")
 @click.option('--hostimport','-i', default='', help="Import Hostfile.")
 @click.argument('infile')
-def cli(debug, trace, hostimport, infile):
+def cli(debug, trace, publish, hostimport, infile):
     f''' Check/Publish base64 to dns '''
     LoggerConfig(debug, trace)
 
@@ -164,7 +182,7 @@ def cli(debug, trace, hostimport, infile):
         site, hosts = hostImport(hostimport, site, hosts)
     else:
         logger.debug(f'Site Activation.')
-        site, hosts = siteActivation(debug, trace, site, hosts)
+        site, hosts = siteActivation(debug, trace, publish, site, hosts)
         pass
     saveconfig(site, hosts, infile)
     return 0
