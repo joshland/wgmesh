@@ -1,0 +1,7 @@
+locus -> report on the locus name fetched from the DNS query
+Add debug reporting to every open()
+regen public key from site
+remove private keys from the trace and debug loggins
+wgkeys should explicitly rewrite the site-keys
+Cleanup should find dead hosts in DNS, and clean them up 
+we need a dns validator, to check the records
