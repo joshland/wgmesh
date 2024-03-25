@@ -220,7 +220,7 @@ def keyexport(key: Union[PublicKey, PrivateKey]) -> str:
     logger.trace(f'{repr(key)}-{type(key)} / {repr(retval)}-{type(retval)}')
     return retval
 
-def loadconfig(fn: str) -> list:
+def loadconfig(fn: str) -> tuple[Sitecfg, list]:
     ''' load config from disk
         
         fn: YAML file.
@@ -475,10 +475,8 @@ def LoggerConfig(debug: bool, trace: bool):
 
     pass
 
-def CheckConfig(site, hosts):
-    ''' verify Wireguard Core YAML Config, Subnets, etc '''
-    maxcount = len(hosts) + 5
-
+def CheckConfig(site: Sitecfg, hosts: list) -> tuple[Sitecfg, list]:
+    ''' validated Sitecfg setting, hosts mandatory fields.  '''
     asn_list    = []
     hosts_asn_fix = []
 
@@ -525,6 +523,7 @@ def CheckConfig(site, hosts):
         logger.error("ASN Space Exhausted")
         pass
 
+    newasn = None
     for h in hosts_asn_fix:
         logger.trace(f'Checkout ASN for host: {h.hostname}')
         while len(open_asn):
