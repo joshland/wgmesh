@@ -16,11 +16,7 @@ If there are local Routing Requirements, they are beyond the scope of this mesh 
  - [BIRD](https://bird.network.cz/) _modular protocol routing daemon_
  - [Shorewall](https://shorewall.org/) _local linux firewall configuration, with the simple two-interface setup_
 
- See INSTALL.md - for installation details about Virtual Machines and other details.
-
- See SITESETUP.md - for bootstrapping the wgmesh config
-
-
+ See INSTALL.md
 
 ## TODO
 
@@ -113,11 +109,11 @@ The Mesh endpoints expect a VM (or machine) with two attached interfaces.  One i
 
 Mesh BGP Configuration is setup for exchanging routes between Mesh Endpoints across the wireguard links.  Local routing configuration can be attached using [BIRD's modular configuration](https://bird.network.cz/?get_doc&v=20&f=bird-3.html#ss3.2) capability. 
 
-  ![image](Documents/vmconfig-2.0.png)
+  ![image](Documents/vmconfig.png)
 
 ## Process Flow
 
-  ![image](Documents/workflow-2.0.png)
+  ![image](Documents/workflow.png)
 
  ## Troubleshooting
 
