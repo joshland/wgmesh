@@ -4,6 +4,9 @@ The 1.0 branch defined the problem.
 
 The 2.0 branch should be involved with making the core code cleaner and more refined.
 
+The github version publishing should be automated.  PyPi publishing docs are missing as well.
+
+
 ### Easy
 
 * crypto operations should have their own module
@@ -17,12 +20,15 @@ The 2.0 branch should be involved with making the core code cleaner and more ref
 * A means of rekeying the site, and the hosts should be addressed.
 * Document the Communication workflow.
     * site init should be a series of questions.
-        * wgsite --init
+        * wgsite init
+        * wgsite publish
+        * wgsite host <add/delete>
     * the init process should print instructions for the new user.
     * the host config should happen in 2 steps, using the same command.
     * the host setup process should print instructions for the new user.
         * wgsetup host <config>
         * wgsetup publish -> message
+        * wgsetup deploy -> local config
 
 ### Difficult
 
