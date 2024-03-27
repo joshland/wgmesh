@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wgmesh"
-version = "2.0.0"
+version = "2.0.1"
 description = "Wireguard Mesh Configuration Coordinator"
 authors = ["Joshua Schmidlkofer <joshua+wgmesh@joshuainnovates.us>"]
 
@@ -17,7 +17,7 @@ natsort = "*"
 netaddr = "*"
 pynacl = "*"
 route53 = "*"
-ruamel.yaml = "*"
+"ruamel.yaml" = "*"
 six = "*"
 jinja2 = "*"
 

@@ -30,19 +30,25 @@ app = typer.Typer()
 
 @app.command()
 def init(*args, **kwargs):
-    ''' do site init stuff '''
+    ''' 
+    do site init stuff 
+    '''
     print(f'{args} / {kwargs}')
     return 0
 
 @app.command()
 def publish(*args, **kwargs):
-    ''' publish to dns '''
+    ''' 
+    publish to dns 
+    '''
     print(f'{args} / {kwargs}')
     return 0
 
-@app.host()
+@app.command()
 def host(*args, **kwargs):
-    ''' do host-operations '''
+    ''' 
+    do host-operations
+    '''
     print(f'{args} / {kwargs}')
     return 0
 
