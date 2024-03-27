@@ -14,8 +14,9 @@ import dns.resolver
 #from ruamel.yaml import YAML
 
 from nacl.public import Box, PublicKey
-#from .version import VERSION
-#from .route53 import Route53
+from .version import VERSION
+from .route53 import Route53
+from .crypto import *
 
 app = typer.Typer()
 

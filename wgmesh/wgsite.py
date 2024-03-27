@@ -14,9 +14,9 @@ from loguru import logger
 from ruamel.yaml import YAML
 
 from nacl.public import Box, PublicKey
-from .core import *
 from .version import VERSION
 from .route53 import Route53
+from .crypto import *
 
 app = typer.Typer()
 
