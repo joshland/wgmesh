@@ -71,3 +71,7 @@ target/
 Documents/Relationships.md
 wif.py
 
+activate
+local
+s2cfg
+*.tar.gz

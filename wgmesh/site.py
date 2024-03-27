@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-
-##
-## mkhost.py
-##
+''' wgmesh site-specific operations '''
 
 # Create the host basics locally
 import sys
-import click
 import base64
 import binascii
 import nacl.utils
@@ -20,14 +16,6 @@ from nacl.public import Box, PublicKey
 from .core import *
 from .version import VERSION
 from .route53 import Route53
-
-# Site generation / Maintenance
-# Generates a python dictionary with UUENCODE to support host inculcation
-#
-
-# Host import / update
-# UUID matching
-#
 
 CR="\n"
 def siteActivation(debug: bool, trace: bool, publish: bool, site: core.Sitecfg, hosts: core.Host) -> list:

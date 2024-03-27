@@ -1,6 +1,7 @@
 wheel
 attrs
-click
+typer[all]
+rich
 dnspython
 ifaddr
 loguru
