@@ -1,0 +1,16 @@
+wheel
+attrs
+click
+dnspython
+ifaddr
+loguru
+natsort
+netaddr
+pynacl
+route53
+ruamel.yaml
+six
+jinja2
+setuptools
+pytest
+mypy

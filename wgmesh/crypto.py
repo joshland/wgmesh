@@ -52,13 +52,15 @@ def load_public_key(key_string: str|bytes) -> PublicKey:
     ''' read key from a key_string '''
     return loadkey(key_string, PublicKey)
 
-def loadkey(key_string: str|bytes, method: Callable) -> PrivateKey|PublicKey:
+#def loadkey(key_string: str|bytes, method: Callable) -> PrivateKey|PublicKey:
+def loadkey(key_string: str|bytes, method: Callable[[str, Callable[[str], PublicKey | PrivateKey]], PrivateKey | PublicKey]) -> PrivateKey|PublicKey:
     ''' read key from a key_string '''
     pk = keyimport(key_string, method)
-    assert isinstance(pk, (PublicKey, PrivateKey))
     return pk
 
-def keyimport(key: str|bytes,  method: Callable) -> PrivateKey|PublicKey:
+#def keyimport(key: str|bytes,  method: Callable) -> PrivateKey|PublicKey:
+#def keyimport(key: str|bytes,  method: Callable[[str, Callable[[str], PublicKey | PrivateKey]], PublicKey | PrivateKey]) -> PrivateKey|PublicKey:
+def keyimport(key: str|bytes,  method: Callable[[str], PublicKey | PrivateKey]) -> PrivateKey|PublicKey:    
     ''' uudecode a key '''
     logger.trace(f'keyimport: {type(key)}-{repr(key)}')
     if isinstance(key, bytes):
@@ -90,24 +92,24 @@ def keyexport(key: PublicKey|PrivateKey) -> str:
     return retval
 
 
-#if __name__ == "__main__":
-#    ## Crypto library/encoding/decoding sanity check
-#    # make a priv key
-#    testkey = generate_key()
-#    # make a pub key
-#    pubkey = testkey.public_key
-#    # export the key
-#    public_export = keyexport(pubkey)
-#    private_export = keyexport(testkey)
-#    public_export_bytes = public_export.encode('ascii')
-#    private_export_bytes = private_export.encode('ascii')
-#    # import the key
-#    public_import             = load_public_key(public_export)
-#    private_import            = load_private_key(private_export)
-#    public_import_from_bytes  = load_public_key(public_export_bytes)
-#    private_import_from_bytes = load_private_key(private_export_bytes)
-#    # *check kets
-#    assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
-#    assert testkey == private_import == private_import_from_bytes    # validate that the library can export/import public keys
-#    assert pubkey == private_import.public_key # validate that all the keys match
-#
+if __name__ == "__main__":
+    ## Crypto library/encoding/decoding sanity check
+    # make a priv key
+    testkey = generate_key()
+    # make a pub key
+    pubkey = testkey.public_key
+    # export the key
+    public_export = keyexport(pubkey)
+    private_export = keyexport(testkey)
+    public_export_bytes = public_export.encode('ascii')
+    private_export_bytes = private_export.encode('ascii')
+    # import the key
+    public_import             = load_public_key(public_export)
+    private_import            = load_private_key(private_export)
+    public_import_from_bytes  = load_public_key(public_export_bytes)
+    private_import_from_bytes = load_private_key(private_export_bytes)
+    # *check kets
+    assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
+    assert testkey == private_import == private_import_from_bytes    # validate that the library can export/import public keys
+    assert pubkey == private_import.public_key # validate that all the keys match
+

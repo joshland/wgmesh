@@ -1,38 +1,64 @@
-[tool.poetry]
+[build-system]
+requires = [
+    "setuptools>=42",
+    "setuptools-scm",
+    "wheel"
+]
+requires-python = ">=3.10"
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "wgmesh"
 version = "2.0.1"
-description = "Wireguard Mesh Configuration Coordinator"
-authors = ["Joshua Schmidlkofer <joshua+wgmesh@joshuainnovates.us>"]
+authors = [{name = "Joshua M. Schmidlkofer", email = "joshland@protonmail.com"}]
+description = "Wireguard Mesh Maker"
+keywords = ["wireguard", "frr"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Internet",
+    "Topic :: System :: Networking",
+    "Development Status :: 4 - Beta",
+    "Natural Language :: English",
+]
+dependencies = [
+    "wheel",
+    "attrs",
+    "click",
+    "dnspython",
+    "ifaddr",
+    "loguru",
+    "natsort",
+    "netaddr",
+    "pynacl",
+    "route53",
+    "ruamel.yaml",
+    "six",
+    "jinja2",
+]
 
-[tool.poetry.scripts]
-wgsite   = "wgmesh.wgsite:app"
+[project.urls]
+Homepage = "https://github.com/joshland/wgmesh"
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages]
+find = {namespaces = false}
+
+[project.scripts]
 wgsetup  = "wgmesh.wgsetup:app"
+wgsite   = "wgmesh.wgsite:app"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-typer = {extras = ["all"], version = "^0.1.0"}
-wheel = "*"
-attrs = "*"
-rich = "*"
-dnspython = "*"
-ifaddr = "*"
-loguru = "*"
-natsort = "*"
-netaddr = "*"
-pynacl = "*"
-route53 = "*"
-"ruamel.yaml" = "*"
-six = "*"
-jinja2 = "*"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-tox = "*"
-setuptools = "*"
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.9.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
