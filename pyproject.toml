@@ -22,15 +22,9 @@ classifiers = [
     "Operating System :: Linux",
 ]
 dependencies = [
-    "typer[all]",
-    "rich",
-    "pydantic",
-    "pydantic_settings",
-    "eis.logging",
-    "msgraph-sdk",
-    "azure-identity",
     "wheel",
     "attrs",
+    "typer[all]",
     "rich",
     "dnspython",
     "ifaddr",
