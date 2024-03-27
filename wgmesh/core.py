@@ -320,39 +320,6 @@ def _km_process(km: Union[str, bytes], handler: Union[PrivateKey, PublicKey]):
 
     return retval
 
-def decrypt(secret: Union[PrivateKey, str, bytes], public: Union[PublicKey, str, bytes], cipher: Union[str, bytes]):
-    ''' encrypt a host blob target
-
-    secret is either a UUEncoded Key or a realized PrivateKey
-    public is either a UUEncoded Key or a realized PublicKey
-
-    '''
-    if not isinstance(secret, PrivateKey):
-        SSK = _km_process(secret, PrivateKey)
-    else:
-        SSK = secret
-        pass
-
-    if not isinstance(public, PublicKey):
-        PPK = _km_process(public, PublicKey)
-    else:
-        PPK = public
-        pass
-
-    if isinstance(cipher, str):
-        logger.trace(f'convert cipher[str] to ASCII.')
-        cipher = cipher.encode('ascii')
-        pass
-
-    try:
-        cipher = base64.decodebytes(cipher)
-    except binascii.Error:
-        logger.trace(f'cipher appears to be raw')
-
-    sBox = Box(SSK, PPK)
-    output = sBox.decrypt(cipher)
-    return (SSK, PPK, output)
-
 def splitOrderedList(data):
     ''' take incoming encoded text, look for split order markers '''
     if data[0].find(':') > -1:

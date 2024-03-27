@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=61.2"]
-requies-python = ">=3.6"
+requies-python = ">=3.10"
 build-backend = "setuptools.build_meta"
 
 [project]
