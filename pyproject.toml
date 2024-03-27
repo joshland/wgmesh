@@ -4,34 +4,34 @@ requires = [
     "setuptools-scm",
     "wheel"
 ]
-requires-python = ">=3.10"
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "wgmesh"
-version = "2.0.1"
-authors = [{name = "Joshua M. Schmidlkofer", email = "joshland@protonmail.com"}]
-description = "Wireguard Mesh Maker"
-keywords = ["wireguard", "frr"]
+description = "Wireguard Mesh Configuration Coordinator"
+authors = [
+    {name = "Joshua Schmidlkofer", email = "joshua+wgmesh@joshuainnovates.us" },
+]
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
 classifiers = [
-    "Environment :: Console",
-    "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Operating System :: POSIX :: Linux",
-    "Topic :: Internet",
-    "Topic :: System :: Networking",
-    "Development Status :: 4 - Beta",
-    "Natural Language :: English",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: Linux",
 ]
 dependencies = [
+    "typer[all]",
+    "rich",
+    "pydantic",
+    "pydantic_settings",
+    "eis.logging",
+    "msgraph-sdk",
+    "azure-identity",
     "wheel",
     "attrs",
-    "click",
+    "rich",
     "dnspython",
     "ifaddr",
     "loguru",
@@ -43,22 +43,15 @@ dependencies = [
     "six",
     "jinja2",
 ]
-
-[project.urls]
-Homepage = "https://github.com/joshland/wgmesh"
-
-[project.readme]
-file = "README.md"
-content-type = "text/markdown"
-
-[tool.setuptools]
-zip-safe = false
-include-package-data = true
+dynamic = ["version", "readme"]
 
 [tool.setuptools.packages]
 find = {namespaces = false}
 
-[project.scripts]
-wgsetup  = "wgmesh.wgsetup:app"
-wgsite   = "wgmesh.wgsite:app"
+[tool.setuptools.dynamic]
+version = {attr = "wgmesh.version.VERSION"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
 
+[project.scripts]
+wgsite   = "wgmesh.wgsite:app"
+wgsetup  = "wgmesh.wgsetup:app"
