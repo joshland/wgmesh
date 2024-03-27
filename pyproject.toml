@@ -4,6 +4,10 @@ version = "2.0.1"
 description = "Wireguard Mesh Configuration Coordinator"
 authors = ["Joshua Schmidlkofer <joshua+wgmesh@joshuainnovates.us>"]
 
+[tool.poetry.scripts]
+wgsite   = "wgmesh.wgsite:app"
+wgsetup  = "wgmesh.wgsetup:app"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 typer = {extras = ["all"], version = "^0.1.0"}
@@ -22,9 +26,10 @@ six = "*"
 jinja2 = "*"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest = "*"
+tox = "*"
+setuptools = "*"
 
-[tool.poetry.scripts]
-wgsite   = "wgmesh.wgsite:app"
-wgsetup  = "wgmesh.wgsetup:app"
-
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

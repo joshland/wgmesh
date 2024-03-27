@@ -20,14 +20,6 @@ from .crypto import *
 
 app = typer.Typer()
 
-# Site generation / Maintenance
-# Generates a python dictionary with UUENCODE to support host inculcation
-#
-
-# Host import / update
-# UUID matching
-#
-
 @app.command()
 def init(*args, **kwargs):
     ''' 

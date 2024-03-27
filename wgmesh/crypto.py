@@ -90,24 +90,24 @@ def keyexport(key: PublicKey|PrivateKey) -> str:
     return retval
 
 
-if __name__ == "__main__":
-    ## Crypto library/encoding/decoding sanity check
-    # make a priv key
-    testkey = generate_key()
-    # make a pub key
-    pubkey = testkey.public_key
-    # export the key
-    public_export = keyexport(pubkey)
-    private_export = keyexport(testkey)
-    public_export_bytes = public_export.encode('ascii')
-    private_export_bytes = private_export.encode('ascii')
-    # import the key
-    public_import             = load_public_key(public_export)
-    private_import            = load_private_key(private_export)
-    public_import_from_bytes  = load_public_key(public_export_bytes)
-    private_import_from_bytes = load_private_key(private_export_bytes)
-    # *check kets
-    assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
-    assert testkey == private_import == private_import_from_bytes    # validate that the library can export/import public keys
-    assert pubkey == private_import.public_key # validate that all the keys match
-
+#if __name__ == "__main__":
+#    ## Crypto library/encoding/decoding sanity check
+#    # make a priv key
+#    testkey = generate_key()
+#    # make a pub key
+#    pubkey = testkey.public_key
+#    # export the key
+#    public_export = keyexport(pubkey)
+#    private_export = keyexport(testkey)
+#    public_export_bytes = public_export.encode('ascii')
+#    private_export_bytes = private_export.encode('ascii')
+#    # import the key
+#    public_import             = load_public_key(public_export)
+#    private_import            = load_private_key(private_export)
+#    public_import_from_bytes  = load_public_key(public_export_bytes)
+#    private_import_from_bytes = load_private_key(private_export_bytes)
+#    # *check kets
+#    assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
+#    assert testkey == private_import == private_import_from_bytes    # validate that the library can export/import public keys
+#    assert pubkey == private_import.public_key # validate that all the keys match
+#
