@@ -9,7 +9,6 @@ import binascii
 import nacl.utils
 import dns.resolver
 
-from wgmesh import core
 from loguru import logger
 from ruamel.yaml import YAML
 
@@ -21,11 +20,13 @@ from .crypto import *
 app = typer.Typer()
 
 @app.command()
-def init(*args, **kwargs):
+def init():
     ''' 
     do site init stuff 
     '''
-    print(f'{args} / {kwargs}')
+    
+    
+
     return 0
 
 @app.command()

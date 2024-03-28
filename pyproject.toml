@@ -1,7 +1,6 @@
 [build-system]
 requires = [
     "setuptools>=42",
-    "setuptools-scm",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
@@ -22,9 +21,9 @@ classifiers = [
     "Operating System :: Linux",
 ]
 dependencies = [
+    "typer[all]",
     "wheel",
     "attrs",
-    "typer[all]",
     "rich",
     "dnspython",
     "ifaddr",
@@ -39,8 +38,10 @@ dependencies = [
 ]
 dynamic = ["version", "readme"]
 
-[tool.setuptools.packages]
-find = {namespaces = false}
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["wgmesh"]
+namespaces = false
 
 [tool.setuptools.dynamic]
 version = {attr = "wgmesh.version.VERSION"}
@@ -49,3 +50,9 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [project.scripts]
 wgsite   = "wgmesh.wgsite:app"
 wgsetup  = "wgmesh.wgsetup:app"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
