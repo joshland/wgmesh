@@ -16,6 +16,7 @@ from nacl.public import Box, PublicKey
 from .version import VERSION
 from .route53 import Route53
 from .crypto import *
+from .lib import Sitecfg
 
 app = typer.Typer()
 
@@ -25,8 +26,8 @@ def init():
     do site init stuff 
     '''
     
-    
-
+    site = Sitecfg()    
+    print(site)
     return 0
 
 @app.command()
