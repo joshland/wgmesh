@@ -9,7 +9,7 @@ from loguru import logger
 from nacl.public import PrivateKey, PublicKey, Box
 
 class InvalidPublicKey(Exception): pass
-class InvalidPrivateKey(Exception): pass
+class InvalidSecretKey(Exception): pass
 
 #warning: this function was never used. {???}
 def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: str|bytes) -> bytes:
@@ -20,7 +20,7 @@ def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: str|byte
 
     '''
     if not isinstance(secret_key, PrivateKey):
-        raise InvalidPrivateKey
+        raise InvalidSecretKey
     
     if not isinstance(public_key, PublicKey):
         raise InvalidPublicKey
@@ -44,7 +44,7 @@ def generate_key() -> PrivateKey:
     retval = PrivateKey.generate()
     return retval
 
-def load_private_key(key_string: str|bytes) -> PrivateKey:
+def load_secret_key(key_string: str|bytes) -> PrivateKey:
     ''' read key from a key_string '''
     return loadkey(key_string, PrivateKey)
 
@@ -100,16 +100,16 @@ if __name__ == "__main__":
     pubkey = testkey.public_key
     # export the key
     public_export = keyexport(pubkey)
-    private_export = keyexport(testkey)
+    secret_export = keyexport(testkey)
     public_export_bytes = public_export.encode('ascii')
-    private_export_bytes = private_export.encode('ascii')
+    secret_export_bytes = secret_export.encode('ascii')
     # import the key
     public_import             = load_public_key(public_export)
-    private_import            = load_private_key(private_export)
+    secret_import            = load_secret_key(secret_export)
     public_import_from_bytes  = load_public_key(public_export_bytes)
-    private_import_from_bytes = load_private_key(private_export_bytes)
+    secret_import_from_bytes = load_secret_key(secret_export_bytes)
     # *check kets
     assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
-    assert testkey == private_import == private_import_from_bytes    # validate that the library can export/import public keys
-    assert pubkey == private_import.public_key # validate that all the keys match
+    assert testkey == secret_import == secret_import_from_bytes    # validate that the library can export/import public keys
+    assert pubkey == secret_import.public_key # validate that all the keys match
 

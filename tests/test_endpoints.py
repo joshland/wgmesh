@@ -1,6 +1,7 @@
 import pytest
 import wgmesh
 from wgmesh.endpointdata import Endpoint
+from wgmesh.lib import asdict as wgmesh_asdict, LoggerConfig
 from loguru import logger
 from attrs import asdict
 
@@ -10,7 +11,7 @@ blank_data = {
     'secret_key': '',
     'public_key': '',
     'cmdfping': '',
-    'private_key_file': '',
+    'secret_key_file': '',
     'public_key_file': '',
     'interface_public': '',
     'interface_trust': '',
@@ -24,7 +25,7 @@ test_data = {
     'secret_key': '',
     'public_key': '',
     'cmdfping': '',
-    'private_key_file': 'tests/test_priv',
+    'secret_key_file': 'tests/test_priv',
     'public_key_file': 'tests/test_pub',
     'interface_public': '172.16.1.1',
     'interface_trust': 'ens0',
@@ -32,25 +33,37 @@ test_data = {
     'interface_outbound': 'enp0s25',
 }
 
+def test_init():
+    LoggerConfig(0, 0)
+    pass
+
 def test_endpoint_empty():
     ep = Endpoint()
-    logger.info(ep)
     assert isinstance(ep, Endpoint)
 
 def test_endpoint_blank():
     ep = Endpoint(**blank_data)
-    logger.info(ep)
     assert isinstance(ep, Endpoint)
 
 def test_endpoint():
     ep = Endpoint(**test_data)
-    logger.info(ep)
+    #[ assert v == test_data[k] for k, v in asdict(ep).items if k[0] != '_' ]
     for k, v in asdict(ep).items():
+        if k[0] == "_": continue
         assert v == test_data[k]
 
 def test_endpoint_keys():
     ep = Endpoint(**test_data)
     ep.openKeys()
-    logger.info(ep)
-    assert ep.public_key != ''
-    assert ep.secret_key != ''
+    assert ep._public_key != ''
+    assert ep._secret_key != ''
+
+def test_endpoint_export():
+    ep = Endpoint(**test_data)
+    ep.openKeys()
+    data = wgmesh_asdict(ep)
+    with pytest.raises(Exception) as exc_info:   
+        data['_secret_key']
+    with pytest.raises(Exception) as exc_info:   
+        data['_public_key']
+
