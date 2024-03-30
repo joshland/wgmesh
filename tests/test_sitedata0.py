@@ -1,7 +1,7 @@
 import pytest
 
 from loguru import logger
-from wgmesh.sitedata import Sitecfg, Host
+from wgmesh.sitedata import Sitecfg, Host, expandRange
 from wgmesh.lib import asdict as wgmesh_asdict, LoggerConfig
 
 blank_data = {
@@ -27,7 +27,7 @@ test_data = {
         # Examples: https://simpledns.plus/private-ipv6
         'locus': "wgmesh",
         'portbase': 21100,
-        'asn_range': "64512:64525",
+        'asn_range': '64512:64520,65100,65120:65125',
         'publickey': '',
         'privatekey': "site.key",
     }
@@ -35,10 +35,10 @@ test_data = {
 
 host_data_blank = {
     'hostname': '',
-    'asn': '',
-    'octet': '',
+    'asn': '-1',
+    'octet': '-1',
     'local_ipv4': '',
-    'local_ipv6': '',
+    'local_ipv6': [],
     'public_key': '',
     'local_networks': '',
     'public_key_file': '',
@@ -48,10 +48,10 @@ host_data_blank = {
 
 host_data_test = {
     'hostname': 'remotetest.example.com',
-    'asn': '0',
-    'octet': '0',
-    'local_ipv4': '',
-    'local_ipv6': '',
+    'asn': -1,
+    'octet': -1,
+    'local_ipv4': [],
+    'local_ipv6': [],
     'public_key': '',
     'local_networks': '',
     'public_key_file': '',
@@ -62,6 +62,14 @@ host_data_test = {
 def test_init():
     LoggerConfig(0, 0)
     pass
+
+def test_expandRange_single():
+    values = expandRange("1")
+    assert values == [1]
+
+def test_expandRange_multiple():
+    values = expandRange("1:3")
+    assert values == [1, 2, 3]
 
 def test_site_emtpy():
     ''' validate that Sitecfg will fail on required fields '''
@@ -90,11 +98,9 @@ def test_host_data():
     h = Host(sitecfg=s, **host_data_test)
     assert isinstance(h, Host)
 
-
-
 #def test_endpoint_export():
 #    ep = Endpoint(**test_data)
-#    ep.openKeys()
+#    ep.open_keys()
 #    data = wgmesh_asdict(ep)
 #    with pytest.raises(Exception) as exc_info:   
 #        data['_secret_key']

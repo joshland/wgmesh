@@ -54,13 +54,13 @@ def test_endpoint():
 
 def test_endpoint_keys():
     ep = Endpoint(**test_data)
-    ep.openKeys()
+    ep.open_keys()
     assert ep._public_key != ''
     assert ep._secret_key != ''
 
 def test_endpoint_export():
     ep = Endpoint(**test_data)
-    ep.openKeys()
+    ep.open_keys()
     data = wgmesh_asdict(ep)
     with pytest.raises(Exception) as exc_info:   
         data['_secret_key']

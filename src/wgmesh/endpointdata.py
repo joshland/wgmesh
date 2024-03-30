@@ -42,9 +42,9 @@ class Endpoint:
     interface_trust_ip:     str = field(default='', converter=nonone)
     interface_outbound:     str = field(default='', converter=nonone)
     
-    def openKeys(self):
+    def open_keys(self):
         ''' try to unpack the keys '''
-        logger.trace('no openKeys')
+        logger.trace('no open_keys')
         if self._secret_key in emptyValuesTuple:
             self._secret_key = load_secret_key(open(self.secret_key_file, 'r').read())
             self._public_key = self._secret_key.public_key

@@ -1,14 +1,15 @@
 ''' sited data definition and validator functions '''
 
 import os
-import ast
 import uuid
 from uuid import UUID
 import ipaddress
 
 from attr import asdict
+from click import open_file
 from loguru import logger
-from typing import Any
+from typing import Any, List
+from itertools import chain
 from attrs import define, validators, field
 from nacl.public import PrivateKey, PublicKey
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
@@ -22,26 +23,44 @@ from .datalib import asdict as wgmesh_asdict
 class HostMismatch(Exception): pass
 class MissingAsnConfig(Exception): pass
 
-def validateAsnRange(arg):
+def expandRange(arg):
+    ''' expand a range '''
+    try:
+        low, high = [ int(x) for x in arg.split(":") ]
+        high += 1
+    except ValueError:
+        low = int(arg)
+        high = low + 1
+    return list(range(low, high))
+
+def convertAsnRange(arg):
     ''' Check format, and expand the ASNs '''
     if arg == '':
         raise ValueError("site asn_range parameter missing")
-    if isinstance(arg, (tuple, list)):
-        retval = [ int(x) for x in arg ]
-    else:
-        logger.trace(f'trace: {arg}')
-        try:
-            low, high = [ int(x) for x in arg.split(':') ]
-            retval = list(range(low, high + 1))
-        except:
-            retval = ast.literal_eval(arg)
-        pass
+    logger.trace(f'Unpack ASN {arg}')
+    if isinstance(arg, str):
+        arg = arg.split(',')
+    logger.trace(f'Expand and flatten: {arg}')
+    retval = list(chain.from_iterable(([ expandRange(x) for x in arg ])))
     return retval
 
 def convertNetworkAddress(arg):
     ''' validate and clean up network addressing '''
     logger.trace(f'convert network address: {arg}')
     retval = ipaddress.ip_network(arg)
+    return retval
+
+def convertAddressBlocks(arg: str|list) -> list:
+    ''' validate and clean up network addressing '''
+    retval = []
+    if isinstance(arg, str):
+        arg = [arg] if arg != '' else []
+
+    for x in arg:
+        logger.trace(f'local addres: {x}')
+        retval.append( ipaddress.ip_network(x) )
+        continue
+
     return retval
 
 def convertIPAddress(arg):
@@ -64,6 +83,44 @@ def convertUUID(arg):
     retval = uuid.UUID(arg)
     return retval
 
+def collaps_asn_list(arg):
+    ''' collapse the asn list into a minimalist range list '''
+    # Sort the list of VLAN IDs and exclude any with state set to absent
+    asn_list = sorted(arg)
+
+    list_elements: list[list[int]] = []
+
+    consecutive: list[int] = []
+
+    # Format of a VLAN list is VLAN IDs separated with commas.  If any VLANS are consecutive, the range is separated
+    # with a hyphen.
+    # EG:
+    #   420,600-601,603,605-607,609
+    for asn in asn_list:
+
+        if consecutive:
+            if (asn - consecutive[-1]) <= 1:
+                consecutive.append(asn)
+            else:
+                list_elements.append(consecutive)
+                consecutive = [asn,]
+        else:
+            # Populate consecutive with the first element
+            consecutive.append(asn)
+        continue
+    list_elements.append(consecutive)
+
+    # Format the elements into a string
+    str_elements: list[str] = []
+    for element in list_elements:
+        if len(element) == 1:
+            str_elements.append(str(element[0]))
+        else:
+            sorted_asns = sorted(element)
+            str_elements.append(f'{sorted_asns[0]}:{sorted_asns[-1]}')
+        continue
+    return ','.join(str_elements)
+
 @define
 class Sitecfg:
     alerts: str = field(default='', validator=validators.instance_of(str))
@@ -78,8 +135,9 @@ class Sitecfg:
             raise ValueError(f'{attr} address incorrect/incomplete: {arg}')
         return
 
-    asn_range:  str|tuple|list = field(default='', converter=validateAsnRange)
-    aws_access_key_id:     str = field(default='')
+    asn_range:  str|tuple|list = field(default='', converter=convertAsnRange)
+    asn_used:             list = field(default=[])
+    aws_access_key:        str = field(default='')
     aws_secret_access_key: str = field(default='')
     domain:                str = field(default='')
     locus:                 str = field(default='')
@@ -98,11 +156,35 @@ class Sitecfg:
             retval['publickey'] = keyexport(self.publickey)
         retval['tunnel_ipv4'] = str(self.tunnel_ipv4)
         retval['tunnel_ipv6'] = str(self.tunnel_ipv6)
+        retval['asn_range'] = collaps_asn_list(self.asn_range)
         return retval
 
-    def openKeys(self):
+    def register_asn(self, asn):
+        ''' log asn used by a host '''
+        if asn not in self.asn_range:
+            raise ValueError('ASN invalid, not within approved range')
+        if asn in self.asn_used:
+            raise ValueError('Duplicate ASN')
+        self.asn_used.append(asn)
+        return True
+
+    def checkout_asn(self):
+        ''' retrieve an available ASN from the pool '''
+        sset = set(self.asn_range)
+        aset = set(self.asn_used)
+        open_asn = list(sset - aset)
+        if len(open_asn) == 0:
+            logger.error("ASN Space Exhausted")
+            sys.exit(4)
+            pass
+
+        retval = open_asn.pop(0)
+        self.register_asn(retval)
+        return retval
+
+    def open_keys(self):
         ''' try to unpack the keys '''
-        logger.trace('openKeys')
+        logger.trace('open_keys')
 
         if self._master_site_key:
             logger.error("Attempting to re-load the site key. Abort")
@@ -134,15 +216,22 @@ class Sitecfg:
 class Host(object):
     hostname:             str = field()
     sitecfg:          Sitecfg = field()
-    asn:                  int = field(default=0, converter=int)
-    octet:                int = field(default=0, converter=int)
-    local_ipv4:   IPv4Address = field(default='', converter=convertIPAddress)
-    local_ipv6:   IPv6Address = field(default='', converter=convertIPAddress)
+    asn:                  int = field(default=-1, converter=int)
+    octet:                int = field(default=-1, converter=int)
+    local_ipv4:   List[IPv4Address] = field(default='', converter=convertAddressBlocks)
+    local_ipv6:   List[IPv6Address] = field(default='', converter=convertAddressBlocks)
     public_key: PublicKey|str = field(default='')
     local_networks:       str = field(default = '')
     public_key_file:      str = field(default='')
     private_key_file:     str = field(default='')
     uuid:                UUID = field(default='', converter=convertUUID)
+
+    def validate(self):
+        ''' ensure that asn and octet are set for this node '''
+        if self.asn == -1:
+            self.asn = self.sitecfg.checkout_asn()
+        if self.octet == -1:
+            self.octet = self.sitecfg.checkut_octet()
 
     def endport(self):
         ''' returns the octet added to the site.portbase '''

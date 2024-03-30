@@ -58,7 +58,7 @@ def load_site_config(fn: str) -> tuple[Sitecfg, list]:
     logger.trace(f'Hosts: {y.get("hosts").keys()}')
 
     sitecfg = Sitecfg(**y.get('global', {}))
-    sitecfg.openKeys()
+    sitecfg.open_keys()
 
     logger.trace(f'{sitecfg.MSK.public_key} /-/ {sitecfg.publickey}')
 

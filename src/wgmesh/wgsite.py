@@ -95,15 +95,15 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     if portbase: arguments['portbase'] = portbase
     if aws_zone and aws_access and aws_secret:
         arguments['route53'] = aws_zone
-        arguments['aws_access_key_id'] = aws_access
-        arguments['aws_secret_key_id'] = aws_secret
+        arguments['aws_access_key'] = aws_access
+        arguments['aws_secret_access_key'] = aws_secret
         pass
 
     site = Sitecfg(**arguments)
     if dryrun:
         save_site_config(site, [], '')
     else:
-        site.openKeys()
+        site.open_keys()
         save_site_config(site, [], config_file)
         print()
         print("New mesh created")
