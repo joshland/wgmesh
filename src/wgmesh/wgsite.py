@@ -2,26 +2,15 @@
 ''' wgmesh site-specific operations '''
 
 # Create the host basics locally
-from ast import Str
 import os
 import sys
-from typing import Optional
-from dns import wire
 import typer
-from typer.params import Option
 from typing_extensions import Annotated
-import base64
-import binascii
-import nacl.utils
-import dns.resolver
 
 from loguru import logger
-from ruamel.yaml import YAML
 
-from nacl.public import Box, PublicKey
-
-from wgmesh.core import dns_query
-from wgmesh.lib import load_site_config, save_site_config, site_report, decode_domain, encode_domain
+from wgmesh.lib import create_public_txt_record, fetch_and_decode_record, load_site_config
+from wgmesh.lib import save_site_config, site_report, decode_domain, encode_domain, dns_query
 from wgmesh.lib import InvalidHostName, InvalidMessage
 from .version import VERSION
 from .route53 import Route53
@@ -140,6 +129,7 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     except InvalidHostName:
         published_data = None
 
+    existing_records = None
     try:
         if published_data:
             existing_records = decode_domain(published_data)
@@ -169,11 +159,54 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     return 0
 
 @app.command()
-def publish(*args, **kwargs):
-    ''' 
-    publish to dns 
-    '''
-    print(f'{args} / {kwargs}')
+def publish(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+            config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
+            aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
+            aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
+            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+            trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+    '''  publish to dns '''
+    LoggerConfig(debug, trace)
+
+    config_file = os.path.join(config_path, f'{locus}.yaml')
+
+    if aws_zone:
+        logger.warning(f'overriding DNS zone, forcing {aws_zone}')
+        pass
+    
+    with open(config_file, 'r') as cf:
+        site, hosts = load_site_config(cf)
+
+    current_records = None
+    try:
+        current_records = fetch_and_decode_record(site.domain)
+    except InvalidHostName:
+        logger.debug(f'No records found for {site.domain}')
+    except InvalidMessage:
+        logger.warning(f'Invalid JSON Payload for {site.domain}') 
+
+    public_message = site.publish_public_payload()
+
+    if public_message == current_records:
+        print("DNS Correct")
+        if not force:
+            sys.exit(0)
+
+    new_txt_record = create_public_txt_record(public_message)
+
+    logger.info(f'Refreshing Records')
+    r53con = Route53(site.route53, site.domain, 
+                     aws_access_key=site.aws_access_key, aws_secret_access_key=site.aws_secret_access_key)
+
+    if dryrun:
+        commit = False
+    else:
+        commit = True
+
+    r53con.save_txt_record(site.domain, new_txt_record, commit)
     return 0
 
 @app.command()

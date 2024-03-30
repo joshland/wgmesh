@@ -6,7 +6,7 @@ import json
 import base64
 
 from io import StringIO
-from typing import TextIO
+from typing import TextIO, List
 from textwrap import wrap
 
 from loguru import logger
@@ -140,6 +140,12 @@ def encode_domain(sitepayload: dict) -> str:
     retval = base64.b64encode(payload.encode('ascii')).decode('utf-8')
     return retval
 
+def create_public_txt_record(sitepayload: dict) -> List[str]:
+    ''' encode and split the public record '''
+    encoded_record = encode_domain(sitepayload)
+    txt_record = split_encoded_data(encoded_record)
+    return txt_record
+    
 def decode_domain(dnspayload: str) -> str:
     ''' return the decoded domain package '''
 
@@ -156,6 +162,11 @@ def decode_domain(dnspayload: str) -> str:
             continue
         continue
     return retval
+
+def fetch_and_decode_record(domain_name: str) -> dict:
+    dns_data = dns_query(domain_name)
+    decoded_data = decode_domain(sort_and_join_encoded_data(dns_data))
+    return decoded_data
 
 def optprint(arg, string):
     ''' optionally print a string if arg has a value '''
