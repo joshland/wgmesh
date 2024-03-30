@@ -2,7 +2,8 @@ import pytest
 
 from loguru import logger
 from wgmesh.sitedata import Sitecfg, Host, expandRange
-from wgmesh.lib import asdict as wgmesh_asdict, LoggerConfig
+from wgmesh.lib import LoggerConfig
+#from wgmesh.datalib import asdict as wgmesh_asdict
 
 blank_data = {
     'global': {
@@ -60,7 +61,7 @@ host_data_test = {
 }
 
 def test_init():
-    LoggerConfig(0, 0)
+    LoggerConfig(1, 1)
     pass
 
 def test_expandRange_single():
@@ -83,17 +84,20 @@ def test_site_blank():
 
 def test_site_testdata():
     ''' validate that Sitecfg can generate an object '''
+    logger.trace(f'testdata')
     s = Sitecfg(**test_data['global'])
     assert isinstance(s, Sitecfg)
 
 def test_site_publish():
     ''' validate that Sitecfg can generate an object '''
+    logger.trace(f'site_publish')
     s = Sitecfg(**test_data['global']).publish()
     ## TODO: write a test to validate that the secret keyis not present
     ## write a test to validate the public key is encoded
 
 def test_host_data():
     ''' validate that Sitecfg can generate an object '''
+    logger.trace(f'host_data')
     s = Sitecfg(**test_data['global'])
     h = Host(sitecfg=s, **host_data_test)
     assert isinstance(h, Host)

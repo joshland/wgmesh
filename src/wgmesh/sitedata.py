@@ -1,6 +1,7 @@
 ''' sited data definition and validator functions '''
 
 import os
+import sys
 import uuid
 from uuid import UUID
 import ipaddress
@@ -8,7 +9,7 @@ import ipaddress
 from attr import asdict
 from click import open_file
 from loguru import logger
-from typing import Any, List
+from typing import Any, Dict, List
 from itertools import chain
 from attrs import define, validators, field
 from nacl.public import PrivateKey, PublicKey
@@ -42,6 +43,7 @@ def convertAsnRange(arg):
         arg = arg.split(',')
     logger.trace(f'Expand and flatten: {arg}')
     retval = list(chain.from_iterable(([ expandRange(x) for x in arg ])))
+    logger.trace(f'Flattened ASN Range: {retval}')
     return retval
 
 def convertNetworkAddress(arg):
@@ -147,7 +149,14 @@ class Sitecfg:
     publickey:             str = field(default='', converter=nonone)
     privatekey:            str = field(default='', converter=nonone)
     route53:               str = field(default='', converter=nonone)
+    _asn_map:             Dict = field(default={})
+    _octet_map:           Dict = field(default={})
+    _octets:         List[int] = field(default=[0])
     _master_site_key:PrivateKey|None = field(default='')
+
+    def publish_public_payload(self):
+        ''' return the site payload dictionay '''
+        return {'locus': self.locus, 'publickey': keyexport(self._master_site_key.public_key) }
 
     def publish(self):
         ''' export local configuration for storage or transport '''
@@ -159,16 +168,28 @@ class Sitecfg:
         retval['asn_range'] = collaps_asn_list(self.asn_range)
         return retval
 
-    def register_asn(self, asn):
+    def register_asn(self, arg, uuid):
         ''' log asn used by a host '''
-        if asn not in self.asn_range:
+        logger.trace(f'request asn {arg}')
+
+        try:
+            if self._asn_map[uuid] == arg:
+                return True
+        except KeyError:
+            pass
+
+        if arg not in self.asn_range:
             raise ValueError('ASN invalid, not within approved range')
-        if asn in self.asn_used:
+        if arg in self.asn_used:
+            logger.error(f'Used ASNs: {self.asn_used}')
+            logger.trace(f'Available ASNs: {self.asn_range}')
             raise ValueError('Duplicate ASN')
-        self.asn_used.append(asn)
+        logger.trace(f'register asn {arg}')
+        self.asn_used.append(arg)
+        self._asn_map[uuid] = arg
         return True
 
-    def checkout_asn(self):
+    def checkout_asn(self, uuid):
         ''' retrieve an available ASN from the pool '''
         sset = set(self.asn_range)
         aset = set(self.asn_used)
@@ -179,7 +200,28 @@ class Sitecfg:
             pass
 
         retval = open_asn.pop(0)
-        self.register_asn(retval)
+        self.register_asn(retval, uuid)
+        return retval
+
+    def register_octet(self, arg, uuid):
+        ''' register a new octet as being used '''
+        try:
+            if self._octet_map[uuid] == arg:
+                return True
+        except KeyError:
+            pass
+        if arg in self._octets:
+            logger.warning('Attempted to register an existing octet: {octet}')
+        else:
+            self._octets.append(arg)
+            self._octet_map[uuid] = arg
+            logger.trace(f'assign octet {arg}')
+        return arg
+
+    def checkout_octet(self, uuid):
+        ''' checkout the next octet '''
+        retval = self._octets[-1] + 1
+        self.register_octet(retval, uuid)
         return retval
 
     def open_keys(self):
@@ -217,11 +259,29 @@ class Host(object):
     hostname:             str = field()
     sitecfg:          Sitecfg = field()
     asn:                  int = field(default=-1, converter=int)
+    @asn.validator
+    def validateAsn(self, attr, arg):
+        ''' register valid ASNs with the siteobject '''
+        if arg > -1:
+            self.sitecfg.register_asn(arg, self.uuid)
+        else:
+            self.asn = self.sitecfg.checkout_asn(self.uuid)
+            pass
+        pass
     octet:                int = field(default=-1, converter=int)
-    local_ipv4:   List[IPv4Address] = field(default='', converter=convertAddressBlocks)
-    local_ipv6:   List[IPv6Address] = field(default='', converter=convertAddressBlocks)
+    @octet.validator
+    def validateOctet(self, attr, arg):
+        ''' register valid octets with the siteobject '''
+        if arg > -1:
+            self.sitecfg.register_octet(arg, self.uuid)
+        else:
+            self.octet = self.sitecfg.checkout_octet(self.uuid)
+            pass
+        pass
+    local_ipv4: List[IPv4Address] = field(default='', converter=convertAddressBlocks)
+    local_ipv6: List[IPv6Address] = field(default='', converter=convertAddressBlocks)
     public_key: PublicKey|str = field(default='')
-    local_networks:       str = field(default = '')
+    local_networks:       str = field(default='')
     public_key_file:      str = field(default='')
     private_key_file:     str = field(default='')
     uuid:                UUID = field(default='', converter=convertUUID)
@@ -239,6 +299,7 @@ class Host(object):
         return retval
 
     def publish(self):
+        ''' export the class data as a dictionary, render objects as lists '''
         retval = asdict(self)
         retval['local_ipv4'] = [ str(x) for x in self.local_ipv4 ]
         retval['local_ipv6'] = [ str(x) for x in self.local_ipv6 ]

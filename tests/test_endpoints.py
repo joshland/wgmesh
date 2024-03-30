@@ -1,7 +1,8 @@
 import pytest
 import wgmesh
 from wgmesh.endpointdata import Endpoint
-from wgmesh.lib import asdict as wgmesh_asdict, LoggerConfig
+from wgmesh.datalib import asdict as wgmesh_asdict
+from wgmesh.lib import LoggerConfig
 from loguru import logger
 from attrs import asdict
 

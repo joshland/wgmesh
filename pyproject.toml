@@ -35,6 +35,7 @@ dependencies = [
     "ruamel.yaml",
     "six",
     "jinja2",
+    "munch",
 ]
 dynamic = ["version", "readme"]
 
