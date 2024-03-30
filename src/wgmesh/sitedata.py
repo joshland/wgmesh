@@ -13,8 +13,11 @@ from attrs import define, validators, field
 from nacl.public import PrivateKey, PublicKey
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 
+from wgmesh.core import keyexport
+
 from .crypto import load_secret_key, load_public_key
 from .datalib import nonone
+from .datalib import asdict as wgmesh_asdict
 
 class HostMismatch(Exception): pass
 class MissingAsnConfig(Exception): pass
@@ -88,6 +91,15 @@ class Sitecfg:
     route53:               str = field(default='', converter=nonone)
     _master_site_key:PrivateKey|None = field(default='')
 
+    def publish(self):
+        ''' export local configuration for storage or transport '''
+        retval = wgmesh_asdict(self)
+        if isinstance(retval['publickey'], PublicKey):
+            retval['publickey'] = keyexport(self.publickey)
+        retval['tunnel_ipv4'] = str(self.tunnel_ipv4)
+        retval['tunnel_ipv6'] = str(self.tunnel_ipv6)
+        return retval
+
     def openKeys(self):
         ''' try to unpack the keys '''
         logger.trace('openKeys')
@@ -141,6 +153,7 @@ class Host(object):
         retval = asdict(self)
         retval['local_ipv4'] = [ str(x) for x in self.local_ipv4 ]
         retval['local_ipv6'] = [ str(x) for x in self.local_ipv6 ]
+        retval['publickey'] = keyexport(self.public_key)
         del retval['hostname']
         del retval['sitecfg']
         logger.trace(f'Host Pack: {retval}')

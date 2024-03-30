@@ -78,6 +78,11 @@ def test_site_testdata():
     s = Sitecfg(**test_data['global'])
     assert isinstance(s, Sitecfg)
 
+def test_site_publish():
+    ''' validate that Sitecfg can generate an object '''
+    s = Sitecfg(**test_data['global']).publish()
+    ## TODO: write a test to validate that the secret keyis not present
+    ## write a test to validate the public key is encoded
 
 def test_host_data():
     ''' validate that Sitecfg can generate an object '''

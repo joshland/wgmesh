@@ -44,53 +44,46 @@ def generate_key() -> PrivateKey:
     retval = PrivateKey.generate()
     return retval
 
-def load_secret_key(key_string: str|bytes) -> PrivateKey:
+def load_secret_key(key_string: str) -> PrivateKey:
     ''' read key from a key_string '''
-    return loadkey(key_string, PrivateKey)
+    retval = loadkey(key_string, PrivateKey)
+    validation_string = keyexport(retval)
+    validation_string = 'x' * len(validation_string)
+    logger.debug(f'Loaded Private{validation_string}/{len(validation_string)} bytes')
+    return retval
 
-def load_public_key(key_string: str|bytes) -> PublicKey:
+def load_public_key(key_string: str) -> PublicKey:
     ''' read key from a key_string '''
-    return loadkey(key_string, PublicKey)
+    retval = loadkey(key_string, PublicKey)
+    validation_string = keyexport(retval)
+    logger.debug(f'Loaded Public: {validation_string}/{len(validation_string)} bytes')
+    return retval
 
-#def loadkey(key_string: str|bytes, method: Callable) -> PrivateKey|PublicKey:
-def loadkey(key_string: str|bytes, method: Callable[[str, Callable[[str], PublicKey | PrivateKey]], PrivateKey | PublicKey]) -> PrivateKey|PublicKey:
+def loadkey(key_string: str, method: Callable[[str, Callable[[str], PublicKey | PrivateKey]], PrivateKey | PublicKey]) -> PrivateKey|PublicKey:
     ''' read key from a key_string '''
     pk = keyimport(key_string, method)
     return pk
 
-#def keyimport(key: str|bytes,  method: Callable) -> PrivateKey|PublicKey:
-#def keyimport(key: str|bytes,  method: Callable[[str, Callable[[str], PublicKey | PrivateKey]], PublicKey | PrivateKey]) -> PrivateKey|PublicKey:
-def keyimport(key: str|bytes,  method: Callable[[str], PublicKey | PrivateKey]) -> PrivateKey|PublicKey:    
+def keyimport(key: str,  method: Callable[[str], PublicKey | PrivateKey]) -> PrivateKey|PublicKey:
     ''' uudecode a key '''
-    logger.trace(f'keyimport: {type(key)}-{repr(key)}')
+    logger.trace(f'keyimport: {type(key)}')
     if isinstance(key, bytes):
         key = key.decode()
     try:
-        content = base64.decodebytes(key.encode('ascii')).strip()
-        logger.trace(f'{len(content)}:{repr(content)} // {len(key)}:{repr(key)}')
-    except binascii.Error:
-        logger.debug(r'base64 decode fails - assume raw key.')
-        content = key.encode('ascii')
-        pass
+        content = base64.b64decode(key)
+    except binascii.Error as e:
+        logger.error('Key is incorrectly padded.')
+        logger.error(f'{key}')
+        raise e
     logger.debug(f'Create KM Object key:{len(key)} / raw:{len(content)}')
-    pk = method(content)
-    validation_string = keyexport(pk)
-    if isinstance(pk, PrivateKey):
-        validation_string = 'x' * len(validation_string)
-        key_type = 'Private'
-    else:
-        key_type = "Public"
-    logger.debug(f'Encoded {key_type}: {validation_string}/{len(validation_string)} bytes')
-
-    assert isinstance(pk, (PublicKey, PrivateKey))
-    return pk
+    retval = method(content)
+    return retval
 
 def keyexport(key: PublicKey|PrivateKey) -> str:
     ''' encode a key '''
     logger.trace(f'keydecode: {type(key)}-{repr(key)}')
-    retval = base64.encodebytes(key.encode()).decode().strip()
+    retval = base64.b64encode(key.encode()).decode('utf-8')
     return retval
-
 
 if __name__ == "__main__":
     ## Crypto library/encoding/decoding sanity check

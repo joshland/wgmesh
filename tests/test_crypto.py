@@ -2,7 +2,7 @@ import pytest
 
 from nacl.public import PrivateKey, PublicKey, Box
 from wgmesh.lib import LoggerConfig
-from crypto import generate_key, keyexport, load_public_key, load_secret_key 
+from wgmesh.crypto import generate_key, keyimport, keyexport, load_public_key, load_secret_key 
 
 def test_init():
     LoggerConfig(0, 0)
@@ -22,6 +22,12 @@ def test_keyexport():
 
     assert isinstance(public_export, str)
     assert isinstance(private_export, str)
+
+def test_throw_key_padding_exception():
+    import binascii
+
+    with pytest.raises(binascii.Error):
+        keyimport('alkjasdlfkjasdlkj', PrivateKey)
 
 def test_keyexport_loadkey_integration():
     ''' integration test to validate that keys can be exported and imported '''
