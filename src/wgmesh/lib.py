@@ -133,23 +133,29 @@ def dns_query(domain: str) -> str:
     logger.trace(f'Avengers Assembled: {retval}')
     return retval
 
-def encode_domain(sitepayload: dict) -> str:
-    ''' return the decoded domain package '''
-
-    payload = json.dumps(sitepayload)
-    retval = base64.b64encode(payload.encode('ascii')).decode('utf-8')
-    return retval
-
 def create_public_txt_record(sitepayload: dict) -> List[str]:
     ''' encode and split the public record '''
     encoded_record = encode_domain(sitepayload)
     txt_record = split_encoded_data(encoded_record)
     return txt_record
-    
+
+def message_decode(payload: str) -> str:
+    ''' decode a base64 encoded message '''
+    return base64.b64decode(payload.encode('ascii')).decode('utf-8')
+
+def message_encode(payload: str) -> str:
+    ''' base64 encode a message '''
+    return base64.b64encode(payload.encode('ascii')).decode('utf-8')
+
+def encode_domain(sitepayload: dict) -> str:
+   ''' return the decoded domain package '''
+   payload = json.dumps(sitepayload)
+   retval = message_encode(payload)
+   return retval
+  
 def decode_domain(dnspayload: str) -> str:
     ''' return the decoded domain package '''
-
-    text = base64.b64decode(dnspayload)#.encode('utf-8')
+    text = message_decode(dnspayload)
     logger.trace(f'Output: {text} // {type(text)}')
     try:
         retval = json.loads(text)

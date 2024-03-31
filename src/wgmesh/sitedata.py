@@ -12,7 +12,7 @@ from loguru import logger
 from typing import Any, Dict, List
 from itertools import chain
 from attrs import define, validators, field
-from nacl.public import PrivateKey, PublicKey
+from nacl.public import PrivateKey, PublicKey, Box
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 
 from wgmesh.core import keyexport
@@ -152,7 +152,15 @@ class Sitecfg:
     _asn_map:             Dict = field(default={})
     _octet_map:           Dict = field(default={})
     _octets:         List[int] = field(default=[0])
+    _registeredHosts:     Dict = field(default={})
     _master_site_key:PrivateKey|None = field(default='')
+
+    def get_decryption_box(self, publickey: PublicKey) -> Box:
+        ''' setup an SBox for decryption
+        publickey: public key from the host who encrypted the message
+        '''
+        retval = Box(self._master_site_key, publickey)
+        return retval
 
     def publish_public_payload(self):
         ''' return the site payload dictionay '''

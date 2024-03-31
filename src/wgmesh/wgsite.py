@@ -2,6 +2,7 @@
 ''' wgmesh site-specific operations '''
 
 # Create the host basics locally
+from json import JSONDecodeError
 import os
 import sys
 import typer
@@ -9,7 +10,7 @@ from typing_extensions import Annotated
 
 from loguru import logger
 
-from wgmesh.lib import create_public_txt_record, fetch_and_decode_record, load_site_config
+from wgmesh.lib import create_public_txt_record, fetch_and_decode_record, load_site_config, message_decode
 from wgmesh.lib import save_site_config, site_report, decode_domain, encode_domain, dns_query
 from wgmesh.lib import InvalidHostName, InvalidMessage
 from .version import VERSION
@@ -210,13 +211,63 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     return 0
 
 @app.command()
-def host(*args, **kwargs):
-    ''' 
-    do host-operations
-    '''
-    print(f'{args} / {kwargs}')
+def host(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+         host_message:    Annotated[str, typer.Argument(help='Host import string, or file with the message packet.'),
+         config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+         force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+         dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+         debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+         trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+    '''  do host-operations '''
+    LoggerConfig(debug, trace)
+    config_file = os.path.join(config_path, f'{locus}.yaml')
+    
+    with open(config_file) as cf:
+        site, hosts = load_site_config
+
+    if os.path.exists(host_message):
+        with open(host_message, 'r') as msg:
+            message = msg.read()
+    else:
+        message = host_message
+        pass
+    
+    #outer_message = {'publickey': 'bas64 host key', 'message': 'encrypted_payload'}
+    try:
+        outer_message = json.loads(message_decode(message))
+    except json.JSONDecodeError:
+        bindec = message_decode(message)
+        logger.debug(f'Invalid JSON Payload: {bindec}')
+    except binascii.Error:
+        logger.debug(f'Unexpected message, base64 decode failed {message}')
+        pass
+
+    hostkey = load_public_key(outer_message['publickey'])
+    encypted_payload = message_decode(outer_message['message'])
+    SBox = site.get_decryption_box(hostkey)
+
+    hidden_message = SBox.decrypt(encrypted_payload)
+    try:
+        host_message = json.dumps(hidden_message)
+    except JSONDecodeError:
+        logger.error(f'Failed to decode the message from the host. {hidden_message}')
+        pass
+
+    host = Host(**host_message)
+    #
+    # Load hosts
+    # Match by UUID - that is the probable best approach
+    # load into omage
+    #encrypted_payload = {
+    #    'uuid': '2bd3a14d-9b3b-4f1a-9d88-e7c413cd6d8d',
+    #    'public_key': 'o6I7hQanMRT1VRjD6kAEz7IDdiT3KVCw1vj1Z58lVkY=',
+    #    'public_key_file': '/etc/wireguard/x707_pub',
+    #    'private_key_file': '/etc/wireguard/x707_priv',
+    #    'local_ipv4': 'oob.x707.ashbyte.com',
+    #    'local_ipv6': '',
+    #}
+
     return 0
 
 if __name__ == "__main__":
     app()
-
