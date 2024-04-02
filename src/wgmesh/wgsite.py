@@ -10,7 +10,7 @@ from typing_extensions import Annotated
 
 from loguru import logger
 
-from wgmesh.lib import create_public_txt_record, fetch_and_decode_record, load_site_config, message_decode
+from wgmesh.lib import create_public_txt_record, domain_report, fetch_and_decode_record, load_site_config, message_decode
 from wgmesh.lib import save_site_config, site_report, decode_domain, encode_domain, dns_query
 from wgmesh.lib import InvalidHostName, InvalidMessage
 from .version import VERSION
@@ -97,7 +97,8 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
             pass
         report = site.publish()
 
-        site_report(locus, report)
+    print("New mesh created")
+    site_report(locus, report)
     return 0
 
 @app.command()
@@ -119,35 +120,16 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
 
     LoggerConfig(debug, trace)
 
+    if locus[-4:] in ['yaml']:
+        logger.warning("Removing '.yaml' from locus name.")
+        locus = locus[:-5]
     config_file = os.path.join(config_path, f'{locus}.yaml')
     with open(config_file, 'r') as cf:
         site, hosts = load_site_config(cf)
 
     site_report(locus, site.publish())
 
-    try:
-        published_data = dns_query(site.domain)
-    except InvalidHostName:
-        published_data = None
-
-    existing_records = None
-    try:
-        if published_data:
-            existing_records = decode_domain(published_data)
-    except InvalidMessage:
-        logger.warning(f'DNS holds invalid data.')
-        existing_records = None
-
-    dns_payload = site.publish_public_payload()
-
-    print()
-    if existing_records:
-        if existing_records == dns_payload:
-            print("DNS CHECK: Passed")
-        else:
-            print("DNS CHECK: Failed")
-        print(f"  - Calculated: {dns_payload}")
-        print(f"  - Published: {existing_records}")
+    domain_report(site)
 
     # todo: check for Octet and ASN collisions
 
@@ -171,7 +153,10 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
             trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     '''  publish to dns '''
     LoggerConfig(debug, trace)
-
+    if dryrun:
+        commit = False
+    else:
+        commit = True
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     if aws_zone:
@@ -194,6 +179,8 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     if public_message == current_records:
         print("DNS Correct")
         if not force:
+            site_report(locus, site.publish())
+            domain_report(site)
             sys.exit(0)
 
     new_txt_record = create_public_txt_record(public_message)
@@ -202,17 +189,19 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     r53con = Route53(site.route53, site.domain, 
                      aws_access_key=site.aws_access_key, aws_secret_access_key=site.aws_secret_access_key)
 
-    if dryrun:
-        commit = False
-    else:
-        commit = True
-
     r53con.save_txt_record(site.domain, new_txt_record, commit)
+
+    for x in hosts:
+        # list host
+        # compile message
+        # break into uuid.domain
+        # base64 and save
+        continue
     return 0
 
 @app.command()
 def host(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-         host_message:    Annotated[str, typer.Argument(help='Host import string, or file with the message packet.'),
+         host_message:    Annotated[str, typer.Argument(help='Host import string, or file with the message packet.')],
          config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
          force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
          dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
@@ -254,7 +243,6 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
 
     host = Host(**host_message)
-    #
     # Load hosts
     # Match by UUID - that is the probable best approach
     # load into omage

@@ -7,7 +7,6 @@ from uuid import UUID
 import ipaddress
 
 from attr import asdict
-from click import open_file
 from loguru import logger
 from typing import Any, Dict, List
 from itertools import chain
@@ -15,9 +14,7 @@ from attrs import define, validators, field
 from nacl.public import PrivateKey, PublicKey, Box
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 
-from wgmesh.core import keyexport
-
-from .crypto import load_secret_key, load_public_key
+from .crypto import keyexport, load_secret_key, load_public_key
 from .datalib import nonone
 from .datalib import asdict as wgmesh_asdict
 

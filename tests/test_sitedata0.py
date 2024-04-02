@@ -61,7 +61,7 @@ host_data_test = {
 }
 
 def test_init():
-    LoggerConfig(1, 1)
+    LoggerConfig(1, 0)
     pass
 
 def test_expandRange_single():

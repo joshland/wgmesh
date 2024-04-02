@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 ''' lib.py - resource library for file and configuration operations '''
 
+from logging import warning
 import sys
 import json
 import base64
 
 from io import StringIO
-from typing import TextIO, List
+from typing import TextIO, List, Tuple
 from textwrap import wrap
 
+import dns.resolver
 from loguru import logger
+from netaddr import expand_partial_ipv4_address
 from ruamel.yaml import YAML
 from natsort import natsorted
-import dns.resolver
+from munch import munchify
 
-#from .datalib import nonone
-#from .endpointdata import Endpoint
 from .sitedata import Sitecfg, Host
+from .endpointdata import Endpoint
 
 class InvalidHostName(Exception): pass
 class InvalidMessage(Exception): pass
@@ -44,11 +46,42 @@ def LoggerConfig(debug: bool, trace: bool):
 
     pass
 
-class StringYaml(YAML):
-    def dumps(self, data, **kw):
-        stream = StringIO()
-        YAML.dump(self, data, stream, **kw)
-        return stream.getvalue()
+def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
+    ''' load site config from disk
+        
+        fn: YAML file.
+    '''
+    yaml = YAML(typ='rt')
+
+    y = yaml.load(source_file)
+    logger.trace(f'Local: {y.get("local")}')
+    ep_values = munchify(y.get('local'))
+
+    if validate:
+        site_dict = {'locus': ep_values.locus, 'publickey': ep_values.site_pubkey }
+        public_records = fetch_and_decode_record(ep_values.site_domain)
+        if public_records != site_dict:
+            logger.error(f"Locus Mismatch: {y['host']['domain']}")
+            logger.error(f"Config: {y['site']}")
+            logger.error(f"DNS: {public_records}")
+            pass
+
+    retval = Endpoint(**ep_values)
+    return retval
+
+def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
+    ''' load site config from disk
+        
+        fn: YAML file.
+    '''
+    yaml = YAML(typ='rt')
+
+    output = {
+        'local': endpoint.publish()
+    }
+
+    yaml.dump(output, dest_file)
+    return True
 
 def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
     ''' load site config from disk
@@ -74,20 +107,20 @@ def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
         continue
     return sitecfg, hosts
 
-def save_site_config(site: Sitecfg, hosts: list, fn: TextIO):
+def save_site_config(site: Sitecfg, hosts: list, dest_file: TextIO):
     ''' commit config to disk
 
         site: Sitecfg
         hosts: List of Hosts
     '''
+    yaml = YAML(typ='rt')
+
     sitedata = site.publish()
     dumphosts = { h.hostname: h.publish()[1] for h in hosts }
     publish = { 'global': sitedata,
                 'hosts': dumphosts }
 
-    yaml=StringYaml(typ='rt')
-
-    yaml.dump(publish, fn)
+    yaml.dump(publish, dest_file)
     return
 
 def sort_and_join_encoded_data(data):
@@ -152,7 +185,7 @@ def encode_domain(sitepayload: dict) -> str:
    payload = json.dumps(sitepayload)
    retval = message_encode(payload)
    return retval
-  
+
 def decode_domain(dnspayload: str) -> str:
     ''' return the decoded domain package '''
     text = message_decode(dnspayload)
@@ -183,13 +216,42 @@ def optprint(arg, string):
         pass
     pass
 
+def domain_report(site: Sitecfg) -> bool:
+    ''' publish dns_report '''
+
+    try:
+        published_data = dns_query(site.domain)
+    except InvalidHostName:
+        published_data = None
+
+    existing_records = None
+    try:
+        if published_data:
+            existing_records = decode_domain(published_data)
+    except InvalidMessage:
+        logger.warning(f'DNS holds invalid data.')
+        existing_records = "[Invalid data]"
+
+    dns_payload = site.publish_public_payload()
+
+    print()
+    if existing_records:
+        if existing_records == dns_payload:
+            print("DNS CHECK: Passed")
+        else:
+            print("DNS CHECK: Failed")
+        print(f"  - Calculated: {dns_payload}")
+        print(f"  - Published: {existing_records}")
+
+    return True
+
+
 def site_report(locus: str, published_data: dict) -> str:
     ''' compile a text report of the published site data '''
     from munch import munchify
 
     data = munchify(published_data)
     print()
-    print("New mesh created")
     print(f"Locus: {locus}")
     print(f"Domain: {data.domain}")
     print(f"ASN Range: {data.asn_range}")

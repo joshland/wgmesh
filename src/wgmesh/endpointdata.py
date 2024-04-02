@@ -9,6 +9,7 @@ from loguru import logger
 from nacl.public import PrivateKey, PublicKey
 from attrs import define, validators, field, converters
 from .crypto  import generate_key, load_public_key, load_secret_key
+from .datalib import asdict as wgmesh_asdict
 
 emptyValuesTuple = (None, '')
 
@@ -30,17 +31,20 @@ def convert_uuid(value):
 
 @define
 class Endpoint:
-    hostname:               str = attrs.field(default='', converter=convert_hostname)
-    uuid:                   str = attrs.field(default='', converter=convert_uuid)
-    _secret_key:     PrivateKey = attrs.field(default='', )
-    _public_key:      PublicKey = attrs.field(default='', )
+    locus:                  str = field()
+    site_domain:            str = field()
+    site_pubkey:            str = field()
+    hostname:               str = field(default='', converter=convert_hostname)
+    uuid:                   str = field(default='', converter=convert_uuid)
+    _secret_key:     PrivateKey = field(default='', )
+    _public_key:      PublicKey = field(default='', )
     cmdfping:               str = field(default="/usr/sbin/fping", converter=str)
-    secret_key_file:       str = field(default='', converter=nonone)
+    secret_key_file:        str = field(default='', converter=nonone)
     public_key_file:        str = field(default='', converter=nonone)
-    interface_public:       str = field(default='', converter=nonone)
-    interface_trust:        str = field(default='', converter=nonone)
-    interface_trust_ip:     str = field(default='', converter=nonone)
-    interface_outbound:     str = field(default='', converter=nonone)
+    public_iface:           str = field(default='', converter=nonone)
+    public_address:         str = field(default='', converter=nonone)
+    trust_iface:            str = field(default='', converter=nonone)
+    trust_address:          str = field(default='', converter=nonone)
     
     def open_keys(self):
         ''' try to unpack the keys '''
@@ -54,10 +58,7 @@ class Endpoint:
             raise ValueError('Key Already Exists')
 
     def publish(self):
-        m2 = {attr: str(getattr(self, attr)) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
-        logger.trace(f'publish dict: {m2}')
-        del m2['_secret_key']
-        del m2['_public_key']
-        return m2
-    pass
+        ''' export local configuration for storage or transport '''
+        retval = wgmesh_asdict(self)
+        return retval
 
