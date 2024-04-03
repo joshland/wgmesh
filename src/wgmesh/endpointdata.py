@@ -6,9 +6,11 @@ import uuid
 import socket
 
 from loguru import logger
-from nacl.public import PrivateKey, PublicKey
+from nacl.public import PrivateKey, PublicKey, Box
 from attrs import define, validators, field, converters
-from .crypto  import generate_key, load_public_key, load_secret_key
+
+from wgmesh.datalib import message_encode
+from .crypto  import generate_key, keyexport, load_public_key, load_secret_key
 from .datalib import asdict as wgmesh_asdict
 
 emptyValuesTuple = (None, '')
@@ -36,8 +38,6 @@ class Endpoint:
     site_pubkey:            str = field()
     hostname:               str = field(default='', converter=convert_hostname)
     uuid:                   str = field(default='', converter=convert_uuid)
-    _secret_key:     PrivateKey = field(default='', )
-    _public_key:      PublicKey = field(default='', )
     cmdfping:               str = field(default="/usr/sbin/fping", converter=str)
     secret_key_file:        str = field(default='', converter=nonone)
     public_key_file:        str = field(default='', converter=nonone)
@@ -45,10 +45,32 @@ class Endpoint:
     public_address:         str = field(default='', converter=nonone)
     trust_iface:            str = field(default='', converter=nonone)
     trust_address:          str = field(default='', converter=nonone)
+    _site_key:        PublicKey = field(default='')
+    _secret_key:     PrivateKey = field(default='')
+    _public_key:      PublicKey = field(default='')
     
+    def get_message_box(self, publickey: PublicKey) -> Box:
+        ''' setup an SBox for decryption
+        publickey: public key from the host who encrypted the message
+        '''
+        logger.trace(f"create encrypted with box {self.hostname} -> {publickey}")
+        retval = Box(self._secret_key, publickey)
+        return retval
+
+    def get_public_key(self) -> str:
+        return keyexport(self._public_key)
+
+    def encrypt_message(self, message: str) -> str:
+        ''' encrypt a message with the host public key for transmission or posting '''
+        message_box = self.get_message_box(self._site_key)
+        secure_message = message_box.encrypt( message.encode('ascii') )
+        retval = message_encode(secure_message)
+        return retval
+
     def open_keys(self):
         ''' try to unpack the keys '''
         logger.trace('no open_keys')
+        self._site_key = load_public_key(self.site_pubkey)
         if self._secret_key in emptyValuesTuple:
             self._secret_key = load_secret_key(open(self.secret_key_file, 'r').read())
             self._public_key = self._secret_key.public_key

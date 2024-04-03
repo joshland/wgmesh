@@ -11,8 +11,10 @@ import typer as t
 from loguru import logger
 from typing import Annotated
 from nacl.public import Box, PublicKey
+from munch import munchify, Munch
 
 from .endpointdata import Endpoint
+from .datalib import message_encode, message_decode
 from .lib import LoggerConfig, load_endpoint_config, save_endpoint_config, fetch_and_decode_record
 from .version import VERSION
 from .route53 import Route53
@@ -20,6 +22,16 @@ from .crypto import *
 from .hostlib import get_local_addresses_with_interfaces
 
 app = t.Typer()
+
+def hostfile(locus: str, domain: str, config_path:str) ->Munch:
+    ''' common filename configuration '''
+    retval = {
+        'cfg_file': os.path.join(config_path, f'{domain}.yaml'),
+        'pubkey':   os.path.join(config_path, f'{locus}_endpoint_pub'),
+        'privkey':  os.path.join(config_path, f'{locus}_endpoint_priv'),
+    }
+
+    return munchify(retval)
 
 @app.command()
 def init(locus:           Annotated[str, t.Argument(help='Site locus')],
@@ -36,14 +48,9 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
     ''' do site init stuff '''
     LoggerConfig(debug, trace)
 
-    cfg_file = f'{domain}.yaml'
-    pubkey = f'{locus}_endpoint_pub'
-    privkey = f'{locus}_endpoint_priv'
-    endpoint_file  = os.path.join(config_path, cfg_file)
-    endpoint_pubf  = os.path.join(config_path, pubkey)
-    endpoint_privf = os.path.join(config_path, privkey)
+    filenames = hostfile(locus, domain, config_path)
 
-    for x in (endpoint_file, endpoint_pubf, endpoint_privf):
+    for x in (filenames.cfg_file, filenames.pubkey, filenames.privkey):
         if os.path.exists(x) and not (force or dryrun):
             logger.error(f"{x} exists, aborting (use --force to overwrite)")
             sys.exit(4)
@@ -54,7 +61,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
         sys.exit(1)
 
     ep = Endpoint(locus, domain, locus_info['publickey'],
-                  secret_key_file = endpoint_privf, public_key_file = endpoint_pubf)
+                  secret_key_file = filenames.privkey, public_key_file = filenames.pubkey)
     
     if trust_iface:
         ep.trust_iface = trust_iface
@@ -69,10 +76,10 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
     if dryrun:
         print(f'Generated key, ignoring (dryrun)')
     else:
-        with open(endpoint_privf, 'w') as keyf:
+        with open(filenames.privkey, 'w') as keyf:
             keyf.write(keyexport(newkey))
             pass
-        with open(endpoint_pubf, 'w') as keyf:
+        with open(filenames.pubkey, 'w') as keyf:
             keyf.write(keyexport(newkey.public_key))
             pass
         pass
@@ -86,8 +93,8 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
         print(f.read())
         print("===[snip]==")
     else:
-        logger.info(f'Save file {endpoint_file}')
-        with open(endpoint_file, 'w') as cf:
+        logger.info(f'Save file {filenames.cfg_file}')
+        with open(filenames.cfg_file, 'w') as cf:
             save_endpoint_config(ep, cf)
 
     # set hostname
@@ -98,7 +105,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
 
 @app.command()
 def publish(locus:           Annotated[str, t.Argument(help='short/familiar name, short hand for this mesh')],
-            host_message:    Annotated[str, t.Argument(help='Host import string, or file with the message packet.')],
+            domain:          Annotated[str, t.Argument(help='Locus domain name')],
             config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
             force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
             dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
@@ -106,7 +113,28 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
             trace:           Annotated[bool, t.Option(help='trace logging')] = False):
     ''' publish to dns '''
     LoggerConfig(debug, trace)
-    print(f'{args} / {kwargs}')
+
+    filenames = hostfile(locus, domain, config_path)
+    with open(filenames.cfg_file, 'r') as cf:
+        ep = load_endpoint_config(cf)
+        pass
+
+    clear_payload = ep.publish().toJSON()
+    logger.trace(f'Site Registration Package: {clear_payload}')
+    
+    ep.open_keys()
+    b64_cipher_payload = ep.encrypt_message(clear_payload)
+    
+    logger.debug(f'Encrypted Package: {len(clear_payload)}/{len(b64_cipher_payload)}')
+    logger.trace(f'Payload: {b64_cipher_payload}')
+
+    host_package = munchify({'publickey': ep.get_public_key(), 'message': b64_cipher_payload }).toJSON()
+    host_message = message_encode(host_package)
+    
+    print('Transmit the following b64 string, and use "wgsite host"')
+    print(host_message)
+
+
     #uuid: 2bd3a14d-9b3b-4f1a-9d88-e7c413cd6d8d
     #public_key: o6I7hQanMRT1VRjD6kAEz7IDdiT3KVCw1vj1Z58lVkY=
     #public_key_file: /etc/wireguard/x707_pub

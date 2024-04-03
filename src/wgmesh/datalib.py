@@ -2,6 +2,27 @@
 ''' command data functions '''
 import typing
 import attrs
+import base64
+
+from loguru import logger
+from munch import munchify
+
+def message_decode(payload: str|bytes, binary=False) -> str|bytes:
+    ''' decode a base64 encoded message '''
+    if isinstance(payload, str):
+        payload = payload.encode('ascii')
+    logger.debug(f'Decode message {len(payload)}::binary:{binary}')
+    if binary:
+        retval = base64.b64decode(payload)
+    else:
+        retval = base64.b64decode(payload).decode('utf-8')
+    return retval
+
+def message_encode(payload: str|bytes) -> str:
+    ''' base64 encode a message '''
+    if isinstance(payload, str):
+        payload = payload.encode('ascii')
+    return base64.b64encode(payload).decode('utf-8')
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
@@ -25,11 +46,11 @@ def asdict(inst: typing.Any,
         Names formatted by it are used as keys in the resulting dictionary.
         https://github.com/python-attrs/attrs/issues/12
     """
-    return {
+    return munchify({
         attribute_name: value
         for attribute_name, value in attrs.asdict(inst, *args, **kwargs).items()
         if attribute_name[0] != '_'
-    }
+    })
 
 def remove_secret(attribute_name: str) -> str:
     """

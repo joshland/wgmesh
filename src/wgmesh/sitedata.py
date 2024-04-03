@@ -9,6 +9,9 @@ import ipaddress
 from attr import asdict
 from loguru import logger
 from typing import Any, Dict, List
+
+from nacl import public
+from munch import munchify, unmunchify, Munch
 from itertools import chain
 from attrs import define, validators, field
 from nacl.public import PrivateKey, PublicKey, Box
@@ -17,6 +20,7 @@ from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 from .crypto import keyexport, load_secret_key, load_public_key
 from .datalib import nonone
 from .datalib import asdict as wgmesh_asdict
+from .datalib import message_encode, message_decode
 
 class HostMismatch(Exception): pass
 class MissingAsnConfig(Exception): pass
@@ -140,10 +144,10 @@ class Sitecfg:
     aws_secret_access_key: str = field(default='')
     domain:                str = field(default='')
     locus:                 str = field(default='')
-    tunnel_ipv4:   IPv4Network = field(default='192.168.12.0/24', converter=convertNetworkAddress)
+    tunnel_ipv4:   IPv4Network = field(default='192.0.2.0/24', converter=convertNetworkAddress)
     tunnel_ipv6:   IPv6Network = field(default='fd86:ea04:1116::/64', converter=convertNetworkAddress)
     portbase:              int = field(default = 58822, converter=int)
-    publickey:             str = field(default='', converter=nonone)
+    publickey:             str = field(default='')
     privatekey:            str = field(default='', converter=nonone)
     route53:               str = field(default='', converter=nonone)
     _asn_map:             Dict = field(default={})
@@ -152,25 +156,30 @@ class Sitecfg:
     _registeredHosts:     Dict = field(default={})
     _master_site_key:PrivateKey|None = field(default='')
 
-    def get_decryption_box(self, publickey: PublicKey) -> Box:
+    def get_message_box(self, publickey: PublicKey) -> Box:
         ''' setup an SBox for decryption
         publickey: public key from the host who encrypted the message
         '''
+        if isinstance(publickey, str):
+            publickey = load_public_key(publickey)
+
+        logger.trace(f'Create Box ({type(self._master_site_key)}), ({type(publickey)})')
+        logger.trace(f'Create Box: Pub:({publickey})')
         retval = Box(self._master_site_key, publickey)
         return retval
 
     def publish_public_payload(self):
         ''' return the site payload dictionay '''
-        return {'locus': self.locus, 'publickey': keyexport(self._master_site_key.public_key) }
+        return munch({'locus': self.locus, 'publickey': keyexport(self._master_site_key.public_key)})
 
     def publish(self):
         ''' export local configuration for storage or transport '''
         retval = wgmesh_asdict(self)
-        if isinstance(retval['publickey'], PublicKey):
-            retval['publickey'] = keyexport(self.publickey)
-        retval['tunnel_ipv4'] = str(self.tunnel_ipv4)
-        retval['tunnel_ipv6'] = str(self.tunnel_ipv6)
-        retval['asn_range'] = collaps_asn_list(self.asn_range)
+        if isinstance(retval.publickey, PublicKey):
+            retval.publickey = keyexport(self.publickey)
+        retval.tunnel_ipv4 = str(self.tunnel_ipv4)
+        retval.tunnel_ipv6 = str(self.tunnel_ipv6)
+        retval.asn_range = collaps_asn_list(self.asn_range)
         return retval
 
     def register_asn(self, arg, uuid):
@@ -255,8 +264,8 @@ class Sitecfg:
                 sys.exit(1)
                 pass
             logger.trace(f'Public key matches site key.')
-            self.public_key = public_key
-            pass
+        else:
+            self.publickey = keyexport(self._master_site_key.public_key)
     pass
 
 @define
@@ -298,9 +307,42 @@ class Host(object):
         if self.octet == -1:
             self.octet = self.sitecfg.checkut_octet()
 
+    def encrypt_message(self, message: str) -> str:
+        ''' encrypt a message with the host public key for transmission or posting '''
+        message_box = self.sitecfg.get_message_box(self.public_key)
+        secure_message = message_box.encrypt( message )
+        retval = message_encode(secure_message)
+        return retval
+
     def endport(self):
         ''' returns the octet added to the site.portbase '''
         retval = self.sitecfg.portbase + self.octet
+        return retval
+
+    def endpoint_addresses(self):
+        ''' return a formatted list of endpoint IP addresses '''
+        return ','.join([ str(x) for x in self.local_ipv4 + self.local_ipv6 if str(x) > '' ]),
+
+    def publish_peer_deploy(self):
+        ''' publish wgdeploy node details '''
+        retval = munchify ({
+            'locus':     self.site.locus,
+            'site':      self.sitecfg.domain,
+            'portbase':  self.sitecfg.portbase,
+            'octet':     self.octet,
+            'asn':       self.asn,
+            'localport': self.endport(),
+            'remote':    self.endpoint_addresses(),
+            'hosts':     [] })
+
+        for host in self.sitecfg.hosts:
+            retval.hosts.append( { 
+                                'key': host.key,
+                                'asn': host.asn,
+                                'localport': host.endport(),
+                                'remoteport': self.endport(),
+                                'remote': host.endpoint_addresses(), })
+
         return retval
 
     def publish(self):

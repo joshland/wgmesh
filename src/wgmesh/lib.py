@@ -9,6 +9,7 @@ import base64
 from io import StringIO
 from typing import TextIO, List, Tuple
 from textwrap import wrap
+from munch import munchify, unmunchify
 
 import dns.resolver
 from loguru import logger
@@ -19,6 +20,7 @@ from munch import munchify
 
 from .sitedata import Sitecfg, Host
 from .endpointdata import Endpoint
+from .datalib import message_encode, message_decode
 
 class InvalidHostName(Exception): pass
 class InvalidMessage(Exception): pass
@@ -77,7 +79,7 @@ def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
     yaml = YAML(typ='rt')
 
     output = {
-        'local': endpoint.publish()
+        'local': unmunchify(endpoint.publish())
     }
 
     yaml.dump(output, dest_file)
@@ -117,8 +119,8 @@ def save_site_config(site: Sitecfg, hosts: list, dest_file: TextIO):
 
     sitedata = site.publish()
     dumphosts = { h.hostname: h.publish()[1] for h in hosts }
-    publish = { 'global': sitedata,
-                'hosts': dumphosts }
+    publish = { 'global': unmunchify(sitedata),
+                'hosts': unmunchify(dumphosts) }
 
     yaml.dump(publish, dest_file)
     return
@@ -171,14 +173,6 @@ def create_public_txt_record(sitepayload: dict) -> List[str]:
     encoded_record = encode_domain(sitepayload)
     txt_record = split_encoded_data(encoded_record)
     return txt_record
-
-def message_decode(payload: str) -> str:
-    ''' decode a base64 encoded message '''
-    return base64.b64decode(payload.encode('ascii')).decode('utf-8')
-
-def message_encode(payload: str) -> str:
-    ''' base64 encode a message '''
-    return base64.b64encode(payload.encode('ascii')).decode('utf-8')
 
 def encode_domain(sitepayload: dict) -> str:
    ''' return the decoded domain package '''

@@ -26,10 +26,37 @@ Encrypted Message document
 ## Host Records
 
 
-
 ### Host Rekey
 
         {'uuid': '<uuid>', 'command': 'rekey', 'publickey': '', 'newpublickey': '' }
 
 new payload published under new key, immediately published
     
+## Site -> Host Deployment Records
+
+        core = {
+            'asn':      me.asn,
+            'site':     site.domain,
+            'octet':    me.octet,
+            'portbase': site.portbase,
+            'remote':   str(site.ipv6),
+            'hosts': {},
+            }
+
+        logger.trace(f'Deploy Host: {me.uuid}')
+        for h in hosts:
+            if me.uuid == h.uuid: continue
+            logger.trace(f'Add host: {h.uuid}')
+            logger.trace(f'IPv4: {h.local_ipv4}')
+            logger.trace(f'IPv6: {h.local_ipv6}')
+            core['hosts'][h.hostname] = { 
+                'key': h.public_key,
+                'asn': h.asn,
+                'localport': h.endport(),
+                'remoteport': myport,
+                'remote': ','.join([ str(x) for x in h.local_ipv4 + h.local_ipv6 if str(x) > '' ]),
+                }
+            continue
+
+
+

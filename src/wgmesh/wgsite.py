@@ -9,6 +9,7 @@ import typer
 from typing_extensions import Annotated
 
 from loguru import logger
+from munch import munchify, unmunchify, Munch
 
 from wgmesh.lib import create_public_txt_record, domain_report, fetch_and_decode_record, load_site_config, message_decode
 from wgmesh.lib import save_site_config, site_report, decode_domain, encode_domain, dns_query
@@ -191,7 +192,27 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
 
     r53con.save_txt_record(site.domain, new_txt_record, commit)
 
-    for x in hosts:
+    for host in hosts:
+        dns_data = host.publish_peer_deploy()
+        host.encrypt_message(dns_data)
+
+
+
+    #for me in hosts:
+    #    docroot = me.publish_peer_deploy()
+    #    docroot.hosts = []
+    #    for h in hosts:
+    #        if h.uuid == me.uuid:
+    #            continue
+    #        docroot.hosts.append(h.publish_peer_deploy())
+    #        continue
+    #    print(docroot)
+    #    print(unmunchify(docroot))
+    #    #generating host config
+
+        #create host package
+        # Create connection package for msh endpoints
+
         # list host
         # compile message
         # break into uuid.domain
@@ -212,7 +233,7 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     config_file = os.path.join(config_path, f'{locus}.yaml')
     
     with open(config_file) as cf:
-        site, hosts = load_site_config
+        site, hosts = load_site_config(cf)
 
     if os.path.exists(host_message):
         with open(host_message, 'r') as msg:
@@ -222,27 +243,21 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
     
     #outer_message = {'publickey': 'bas64 host key', 'message': 'encrypted_payload'}
-    try:
-        outer_message = json.loads(message_decode(message))
-    except json.JSONDecodeError:
-        bindec = message_decode(message)
-        logger.debug(f'Invalid JSON Payload: {bindec}')
-    except binascii.Error:
-        logger.debug(f'Unexpected message, base64 decode failed {message}')
-        pass
+    ## stage 1: complete
+    message_container = message_decode(message)
+    outer_message = munchify({}).fromJSON(message_container)
+    logger.trace(f'(Decoded Message: {outer_message}')
 
-    hostkey = load_public_key(outer_message['publickey'])
-    encypted_payload = message_decode(outer_message['message'])
-    SBox = site.get_decryption_box(hostkey)
+    # stage 2: complete
+    message_box = site.get_message_box(load_public_key(outer_message.publickey))
+    cipher_message = message_decode(outer_message.message, binary=True)
+    inner_message = message_box.decrypt(cipher_message)
+    logger.trace(f'Message Decrypted: {inner_message}')
 
-    hidden_message = SBox.decrypt(encrypted_payload)
-    try:
-        host_message = json.dumps(hidden_message)
-    except JSONDecodeError:
-        logger.error(f'Failed to decode the message from the host. {hidden_message}')
-        pass
+    host_message = munchify({}).fromJSON(inner_message)
+    logger.debug(f'{host_message}')
 
-    host = Host(**host_message)
+    #host = Host(**host_message)
     # Load hosts
     # Match by UUID - that is the probable best approach
     # load into omage
