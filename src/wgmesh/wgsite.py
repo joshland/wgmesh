@@ -33,21 +33,21 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
          tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
          portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
          aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
-         aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '', 
-         aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '', 
+         aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
+         aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
          force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
          dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
          debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
          trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
-    ''' 
-    do site init stuff 
+    '''
+    do site init stuff
     '''
     LoggerConfig(debug, trace)
 
     config_file = os.path.join(config_path, f'{locus}.yaml')
-    
+
     if os.path.exists(config_file) and not force and not dryrun:
-        logger.error(f'Error: {config_file} exists.  Aborting. (use --force to overwrite)')
+        logger.error(f'Error: {config_file} exists. Aborting. (use --force to overwrite)')
         sys.exit(1)
 
     if not secret_key_file:
@@ -116,7 +116,7 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
           aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
           force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
           dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
-          debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+          debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' check the config '''
     from io import StringIO
@@ -129,19 +129,15 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     config_file = os.path.join(config_path, f'{locus}.yaml')
     with open(config_file, 'r') as cf:
         site, hosts = load_site_config(cf)
-
     site_report(locus, site.publish())
 
     domain_report(site)
 
     # todo: check for Octet and ASN collisions
-
     # check for output
     # generate DNS payload, get public record
     # save records in [config_path]/dns_records file yaml
     # print results and changes
-
-
     return 0
 
 @app.command()
@@ -165,7 +161,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     if aws_zone:
         logger.warning(f'overriding DNS zone, forcing {aws_zone}')
         pass
-    
+
     with open(config_file, 'r') as cf:
         site, hosts = load_site_config(cf)
 
@@ -175,7 +171,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     except InvalidHostName:
         logger.debug(f'No records found for {site.domain}')
     except InvalidMessage:
-        logger.warning(f'Invalid JSON Payload for {site.domain}') 
+        logger.warning(f'Invalid JSON Payload for {site.domain}')
 
     public_message = site.publish_public_payload()
 
@@ -189,7 +185,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     new_txt_record = create_public_txt_record(public_message)
 
     logger.info(f'Refreshing Records')
-    r53con = Route53(site.route53, site.domain, 
+    r53con = Route53(site.route53, site.domain,
                      aws_access_key=site.aws_access_key, aws_secret_access_key=site.aws_secret_access_key)
 
     r53con.save_txt_record(site.domain, new_txt_record, commit)
@@ -233,7 +229,7 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     '''  do host-operations '''
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f'{locus}.yaml')
- 
+
     with open(config_file) as cf:
         site, hosts = load_site_config(cf)
 
@@ -243,7 +239,7 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     else:
         message = host_message
         pass
-    
+
     #outer_message = {'publickey': 'bas64 host key', 'message': 'encrypted_payload'}
     ## bug this needs to be serialzed and made transport agnostic
     ## stage 1: complete
@@ -296,7 +292,7 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     else:
         with open(config_file, 'w') as cf:
             save_site_config(site, hosts, cf)
- 
+
     #host = Host(**host_message)
     # Load hosts
     # Match by UUID - that is the probable best approach

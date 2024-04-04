@@ -40,7 +40,7 @@ def configure(filenames: dict,
               public_iface: str,
               public_addrs: str,
               dryrun: bool) -> Endpoint:
-    ''' handle configuration ''' 
+    ''' handle configuration '''
 
     if trust_iface > '':
         ep.trust_iface = trust_iface
@@ -87,7 +87,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
         if os.path.exists(x) and not (force or dryrun):
             logger.error(f"{x} exists, aborting (use --force to overwrite)")
             sys.exit(4)
-  
+
     locus_info = fetch_and_decode_record(domain)
     if not locus_info:
         logger.error(f"Failed to fetch record, aborting")
@@ -107,7 +107,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
 
     ep = Endpoint(locus, domain, locus_info['publickey'],
                   secret_key_file = filenames.privkey, public_key_file = filenames.pubkey)
-  
+
     configure(filenames, ep, trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
 
 @app.command()
@@ -126,7 +126,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
     LoggerConfig(debug, trace)
 
     filenames = hostfile(locus, domain, config_path)
-  
+
     locus_info = fetch_and_decode_record(domain)
     if not locus_info:
         logger.error(f"Failed to fetch record, aborting")
@@ -136,7 +136,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
         ep = load_endpoint_config(cf)
 
     configure(filenames, ep, trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
-  
+
     # set hostname
     # public interface
     # trusted interfac
@@ -161,16 +161,16 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
 
     clear_payload = ep.publish().toJSON()
     logger.trace(f'Site Registration Package: {clear_payload}')
-  
+
     ep.open_keys()
     b64_cipher_payload = ep.encrypt_message(clear_payload)
-  
+
     logger.debug(f'Encrypted Package: {len(clear_payload)}/{len(b64_cipher_payload)}')
     logger.trace(f'Payload: {b64_cipher_payload}')
 
     host_package = munchify({'publickey': ep.get_public_key(), 'message': b64_cipher_payload }).toJSON()
     host_message = message_encode(host_package)
-  
+
     print('Transmit the following b64 string, and use "wgsite host"')
     print(host_message)
 

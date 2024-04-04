@@ -21,7 +21,7 @@ def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: str|byte
     '''
     if not isinstance(secret_key, PrivateKey):
         raise InvalidSecretKey
-    
+
     if not isinstance(public_key, PublicKey):
         raise InvalidPublicKey
 

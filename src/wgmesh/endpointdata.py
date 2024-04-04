@@ -50,7 +50,7 @@ class Endpoint:
     _site_key:        PublicKey = field(default='')
     _secret_key:     PrivateKey = field(default='')
     _public_key:      PublicKey = field(default='')
-    
+
     def get_message_box(self, publickey: PublicKey) -> Box:
         ''' setup an SBox for decryption
         publickey: public key from the host who encrypted the message

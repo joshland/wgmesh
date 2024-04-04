@@ -32,7 +32,7 @@ class Route53(object):
         if self.rr_conn:
             return
         logger.debug(f'Open credentialed connection to route53.')
-        self.rr_conn = route53.connect( 
+        self.rr_conn = route53.connect(
             aws_access_key_id = self.aws_access_key,
             aws_secret_access_key = self.aws_secret_access_key )
         return

@@ -50,7 +50,7 @@ def LoggerConfig(debug: bool, trace: bool):
 
 def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
     ''' load site config from disk
-        
+
         fn: YAML file.
     '''
     yaml = YAML(typ='rt')
@@ -73,7 +73,7 @@ def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
 
 def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
     ''' load site config from disk
-        
+
         fn: YAML file.
     '''
     yaml = YAML(typ='rt')
@@ -87,7 +87,7 @@ def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
 
 def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
     ''' load site config from disk
-        
+
         fn: YAML file.
     '''
     yaml = YAML(typ='rt')
