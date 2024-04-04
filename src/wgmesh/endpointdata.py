@@ -8,6 +8,7 @@ import socket
 from loguru import logger
 from nacl.public import PrivateKey, PublicKey, Box
 from attrs import define, validators, field, converters
+from munch import munchify
 
 from wgmesh.datalib import message_encode
 from .crypto  import generate_key, keyexport, load_public_key, load_secret_key
@@ -45,6 +46,7 @@ class Endpoint:
     public_address:         str = field(default='', converter=nonone)
     trust_iface:            str = field(default='', converter=nonone)
     trust_address:          str = field(default='', converter=nonone)
+
     _site_key:        PublicKey = field(default='')
     _secret_key:     PrivateKey = field(default='')
     _public_key:      PublicKey = field(default='')
@@ -67,6 +69,11 @@ class Endpoint:
         retval = message_encode(secure_message)
         return retval
 
+    def export(self):
+        ''' export local configuration for storage '''
+        retval = wgmesh_asdict(self)
+        return munchify(retval)
+
     def open_keys(self):
         ''' try to unpack the keys '''
         logger.trace('no open_keys')
@@ -80,7 +87,14 @@ class Endpoint:
             raise ValueError('Key Already Exists')
 
     def publish(self):
-        ''' export local configuration for storage or transport '''
-        retval = wgmesh_asdict(self)
-        return retval
+        ''' export local configuration for transport '''
+        retval = {
+            'hostname': self.hostname,
+            'uuid': self.uuid,
+            'public_key': self.get_public_key(),
+            'public_key_file': self.public_key_file,
+            'private_key_file': self.secret_key_file,
+            'remote_addr': ",".join(self.public_address),
+        }
+        return munchify(retval)
 

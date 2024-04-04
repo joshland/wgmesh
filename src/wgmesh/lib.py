@@ -79,7 +79,7 @@ def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
     yaml = YAML(typ='rt')
 
     output = {
-        'local': unmunchify(endpoint.publish())
+        'local': unmunchify(endpoint.export())
     }
 
     yaml.dump(output, dest_file)

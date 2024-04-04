@@ -168,6 +168,12 @@ class Sitecfg:
         retval = Box(self._master_site_key, publickey)
         return retval
 
+    def get_host_by_uuid(self, uuid: UUID):
+        ''' lookup a host by a UUID '''
+        retval = self._asn_map.get(uuid, None)
+
+        return retval
+
     def publish_public_payload(self):
         ''' return the site payload dictionay '''
         return munch({'locus': self.locus, 'publickey': keyexport(self._master_site_key.public_key)})

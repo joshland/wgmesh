@@ -6,6 +6,7 @@ from json import JSONDecodeError
 import os
 import sys
 import typer
+from ipaddress import ip_address
 from typing_extensions import Annotated
 
 from loguru import logger
@@ -18,6 +19,7 @@ from .version import VERSION
 from .route53 import Route53
 from .crypto import *
 from .lib import Sitecfg, LoggerConfig
+from .sitedata import Host
 
 app = typer.Typer()
 
@@ -110,11 +112,11 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
           tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
           portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
           aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
-          aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '', 
-          aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '', 
+          aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
+          aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
           force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
           dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
-          debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+          debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' check the config '''
     from io import StringIO
@@ -231,7 +233,7 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     '''  do host-operations '''
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f'{locus}.yaml')
-    
+ 
     with open(config_file) as cf:
         site, hosts = load_site_config(cf)
 
@@ -243,6 +245,7 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
     
     #outer_message = {'publickey': 'bas64 host key', 'message': 'encrypted_payload'}
+    ## bug this needs to be serialzed and made transport agnostic
     ## stage 1: complete
     message_container = message_decode(message)
     outer_message = munchify({}).fromJSON(message_container)
@@ -257,6 +260,43 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     host_message = munchify({}).fromJSON(inner_message)
     logger.debug(f'{host_message}')
 
+    host = site.get_host_by_uuid(host_message.uuid)
+
+    host_message.local_ipv4 = []
+    host_message.local_ipv6 = []
+
+    for x in host_message.remote_addr.split(','):
+        try:
+            addr = ip_address(x)
+        except ValueError:
+            logger.warning(f'Ignoring invalid IP: {x}')
+            continue
+
+        if addr.version == 4:
+            host_message.local_ipv4.append(addr)
+        elif addr.version == 6:
+            host_message.local_ipv4.append(addr)
+        else:
+            logger.error(f'Unknown Address: x')
+            continue
+        continue
+
+    del host_message.remote_addr
+
+    if host:
+        logger.debug(f'Update host {host.uuid}/{host.hostname}')
+        host.update(hosts)
+    else:
+        newHost = Host(sitecfg=site, **host_message)
+        print(newHost)
+        hosts.append(host)
+
+    if dryrun:
+        print("DO DRYRUN STUFF")
+    else:
+        with open(config_file, 'w') as cf:
+            save_site_config(site, hosts, cf)
+ 
     #host = Host(**host_message)
     # Load hosts
     # Match by UUID - that is the probable best approach

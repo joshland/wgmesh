@@ -35,7 +35,7 @@ new payload published under new key, immediately published
 ## Site -> Host Deployment Records
 
         core = {
-            'asn':      me.asn,
+           'asn':      me.asn,
             'site':     site.domain,
             'octet':    me.octet,
             'portbase': site.portbase,
@@ -59,4 +59,5 @@ new payload published under new key, immediately published
             continue
 
 
+        {
 

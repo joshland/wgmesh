@@ -2,6 +2,7 @@
 ''' wgmesh site-specific operations '''
 
 # Create the host basics locally
+from logging import warning
 import os
 import sys
 from io import StringIO
@@ -10,7 +11,6 @@ from glob import glob
 import typer as t
 from loguru import logger
 from typing import Annotated
-from nacl.public import Box, PublicKey
 from munch import munchify, Munch
 
 from .endpointdata import Endpoint
@@ -33,56 +33,23 @@ def hostfile(locus: str, domain: str, config_path:str) ->Munch:
 
     return munchify(retval)
 
-@app.command()
-def init(locus:           Annotated[str, t.Argument(help='Site locus')],
-         domain:          Annotated[str, t.Argument(help='Locus domain name')],
-         config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")]          = '/etc/wireguard',
-         trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')]       = False, 
-         trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')]       = False, 
-         public_iface:    Annotated[str,   t.Option(help='Public Interface')]       = False, 
-         public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')]       = False, 
-         force:           Annotated[bool,  t.Option(help='force overwrite')]       = False,
-         dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
-         debug:           Annotated[bool,  t.Option(help='debug logging')]         = False,
-         trace:           Annotated[bool,  t.Option(help='trace logging')]         = False):
-    ''' do site init stuff '''
-    LoggerConfig(debug, trace)
+def configure(filenames: dict,
+              ep: Endpoint,
+              trust_iface: str,
+              trust_addrs: str,
+              public_iface: str,
+              public_addrs: str,
+              dryrun: bool) -> Endpoint:
+    ''' handle configuration ''' 
 
-    filenames = hostfile(locus, domain, config_path)
-
-    for x in (filenames.cfg_file, filenames.pubkey, filenames.privkey):
-        if os.path.exists(x) and not (force or dryrun):
-            logger.error(f"{x} exists, aborting (use --force to overwrite)")
-            sys.exit(4)
-    
-    locus_info = fetch_and_decode_record(domain)
-    if not locus_info:
-        logger.error(f"Failed to fetch record, aborting")
-        sys.exit(1)
-
-    ep = Endpoint(locus, domain, locus_info['publickey'],
-                  secret_key_file = filenames.privkey, public_key_file = filenames.pubkey)
-    
-    if trust_iface:
+    if trust_iface > '':
         ep.trust_iface = trust_iface
-    if public_iface:
+    if public_iface > '':
         ep.public_iface = public_iface
-    if trust_addrs:
+    if trust_addrs > '':
         ep.trust_address = trust_addrs.split(',')
-    if public_addrs:
+    if public_addrs > '':
         ep.public_address = public_addrs.split(',')
-
-    newkey = generate_key()
-    if dryrun:
-        print(f'Generated key, ignoring (dryrun)')
-    else:
-        with open(filenames.privkey, 'w') as keyf:
-            keyf.write(keyexport(newkey))
-            pass
-        with open(filenames.pubkey, 'w') as keyf:
-            keyf.write(keyexport(newkey.public_key))
-            pass
-        pass
 
     if dryrun:
         f = StringIO()
@@ -97,6 +64,79 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
         with open(filenames.cfg_file, 'w') as cf:
             save_endpoint_config(ep, cf)
 
+    return ep
+
+@app.command()
+def init(locus:           Annotated[str, t.Argument(help='Site locus')],
+         domain:          Annotated[str, t.Argument(help='Locus domain name')],
+         config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+         trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')] = '',
+         trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
+         public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
+         public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')] = False,
+         force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
+         dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
+         debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
+         trace:           Annotated[bool,  t.Option(help='trace logging')] = False):
+    ''' do site init stuff '''
+    LoggerConfig(debug, trace)
+
+    filenames = hostfile(locus, domain, config_path)
+
+    for x in (filenames.cfg_file, filenames.pubkey, filenames.privkey):
+        if os.path.exists(x) and not (force or dryrun):
+            logger.error(f"{x} exists, aborting (use --force to overwrite)")
+            sys.exit(4)
+  
+    locus_info = fetch_and_decode_record(domain)
+    if not locus_info:
+        logger.error(f"Failed to fetch record, aborting")
+        sys.exit(1)
+
+    newkey = generate_key()
+    if dryrun:
+        print(f'Generated key, ignoring (dryrun)')
+    else:
+        with open(filenames.privkey, 'w') as keyf:
+            keyf.write(keyexport(newkey))
+            pass
+        with open(filenames.pubkey, 'w') as keyf:
+            keyf.write(keyexport(newkey.public_key))
+            pass
+        pass
+
+    ep = Endpoint(locus, domain, locus_info['publickey'],
+                  secret_key_file = filenames.privkey, public_key_file = filenames.pubkey)
+  
+    configure(filenames, ep, trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
+
+@app.command()
+def config(locus:           Annotated[str, t.Argument(help='Site locus')],
+           domain:          Annotated[str, t.Argument(help='Locus domain name')],
+           config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+           trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')] = '',
+           trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
+           public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
+           public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')] = '',
+           force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
+           dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
+           debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
+           trace:           Annotated[bool,  t.Option(help='trace logging')] = False):
+    ''' do site init stuff '''
+    LoggerConfig(debug, trace)
+
+    filenames = hostfile(locus, domain, config_path)
+  
+    locus_info = fetch_and_decode_record(domain)
+    if not locus_info:
+        logger.error(f"Failed to fetch record, aborting")
+        sys.exit(1)
+
+    with open(filenames.cfg_file, 'r') as cf:
+        ep = load_endpoint_config(cf)
+
+    configure(filenames, ep, trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
+  
     # set hostname
     # public interface
     # trusted interfac
@@ -121,16 +161,16 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
 
     clear_payload = ep.publish().toJSON()
     logger.trace(f'Site Registration Package: {clear_payload}')
-    
+  
     ep.open_keys()
     b64_cipher_payload = ep.encrypt_message(clear_payload)
-    
+  
     logger.debug(f'Encrypted Package: {len(clear_payload)}/{len(b64_cipher_payload)}')
     logger.trace(f'Payload: {b64_cipher_payload}')
 
     host_package = munchify({'publickey': ep.get_public_key(), 'message': b64_cipher_payload }).toJSON()
     host_message = message_encode(host_package)
-    
+  
     print('Transmit the following b64 string, and use "wgsite host"')
     print(host_message)
 
