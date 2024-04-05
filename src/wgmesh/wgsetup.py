@@ -78,7 +78,11 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
          dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
          debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
          trace:           Annotated[bool,  t.Option(help='trace logging')] = False):
-    ''' do site init stuff '''
+    '''
+    initial wgmesh site configuration, key generation and site buildout
+
+    requires: locus and wgmesh
+    '''
     LoggerConfig(debug, trace)
 
     filenames = hostfile(locus, domain, config_path)
@@ -122,7 +126,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
            dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
            debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
            trace:           Annotated[bool,  t.Option(help='trace logging')] = False):
-    ''' do site init stuff '''
+    ''' site (re)configuration '''
     LoggerConfig(debug, trace)
 
     filenames = hostfile(locus, domain, config_path)
@@ -151,7 +155,7 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
             dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
             debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
             trace:           Annotated[bool, t.Option(help='trace logging')] = False):
-    ''' publish to dns '''
+    ''' publish site registration - must be imported by wgsite master '''
     LoggerConfig(debug, trace)
 
     filenames = hostfile(locus, domain, config_path)
@@ -188,7 +192,7 @@ def list(ignore:          Annotated[str,  t.Option(help='Comma-delimited list of
          config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
          debug:           Annotated[bool, t.Option(help='debug logging')] = False,
          trace:           Annotated[bool, t.Option(help='trace logging')] = False):
-    ''' publish to dns '''
+    ''' list details about the host, current config(s), if any '''
     LoggerConfig(debug, trace)
 
     import shutil
@@ -222,7 +226,7 @@ def list(ignore:          Annotated[str,  t.Option(help='Comma-delimited list of
 
 @app.command()
 def deploy(*args, **kwargs):
-    ''' do host-operations '''
+    ''' deploy local wgmesh configuration and scripts '''
     LoggerConfig(debug, trace)
     print(f'{args} / {kwargs}')
     return 0

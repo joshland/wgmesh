@@ -1,8 +1,12 @@
+from io import StringIO
 import pytest
 
 from loguru import logger
-from wgmesh.sitedata import Sitecfg, Host, expandRange
+from munch import munchify
+from wgmesh.crypto import keyimport, load_public_key
+from wgmesh.sitedata import Sitecfg, Host, expandRange, collapse_asn_list
 from wgmesh.lib import LoggerConfig
+from wgmesh.transforms import SitePublicRecord
 #from wgmesh.datalib import asdict as wgmesh_asdict
 
 blank_data = {
@@ -60,8 +64,54 @@ host_data_test = {
     'uuid': '7bc1bafe-87ba-4471-9ea7-6ef8e99b82c0',
 }
 
+host_yaml_raw_data = """
+global:
+  alerts: ''
+  asn_range: 4200000000:4200000010,4200000015
+  asn_used:
+  - 4200000000
+  aws_access_key:
+  aws_secret_access_key:
+  domain: example.dyn.ashbyte.com
+  locus: example
+  tunnel_ipv4: 100.0.0.0/24
+  tunnel_ipv6: fd7b:c042:23c5:a33f::/64
+  portbase: 7000
+  publickey: bVEY8bpWDjKY/K7w1u3i+noShGhRHfFpzPEb1hebBAE=
+  privatekey: dev/example_priv
+  route53: Z1WPZU95RUKGNI
+hosts:
+  aee8a79f-c608-4fe9-8484-cdef6911366f:
+    uuid: aee8a79f-c608-4fe9-8484-cdef6911366f
+    hostname: AtomBattler.ashbyte.com
+    asn: 4200000000
+    octet: 1
+    local_ipv4:
+    - 4.2.2.2/32
+    - 8.8.8.8/32
+    - fd86:ea04:1116::1/128
+    local_ipv6: []
+    public_key: ''
+    local_networks: ''
+    public_key_file: dev/example_endpoint_pub
+    private_key_file: dev/example_endpoint_priv
+"""[1:]
+
+with open('tests/test_pub', 'r') as pubf:
+    test_public_key_encoded = pubf.read()
+    test_public_key_decoded = load_public_key(test_public_key_encoded)
+
+with open('tests/test_priv', 'r') as prvf:
+   test_private_key_encoded = prvf.read()
+   test_private_key_decoded = load_public_key(test_private_key_encoded)
+   
+spr_integration_payload = {'locus': 'example', 'publickey': test_public_key_encoded }
+
+test_collapse_expanded_list = [ 22, 23, 24, 25, 1, 2, 3, 4, 10, 11, 12, 13 ]
+test_collapse_collapsed_list = "1:4,10:13,22:25"
+
 def test_init():
-    LoggerConfig(1, 0)
+    LoggerConfig(1, 1)
     pass
 
 def test_expandRange_single():
@@ -71,6 +121,10 @@ def test_expandRange_single():
 def test_expandRange_multiple():
     values = expandRange("1:3")
     assert values == [1, 2, 3]
+
+def test_collapse_list():
+    values = collapse_asn_list(test_collapse_expanded_list)
+    assert test_collapse_collapsed_list == values
 
 def test_site_emtpy():
     ''' validate that Sitecfg will fail on required fields '''
@@ -92,15 +146,45 @@ def test_site_publish():
     ''' validate that Sitecfg can generate an object '''
     logger.trace(f'site_publish')
     s = Sitecfg(**test_data['global']).publish()
+    print(s)
+
+    with pytest.raises(AttributeError) as exc_info:
+        k = s._privatekey
+
+    with pytest.raises(AttributeError) as exc_info:
+        k = s._private_key
     ## TODO: write a test to validate that the secret keyis not present
     ## write a test to validate the public key is encoded
 
-def test_host_data():
+def test_site_public_record():
+    spr = SitePublicRecord('example', test_public_key_encoded)
+    export = spr.publish()
+    assert tuple(export.keys()) == ('locus', 'publickey')
+
+def test_site_loaddata():
+    buffer = StringIO()
+    buffer.write(host_yaml_raw_data)
+    buffer.seek(0)
+    spr= Sitecfg.load_site_config(buffer)
+    assert isinstance(spr, Sitecfg)
+
+def test_spr_integration_test():
+    jsonpayload = munchify(spr_integration_payload).toJSON()
+    spr = SitePublicRecord.fromJSON(jsonpayload)
+    export = spr.publish()
+    assert tuple(export.keys()) == ('locus', 'publickey')
+
+def test_site_host_integration():
     ''' validate that Sitecfg can generate an object '''
-    logger.trace(f'host_data')
     s = Sitecfg(**test_data['global'])
     h = Host(sitecfg=s, **host_data_test)
     assert isinstance(h, Host)
+
+def test_site_host_integration_save():
+    ''' validate that Sitecfg can generate an object '''
+    s = Sitecfg(**test_data['global'])
+    h = Host(sitecfg=s, **host_data_test)
+    yaml_data = s.save_site_config()
 
 #def test_endpoint_export():
 #    ep = Endpoint(**test_data)

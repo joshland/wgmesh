@@ -3,9 +3,18 @@
 import typing
 import attrs
 import base64
+from uuid import UUID, uuid4
 
 from loguru import logger
 from munch import munchify
+
+emptyValuesTuple = (None, '')
+
+def convert_uuid_uuid(value):
+    if value.strip() in emptyValuesTuple:
+        return str( uuid4() )
+    else:
+        return UUID(value)
 
 def message_decode(payload: str|bytes, binary=False) -> str|bytes:
     ''' decode a base64 encoded message '''

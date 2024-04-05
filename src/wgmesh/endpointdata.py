@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 ''' endpoint data definition and validators '''
 
-import attrs
-import uuid
 import socket
+from uuid import UUID
 
 from loguru import logger
 from nacl.public import PrivateKey, PublicKey, Box
-from attrs import define, validators, field, converters
+from attrs import define, field
 from munch import munchify
 
 from wgmesh.datalib import message_encode
-from .crypto  import generate_key, keyexport, load_public_key, load_secret_key
-from .datalib import asdict as wgmesh_asdict
-
-emptyValuesTuple = (None, '')
+from .crypto  import keyexport, load_public_key, load_secret_key
+from .datalib import asdict as wgmesh_asdict, convert_uuid_uuid, emptyValuesTuple
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
@@ -27,10 +24,6 @@ def convert_hostname(arg: str) -> str:
         return socket.gethostname()
     return arg
 
-def convert_uuid(value):
-    if value.strip() in emptyValuesTuple:
-        return str( uuid.uuid4() )
-    return value
 
 @define
 class Endpoint:
@@ -38,7 +31,7 @@ class Endpoint:
     site_domain:            str = field()
     site_pubkey:            str = field()
     hostname:               str = field(default='', converter=convert_hostname)
-    uuid:                   str = field(default='', converter=convert_uuid)
+    uuid:                  UUID = field(default='', converter=convert_uuid_uuid)
     cmdfping:               str = field(default="/usr/sbin/fping", converter=str)
     secret_key_file:        str = field(default='', converter=nonone)
     public_key_file:        str = field(default='', converter=nonone)
@@ -71,8 +64,9 @@ class Endpoint:
 
     def export(self):
         ''' export local configuration for storage '''
-        retval = wgmesh_asdict(self)
-        return munchify(retval)
+        retval = munchify(wgmesh_asdict(self))
+        retval.uuid = str(retval.uuid)
+        return retval
 
     def open_keys(self):
         ''' try to unpack the keys '''

@@ -7,7 +7,7 @@ import json
 import base64
 
 from io import StringIO
-from typing import TextIO, List, Tuple
+from typing import Callable, TextIO, List, Tuple
 from textwrap import wrap
 from munch import munchify, unmunchify
 
@@ -18,7 +18,7 @@ from ruamel.yaml import YAML
 from natsort import natsorted
 from munch import munchify
 
-from .sitedata import Sitecfg, Host
+from .sitedata import Sitecfg, Host, check_asn_sanity
 from .endpointdata import Endpoint
 from .datalib import message_encode, message_decode
 
@@ -93,9 +93,9 @@ def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
     yaml = YAML(typ='rt')
 
     y = yaml.load(source_file)
-
+    logger.trace(f'{y}')
     logger.trace(f'Global: {y.get("global")}')
-    logger.trace(f'Hosts: {y.get("hosts").keys()}')
+    logger.trace(f'Hosts: {y.get("hosts")}')
 
     sitecfg = Sitecfg(**y.get('global', {}))
     sitecfg.open_keys()
@@ -107,22 +107,19 @@ def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
         h = Host(k, sitecfg, **v)
         hosts.append(h)
         continue
+    check_asn_sanity(sitecfg, hosts)
     return sitecfg, hosts
 
-def save_site_config(site: Sitecfg, hosts: list, dest_file: TextIO):
-    ''' commit config to disk
+def safe_save_site_config(site: Sitecfg, hosts: list, filename: str):
+    ''' wait until a save has completed successfully before rewriting a file. '''
+    buffer = StringIO()
 
-        site: Sitecfg
-        hosts: List of Hosts
-    '''
-    yaml = YAML(typ='rt')
+    save_site_config(site, hosts, buffer)
+    buffer.seek(0)
 
-    sitedata = site.publish()
-    dumphosts = { h.hostname: h.publish()[1] for h in hosts }
-    publish = { 'global': unmunchify(sitedata),
-                'hosts': unmunchify(dumphosts) }
+    with open(filename, 'w') as cf:
+        cf.write(buffer.read())
 
-    yaml.dump(publish, dest_file)
     return
 
 def sort_and_join_encoded_data(data):

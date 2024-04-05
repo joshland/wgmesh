@@ -1,4 +1,5 @@
 import pytest
+from uuid import UUID
 
 from wgmesh.endpointdata import Endpoint
 from wgmesh.datalib import asdict as wgmesh_asdict
@@ -71,7 +72,13 @@ def test_endpoint():
     #[ assert v == test_data[k] for k, v in asdict(ep).items if k[0] != '_' ]
     for k, v in asdict(ep).items():
         if k[0] == "_": continue
-        assert v == test_data[k]
+        if isinstance(v, UUID):
+            assert str(v) == test_data[k]
+        else:
+            assert v == test_data[k]
+            continue
+        continue
+
 
 def test_endpoint_export():
     ''' test exporting the blank data set '''

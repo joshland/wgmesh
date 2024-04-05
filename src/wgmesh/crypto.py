@@ -6,6 +6,7 @@ import binascii
 
 from typing import Callable
 from loguru import logger
+
 from nacl.public import PrivateKey, PublicKey, Box
 
 class InvalidPublicKey(Exception): pass
@@ -43,6 +44,16 @@ def generate_key() -> PrivateKey:
     ''' generate a key '''
     retval = PrivateKey.generate()
     return retval
+
+def generate_site_key(secret_path: str, dryrun: bool) -> PrivateKey:
+    ''' generate and store keys '''
+    newkey = generate_key()
+    if dryrun:
+        return newkey
+    with open(secret_path, 'w') as keyfile:
+        keyfile.write(keyexport(newkey))
+        pass
+    return newkey
 
 def load_secret_key(key_string: str) -> PrivateKey:
     ''' read key from a key_string '''
