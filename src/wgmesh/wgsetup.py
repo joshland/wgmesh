@@ -158,6 +158,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
 def publish(locus:           Annotated[str, t.Argument(help='short/familiar name, short hand for this mesh')],
             domain:          Annotated[str, t.Argument(help='Locus domain name')],
             config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            outfile:         Annotated[str, t.Option(help='Output file')] = '',
             force:           Annotated[bool, t.Option(help='force overwrite')] = False,
             dryrun:          Annotated[bool, t.Option(help='do not write anything')] = False,
             debug:           Annotated[bool, t.Option(help='debug logging')] = False,
@@ -182,9 +183,16 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
     host_package = munchify({'publickey': ep.get_public_key(), 'message': b64_cipher_payload }).toJSON()
     host_message = message_encode(host_package)
 
-    print('Transmit the following b64 string, and use "wgsite host"')
-    print(host_message)
-
+    if outfile:
+        if os.path.exists(outfile) and not force:
+            print(f'Error: {outfile} exists, use --force to override')
+            sys.exit(4)
+        with open(outfile, 'w') as mf:
+            mf.write(host_message)
+    else:
+        print('Transmit the following b64 string, and use "wgsite host"')
+        print(host_message)
+        pass
 
     #uuid: 2bd3a14d-9b3b-4f1a-9d88-e7c413cd6d8d
     #public_key: o6I7hQanMRT1VRjD6kAEz7IDdiT3KVCw1vj1Z58lVkY=

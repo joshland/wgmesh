@@ -27,7 +27,7 @@ app = typer.Typer()
 def init(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
          domain:          Annotated[str, typer.Argument(help='primary domain where the locus TXT record will be published.')],
          asn:             Annotated[str, typer.Argument(help="Range of ASN Number (32bit ok) ex. 64512:64550")],
-         config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+         config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
          secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
          tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
          tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
@@ -118,7 +118,7 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
 
 @app.command()
 def check(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-          config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+          config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
           secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
           tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
           tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
@@ -158,7 +158,7 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
            domain:          Annotated[str,
            typer.Argument(help='primary domain where the locus TXT record will be published.')] = '',
            asn:             Annotated[str, typer.Argument(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
-           config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+           config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
            secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
            tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
            tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
@@ -203,7 +203,7 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
 
 @app.command()
 def genkeys(locus: Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-            config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
             force: Annotated[bool, typer.Option(help='overwrite existing key(s). NO TAKE BACKS')] = False):
     ''' generate new site key '''
     config_file = os.path.join(config_path, f'{locus}.yaml')
@@ -221,7 +221,7 @@ def genkeys(locus: Annotated[str, typer.Argument(help='short/familiar name, shor
 
 @app.command()
 def publish(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-            config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
             aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
             aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
             aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
@@ -300,7 +300,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
 @app.command()
 def host(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
          host_message:    Annotated[str, typer.Argument(help='Host import string, or file with the message packet.')],
-         config_path:     Annotated[str, typer.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+         config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
          force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
          dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
          debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
@@ -313,13 +313,16 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         site = Sitecfg.load_site_config(cf)
 
     if os.path.exists(host_message):
+        logger.debug(f'{host_message} is a file.')
         with open(host_message, 'r') as msg:
             message = msg.read()
     else:
+        logger.debug(f'Message supplied through command line')
         message = host_message
         pass
 
     logger.debug(f'transform stage 1, decode')
+    logger.trace(f'raw message: {message}')
     encrypted_record = SiteEncryptedHostRegistration.from_base64_json(message)
     logger.trace(f'(Decoded Message: {encrypted_record}')
 

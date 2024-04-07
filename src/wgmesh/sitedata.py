@@ -278,6 +278,7 @@ class Sitecfg:
     _hosts:         List[Host] = field(default=[])
     _octet_map:           Dict = field(default={})
     _octets:         List[int] = field(default=[0])
+    _open_asn:       List[int] = field(default=[])
     _registeredHosts:     Dict = field(default={})
     _master_aws_secrets: EncryptedAWSSecrets = field(default=None)
     _master_site_key:PrivateKey|None = field(default=None)
@@ -422,17 +423,10 @@ class Sitecfg:
 
     def checkout_asn(self, uuid):
         ''' retrieve an available ASN from the pool '''
-        sset = set(self.asn_range)
-        logger.trace(f'Available ASNs: {sset}')
-        aset = set(self.asn_used)
-        logger.trace(f'Used ASNs: {sset}')
-        open_asn = list(sset - aset)
-        logger.debug(f'Open ASN Set: {sset}')
-        if len(open_asn) == 0:
-            logger.error("ASN Space Exhausted")
-            sys.exit(4)
-
-        retval = open_asn.pop(0)
+        # fixme: we need a --fix-asns options
+        if not len(self._open_asn):
+            self.calculate_open_asn()
+        retval = self._open_asn.pop(0)
         self.register_asn(retval, uuid)
         return retval
 
@@ -457,6 +451,19 @@ class Sitecfg:
         self.register_octet(retval, uuid)
         return retval
 
+    def calculate_open_asn(self):
+        ''' try to find open_asns '''
+        ## setup ASN list
+        sset = set(self.asn_range)
+        logger.trace(f'Available ASNs: {sset}')
+        aset = set(self.asn_used)
+        logger.trace(f'Used ASNs: {sset}')
+        self._open_asn = list(sset - aset)
+        logger.debug(f'Open ASN Set: {sset}')
+        if len(self._open_asn) == 0:
+            logger.error("ASN Space Exhausted")
+            sys.exit(4)
+
     def open_keys(self):
         ''' try to unpack the keys '''
         logger.trace('open_keys')
@@ -480,7 +487,6 @@ class Sitecfg:
             if public_key != self._master_site_key.public_key:
                 logger.error(f'Public key in Site config does not match {self.privatekey}')
                 sys.exit(1)
-                pass
             logger.trace(f'Public key matches site key.')
         else:
             self.publickey = keyexport(self._master_site_key.public_key)
@@ -493,6 +499,7 @@ class Sitecfg:
             box = self.get_message_box(self._master_site_key.public_key)
             self._master_aws_secrets = EncryptedAWSSecrets.load_encrypted_credentials(self.aws_credentials, box)
             pass
+
     pass
 
 
