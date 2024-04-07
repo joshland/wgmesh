@@ -34,7 +34,7 @@ test_data = {
         'portbase': 21100,
         'asn_range': '64512:64520,65100,65120:65125',
         'publickey': '',
-        'privatekey': "site.key",
+        'privatekey': "tests/test_priv",
     }
 }
 
@@ -104,7 +104,7 @@ with open('tests/test_pub', 'r') as pubf:
 with open('tests/test_priv', 'r') as prvf:
    test_private_key_encoded = prvf.read()
    test_private_key_decoded = load_public_key(test_private_key_encoded)
-   
+
 spr_integration_payload = {'locus': 'example', 'publickey': test_public_key_encoded }
 
 test_collapse_expanded_list = [ 22, 23, 24, 25, 1, 2, 3, 4, 10, 11, 12, 13 ]
@@ -128,12 +128,12 @@ def test_collapse_list():
 
 def test_site_emtpy():
     ''' validate that Sitecfg will fail on required fields '''
-    with pytest.raises(ValueError) as exc_info:   
+    with pytest.raises(ValueError) as exc_info:
         s = Sitecfg()
 
 def test_site_blank():
     ''' validate that Sitecfg can generate an object '''
-    with pytest.raises(ValueError) as exc_info:   
+    with pytest.raises(ValueError) as exc_info:
         s = Sitecfg(**blank_data['global'])
 
 def test_site_testdata():
@@ -145,7 +145,9 @@ def test_site_testdata():
 def test_site_publish():
     ''' validate that Sitecfg can generate an object '''
     logger.trace(f'site_publish')
-    s = Sitecfg(**test_data['global']).publish()
+    s = Sitecfg(**test_data['global'])
+    s.open_keys()
+    s = s.publish()
     print(s)
 
     with pytest.raises(AttributeError) as exc_info:
@@ -190,8 +192,8 @@ def test_site_host_integration_save():
 #    ep = Endpoint(**test_data)
 #    ep.open_keys()
 #    data = wgmesh_asdict(ep)
-#    with pytest.raises(Exception) as exc_info:   
+#    with pytest.raises(Exception) as exc_info:
 #        data['_secret_key']
-#    with pytest.raises(Exception) as exc_info:   
+#    with pytest.raises(Exception) as exc_info:
 #        data['_public_key']
 #

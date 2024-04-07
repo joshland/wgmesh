@@ -349,8 +349,9 @@ def host(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         print("DO DRYRUN STUFF")
     else:
         logger.trace(f'Save site: {site}')
-        logger.trace(f'Save site: {hosts}')
-        safe_save_site_config(site, hosts, config_file)
+        site_yaml = site.save_site_config()
+        with open(config_file, 'w') as cf:
+            cf.write(site_yaml)
 
     #host = Host(**host_message)
     # Load hosts

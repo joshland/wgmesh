@@ -241,6 +241,7 @@ def site_report(locus: str, published_data: dict) -> str:
     ''' compile a text report of the published site data '''
     from munch import munchify
 
+    logger.trace(f"Site Report: {published_data}")
     data = munchify(published_data)
     print()
     print(f"Locus: {locus}")

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+''' data and document transformation classes '''
 
 from base64 import b64encode, b64decode
-import base64
-from munch import munchify, unmunchify
-from nacl.public import Box, PublicKey, PrivateKey
-from attr import define, field, asdict
+from ipaddress import ip_address
+
 from loguru import logger
+from attr import define, field, asdict
+from munch import munchify, unmunchify, Munch
+from nacl.public import Box, PublicKey, PrivateKey
 
 from .crypto import keyexport
 
@@ -39,7 +41,28 @@ def convert_list_to_csv(arg):
 
 def convert_base64_to_bytes(arg):
     ''' convert a binary payload to binary '''
-    return base64.b64decode(arg)
+    return b64decode(arg)
+
+@define
+class EncryptedAWSSecrets:
+    access_key: str = field()
+    secret_key: str = field()
+    @classmethod
+    def load_encrypted_credentials(cls, payload, box):
+        ''' load encrypted aws credentials '''
+        raw_message = b64decode(payload)
+        hidden_message = munchify({}).fromJSON(box.decrypt(raw_message))
+        retval = EncryptedAWSSecrets(hidden_message.access_key,
+                                     hidden_message.secret_key)
+        return retval
+    def publish(self) -> Munch:
+        return munchify({'access_key': self.access_key,
+                        'secret_key': self.secret_key})
+    def export_encrypted_credentials(self, box: Box):
+        ''' self -> json -> encrypt -> str '''
+        json_dump = self.publish().toJSON()
+        encrypted_message = box.encrypt(json_dump.encode('ascii'))
+        return b64encode(encrypted_message).decode('utf-8')
 
 @define
 class SitePublicRecord:
@@ -63,12 +86,25 @@ class SiteEncryptedHostRegistration:
     @classmethod
     def from_base64_json(cls, payload):
         ''' decode a base64 message, and return the Encrypted Message '''
-        raw_message = base64.b64decode(payload).decode('utf-8')
+        raw_message = b64decode(payload).decode('utf-8')
         content = munchify({}).fromJSON(raw_message)
         return SiteEncryptedHostRegistration(content.publickey, content.message)
+
     def decrypt(self, box: Box):
         ''' attempt to decrypt the message '''
-        hidden_message = box.decyrpt(self.message)
+        hidden_message = munchify({}).fromJSON(box.decrypt(self.message).decode('utf-8'))
+        logger.trace(f'Decrypted message: {hidden_message}')
+        retval = HostRegistration(hidden_message.uuid,
+                                  hidden_message.hostname,
+                                  hidden_message.public_key,
+                                  hidden_message.public_key_file,
+                                  hidden_message.private_key_file,)
+        retval.split_remotes(hidden_message.remote_addr)
+        return retval.publish()
+
+    def encrypt(self, box: Box):
+        ''' attempt to decrypt the message '''
+        hidden_message = munchify({}).fromJSON(box.decrypt(self.message).decode('utf-8'))
         logger.trace(f'Decrypted message: {hidden_message}')
         retval = HostRegistration(hidden_message.uuid,
                                   hidden_message.public_key,
@@ -77,15 +113,30 @@ class SiteEncryptedHostRegistration:
         return retval
 
 @define
-class HostRegistration:
+class EndpointHostRegistrationMessage:
+    hostname:         str = field()
     uuid:             str = field(converter=str)
+    remote_addr:      str = field()
     public_key:       str = field()
     public_key_file:  str = field()
     private_key_file: str = field()
-    local_ipv4:       str = field(converter=convert_list_to_csv, default=[])
-    local_ipv6:       str = field(converter=convert_list_to_csv, default=[])
+
+@define
+class HostRegistration:
+    uuid:             str = field(converter=str)
+    hostname:         str = field()
+    public_key:       str = field()
+    public_key_file:  str = field()
+    private_key_file: str = field()
+    local_ipv4:      list = field(default=[])
+    local_ipv6:      list = field(default=[])
+    def publish(self):
+        ''' export the local '''
+        return munchify(asdict(self))
+
     def split_remotes(self, remote_addrs):
         ''' older host registrations send all remote addresses in a single list '''
+        logger.debug(f'split_remotes: {self.local_ipv4}/{self.local_ipv6}')
         for x in remote_addrs.split(','):
             try:
                 addr = ip_address(x)
@@ -102,8 +153,6 @@ class HostRegistration:
                 logger.error(f'Unknown Address: x')
                 continue
             continue
-
-
 
 @define
 class EncryptedHostRegistration:

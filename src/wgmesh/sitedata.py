@@ -7,6 +7,7 @@ import uuid
 import ipaddress
 from uuid import UUID
 from io import StringIO
+from base64 import b64encode, b64decode
 from itertools import chain
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 
@@ -23,6 +24,7 @@ from .crypto import keyexport, load_secret_key, load_public_key
 from .datalib import nonone
 from .datalib import asdict as wgmesh_asdict
 from .datalib import message_encode, message_decode
+from .transforms import EncryptedAWSSecrets
 
 class HostMismatch(Exception): pass
 class MissingAsnConfig(Exception): pass
@@ -258,7 +260,27 @@ class Host(object):
 
 @define
 class Sitecfg:
+    locus:                 str = field(default='')
+    domain:                str = field(default='')
+    tunnel_ipv4:   IPv4Network = field(default='', converter=convertNetworkAddress)
+    tunnel_ipv6:   IPv6Network = field(default='', converter=convertNetworkAddress)
+    portbase:              int = field(default = 58822, converter=int)
+    asn_range:  str|tuple|list = field(default='', converter=convertAsnRange)
+    asn_used:             list = field(default=[])
+    privatekey:            str = field(default='', converter=nonone)
+    publickey:             str = field(default='')
+    route53:               str = field(default='', converter=nonone)
+    aws_credentials:       str = field(default='')
+    aws_access_key:        str = field(default='')
+    aws_secret_access_key: str = field(default='')
     alerts: str = field(default='', validator=validators.instance_of(str))
+    _asn_map:             Dict = field(default={})
+    _hosts:         List[Host] = field(default=[])
+    _octet_map:           Dict = field(default={})
+    _octets:         List[int] = field(default=[0])
+    _registeredHosts:     Dict = field(default={})
+    _master_aws_secrets: EncryptedAWSSecrets = field(default=None)
+    _master_site_key:PrivateKey|None = field(default=None)
     @alerts.validator
     def _check_alerts(self, attr, arg):
         ''' check for valid email address '''
@@ -269,26 +291,6 @@ class Sitecfg:
         if len(parts) == 1:
             raise ValueError(f'{attr} address incorrect/incomplete: {arg}')
         return
-
-    asn_range:  str|tuple|list = field(default='', converter=convertAsnRange)
-    asn_used:             list = field(default=[])
-    aws_access_key:        str = field(default='')
-    aws_secret_access_key: str = field(default='')
-    domain:                str = field(default='')
-    locus:                 str = field(default='')
-    tunnel_ipv4:   IPv4Network = field(default='', converter=convertNetworkAddress)
-    tunnel_ipv6:   IPv6Network = field(default='', converter=convertNetworkAddress)
-    portbase:              int = field(default = 58822, converter=int)
-    publickey:             str = field(default='')
-    privatekey:            str = field(default='', converter=nonone)
-    route53:               str = field(default='', converter=nonone)
-    _asn_map:             Dict = field(default={})
-    _hosts:         List[Host] = field(default=[])
-    _octet_map:           Dict = field(default={})
-    _octets:         List[int] = field(default=[0])
-    _registeredHosts:     Dict = field(default={})
-    _master_site_key:PrivateKey|None = field(default='')
-
     @classmethod
     def load_site_config(cls, source_file: TextIO):
         ''' load site config from disk
@@ -315,11 +317,9 @@ class Sitecfg:
             continue
         check_asn_sanity(sitecfg, hosts)
         return sitecfg
-
     def host_add(self, host: Host):
         ''' add host '''
         self._hosts.append(host)
-
     def save_site_config(self):
         ''' commit config to disk
 
@@ -340,7 +340,6 @@ class Sitecfg:
         buffer.seek(0)
 
         return buffer.read()
-
     def get_message_box(self, publickey: PublicKey) -> Box:
         ''' setup an SBox for decryption
         publickey: public key from the host who encrypted the message
@@ -352,7 +351,6 @@ class Sitecfg:
         logger.trace(f'Create Box: Pub:({publickey})')
         retval = Box(self._master_site_key, publickey)
         return retval
-
     def get_host_by_uuid(self, uuid: UUID):
         ''' lookup a host by a UUID '''
         retval = self._asn_map.get(uuid, None)
@@ -365,20 +363,30 @@ class Sitecfg:
 
     def publish(self):
         ''' export local configuration for storage or transport '''
-        retval = {'alerts': self.alerts,
-                  'asn_range': collapse_asn_list(self.asn_range),
-                  'asn_used': self.asn_used,
-                  'aws_access_key': self.aws_access_key,
-                  'aws_secret_access_key': self.aws_secret_access_key,
-                  'domain': self.domain,
-                  'locus': self.locus,
+        if (self._master_aws_secrets and self.aws_credentials == '') and self._master_site_key:
+            box = self.get_message_box(self._master_site_key.public_key)
+            self.aws_credentials = self._master_aws_secrets.export_encrypted_credentials(box)
+
+        retval = {'locus': self.locus,
                   'tunnel_ipv4': str(self.tunnel_ipv4) if self.tunnel_ipv4 else None,
                   'tunnel_ipv6': str(self.tunnel_ipv6) if self.tunnel_ipv6 else None,
+                  'domain': self.domain,
                   'portbase': self.portbase,
+                  'asn_range': collapse_asn_list(self.asn_range),
+                  'asn_used': self.asn_used,
                   'publickey': self.publickey,
                   'privatekey': self.privatekey,
-                  'route53': self.route53 }
+                  'alerts': self.alerts,
+                  'route53': self.route53,
+                  'aws_credentials': '',
+                  'aws_access_key': self.aws_access_key,
+                  'aws_secret_access_key': self.aws_secret_access_key,
+                  }
         retval = munchify(retval)
+
+        if self._master_aws_secrets:
+            retval.aws_credentials = self._master_aws_secrets.export_encrypted_credentials(
+                self.get_message_box(self._master_site_key.public_key))
 
         if isinstance(retval.publickey, PublicKey):
             retval.publickey = keyexport(self.publickey)
@@ -452,7 +460,6 @@ class Sitecfg:
     def open_keys(self):
         ''' try to unpack the keys '''
         logger.trace('open_keys')
-
         if self._master_site_key:
             logger.error("Attempting to re-load the site key. Abort")
             sys.exit(2)
@@ -465,7 +472,7 @@ class Sitecfg:
                     pass
                 pass
         else:
-            logger.error('Missing global->secret_key.  Run init?')
+            logger.error('Missing global->secret_key. Run init?')
             sys.exit(3)
 
         if self.publickey:
@@ -477,6 +484,15 @@ class Sitecfg:
             logger.trace(f'Public key matches site key.')
         else:
             self.publickey = keyexport(self._master_site_key.public_key)
+
+        if (self.aws_access_key and self.aws_secret_access_key) and self.aws_credentials == '':
+            self._master_aws_secrets = EncryptedAWSSecrets(self.aws_access_key, self.aws_secret_access_key)
+            self.aws_access_key = ''
+            self.aws_secret_access_key = ''
+        elif self.aws_credentials > '':
+            box = self.get_message_box(self._master_site_key.public_key)
+            self._master_aws_secrets = EncryptedAWSSecrets.load_encrypted_credentials(self.aws_credentials, box)
+            pass
     pass
 
 

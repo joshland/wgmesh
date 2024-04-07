@@ -9,9 +9,10 @@ from nacl.public import PrivateKey, PublicKey, Box
 from attrs import define, field
 from munch import munchify
 
-from wgmesh.datalib import message_encode
 from .crypto  import keyexport, load_public_key, load_secret_key
 from .datalib import asdict as wgmesh_asdict, convert_uuid_uuid, emptyValuesTuple
+from .datalib import message_encode
+from .transforms import EndpointHostRegistrationMessage
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
@@ -23,7 +24,6 @@ def convert_hostname(arg: str) -> str:
     if arg.strip() in emptyValuesTuple:
         return socket.gethostname()
     return arg
-
 
 @define
 class Endpoint:
@@ -80,15 +80,19 @@ class Endpoint:
         else:
             raise ValueError('Key Already Exists')
 
+    def send_host_message(self):
+        ''' export local configuration for transport '''
+        retval = EndpointHostRegistrationMessage(**self.publish())
+        return retval
+
     def publish(self):
         ''' export local configuration for transport '''
         retval = {
             'hostname': self.hostname,
-            'uuid': self.uuid,
+            'uuid': str(self.uuid),
             'public_key': self.get_public_key(),
             'public_key_file': self.public_key_file,
             'private_key_file': self.secret_key_file,
-            'remote_addr': ",".join(self.public_address),
-        }
+            'remote_addr': ",".join(self.public_address) }
         return munchify(retval)
 

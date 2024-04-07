@@ -35,6 +35,7 @@ def hostfile(locus: str, domain: str, config_path:str) ->Munch:
 
 def configure(filenames: dict,
               ep: Endpoint,
+              hostname: str,
               trust_iface: str,
               trust_addrs: str,
               public_iface: str,
@@ -42,13 +43,15 @@ def configure(filenames: dict,
               dryrun: bool) -> Endpoint:
     ''' handle configuration '''
 
-    if trust_iface > '':
+    if hostname:
+        ep.hostname = hostname
+    if trust_iface:
         ep.trust_iface = trust_iface
-    if public_iface > '':
+    if public_iface:
         ep.public_iface = public_iface
-    if trust_addrs > '':
+    if trust_addrs:
         ep.trust_address = trust_addrs.split(',')
-    if public_addrs > '':
+    if public_addrs:
         ep.public_address = public_addrs.split(',')
 
     if dryrun:
@@ -70,6 +73,7 @@ def configure(filenames: dict,
 def init(locus:           Annotated[str, t.Argument(help='Site locus')],
          domain:          Annotated[str, t.Argument(help='Locus domain name')],
          config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+         hostname:        Annotated[str,   t.Option(help='Explicitly Set Hostname')] = None,
          trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')] = '',
          trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
          public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
@@ -112,12 +116,14 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
     ep = Endpoint(locus, domain, locus_info['publickey'],
                   secret_key_file = filenames.privkey, public_key_file = filenames.pubkey)
 
-    configure(filenames, ep, trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
+    configure(filenames, ep, hostname,
+              trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
 
 @app.command()
 def config(locus:           Annotated[str, t.Argument(help='Site locus')],
            domain:          Annotated[str, t.Argument(help='Locus domain name')],
            config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+           hostname:        Annotated[str,   t.Option(help='Explicitly Set Hostname')] = None,
            trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')] = '',
            trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
            public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
@@ -139,7 +145,8 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
     with open(filenames.cfg_file, 'r') as cf:
         ep = load_endpoint_config(cf)
 
-    configure(filenames, ep, trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
+    configure(filenames, ep, hostname,
+              trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
 
     # set hostname
     # public interface
@@ -151,9 +158,9 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
 def publish(locus:           Annotated[str, t.Argument(help='short/familiar name, short hand for this mesh')],
             domain:          Annotated[str, t.Argument(help='Locus domain name')],
             config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
-            force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
-            dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
-            debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
+            force:           Annotated[bool, t.Option(help='force overwrite')] = False,
+            dryrun:          Annotated[bool, t.Option(help='do not write anything')] = False,
+            debug:           Annotated[bool, t.Option(help='debug logging')] = False,
             trace:           Annotated[bool, t.Option(help='trace logging')] = False):
     ''' publish site registration - must be imported by wgsite master '''
     LoggerConfig(debug, trace)
