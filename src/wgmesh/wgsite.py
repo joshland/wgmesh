@@ -298,13 +298,55 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     return 0
 
 @app.command()
-def host(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-         host_message:    Annotated[str, typer.Argument(help='Host import string, or file with the message packet.')],
-         config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
-         force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
-         dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
-         debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
-         trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+def listhost(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+             uuid:            Annotated[str, typer.Argument(help='Host import string, or file with the message packet.')] = None,
+             config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+             force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+             dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+             debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+             trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+    ''' Host import and update operations '''
+    LoggerConfig(debug, trace)
+    config_file = os.path.join(config_path, f'{locus}.yaml')
+
+    with open(config_file) as cf:
+        site = Sitecfg.load_site_config(cf)
+
+    for x in site._hosts:
+        print(f'Host: {x.hostname}')
+        print(f'UUID: {x.uuid}')
+        print(f'ASN:{x.asn} Octet:{x.octet}({site.portbase+x.octet}')
+        print(f'Address_v4:{x.local_ipv4}')
+        print(f'Address_v6:{x.local_ipv6}')
+        continue
+    pass
+
+@app.command()
+def delhost(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+            uuid:             Annotated[str, typer.Argument(help='Host import string, or file with the message packet.')],
+            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+            trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+    ''' Host import and update operations '''
+    LoggerConfig(debug, trace)
+    config_file = os.path.join(config_path, f'{locus}.yaml')
+
+    with open(config_file) as cf:
+        site = Sitecfg.load_site_config(cf)
+
+    site.host_delete(uuid)
+
+
+@app.command()
+def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+            host_message:    Annotated[str, typer.Argument(help='Host import string, or file with the message packet.')],
+            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+            trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' Host import and update operations '''
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f'{locus}.yaml')

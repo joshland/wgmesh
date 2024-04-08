@@ -321,6 +321,28 @@ class Sitecfg:
     def host_add(self, host: Host):
         ''' add host '''
         self._hosts.append(host)
+
+    def host_delete(self, uuid):
+        ''' delete a host by UUID '''
+        host = None
+        for index, h in enumerate(self._hosts):
+            if str(x.uuid) == uuid:
+                logger.debug(f'Matched UUID: {uuid}=>{h}')
+                host = h
+                break
+            continue
+
+        if not host:
+            raise ValueError('no matching uuid found')
+
+        logger.trace(f'Remove Host: {index}=>{host}')
+        del self.hosts[index]
+        logger.trace(f"Clean ASN Map: {self._asn_map[host.uuid]}")
+        del self._asn_map[uuid]
+        logger.trace(f"Clean Octet Map: {self._octet_map[host.uuid]}")
+        del self._octet_map[uuid]
+        return True
+
     def save_site_config(self):
         ''' commit config to disk
 
@@ -410,7 +432,7 @@ class Sitecfg:
             for k, v in self._asn_map.items():
                 if v == arg:
                     logger.trace(f'Conflicting ASN found: {str(k)} conflicts with {str(uuid)}')
-                    logger.error(f'Used ASNs: {self.asn_used}')
+                    logger.error(f'Used ASNs: {self.asn_used} {str(k)} conflicts with {str(uuid)}')
                     logger.trace(f'Available ASNs: {self.asn_range}')
                     raise ValueError('Duplicate ASN')
                 continue

@@ -29,7 +29,8 @@ function wg_publish(){
 
 function wg_import(){
     WGM_CONFIG=dev
-    HOSTFILE=${WGM_CONFIG}/${1}-registration.txt
+    TESTPATH=${BASEPATH}/${1}
+    HOSTFILE=${TESTPATH}/${1}-registration.txt
     echo "===================== HOST IMPORT [${HOSTFILE}] ==========================="
     echo "wgsite host example ${HOSTFILE} --config-path ${WGM_CONFIG} --debug"
     wgsite host example ${HOSTFILE} --config-path ${WGM_CONFIG} --debug
