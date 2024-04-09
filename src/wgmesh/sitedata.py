@@ -326,7 +326,7 @@ class Sitecfg:
         ''' delete a host by UUID '''
         host = None
         for index, h in enumerate(self._hosts):
-            if str(x.uuid) == uuid:
+            if str(h.uuid) == uuid:
                 logger.debug(f'Matched UUID: {uuid}=>{h}')
                 host = h
                 break
@@ -335,12 +335,15 @@ class Sitecfg:
         if not host:
             raise ValueError('no matching uuid found')
 
-        logger.trace(f'Remove Host: {index}=>{host}')
-        del self.hosts[index]
-        logger.trace(f"Clean ASN Map: {self._asn_map[host.uuid]}")
-        del self._asn_map[uuid]
-        logger.trace(f"Clean Octet Map: {self._octet_map[host.uuid]}")
-        del self._octet_map[uuid]
+        logger.debug(f'Remove Host: {index}=>{host}')
+        logger.trace(f'cleaning: {self._hosts}')
+        del self._hosts[index]
+        logger.debug(f"Clean ASN Map: {self._asn_map[host.uuid]}")
+        logger.trace(f'cleaning: {self._asn_map}')
+        del self._asn_map[host.uuid]
+        logger.debug(f"Clean Octet Map: {self._octet_map[host.uuid]}")
+        del self._octet_map[host.uuid]
+        logger.trace(f'cleaning: {self._octet_map}')
         return True
 
     def save_site_config(self):
@@ -396,7 +399,7 @@ class Sitecfg:
                   'domain': self.domain,
                   'portbase': self.portbase,
                   'asn_range': collapse_asn_list(self.asn_range),
-                  'asn_used': self.asn_used,
+                  'asn_used': list(self._asn_map.values()),
                   'publickey': self.publickey,
                   'privatekey': self.privatekey,
                   'alerts': self.alerts,
@@ -428,7 +431,7 @@ class Sitecfg:
 
         if arg not in self.asn_range:
             raise ValueError('ASN invalid, not within approved range')
-        if arg in self.asn_used:
+        if arg in self._asn_map.values():
             for k, v in self._asn_map.items():
                 if v == arg:
                     logger.trace(f'Conflicting ASN found: {str(k)} conflicts with {str(uuid)}')
@@ -439,7 +442,6 @@ class Sitecfg:
             pass
 
         logger.trace(f'register asn {arg}')
-        self.asn_used.append(arg)
         self._asn_map[uuid] = arg
         return True
 
