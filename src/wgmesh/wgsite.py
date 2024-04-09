@@ -101,17 +101,15 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
 
     site = Sitecfg(**arguments)
+    site.open_keys()
+    save_data = site.save_site_config()
     if dryrun:
-        from io import StringIO
-        buf = StringIO()
-        save_site_config(site, [], buf)
-        buf.seek(0)
-        print(buf.read())
+        print(save_data)
     else:
-        site.open_keys()
-        safe_save_site_config(site, [], config_file)
-        report = site.publish()
-
+        with open(config_file, 'w', encoding='utf-8') as cf:
+            cf.write(save_data)
+            pass
+        pass
     site_report(locus, site.publish())
     print("New mesh created")
     print(f"Now, you can run 'wgsite publish {site.locus}'")
@@ -170,8 +168,7 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
     with open(config_file, 'r', encoding='utf-8') as cf:
         site= Sitecfg.load_site_config(cf)
         pass
-    print("Before")
-    site_report(locus, site.publish())
+    previous = site.save_site_config()
 
     update = ( 'asn','secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
 
@@ -188,9 +185,11 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
         arguments.aws_secret_access_key = aws_secret
         pass
 
-    print("Before")
-    site_report(locus, site.publish())
     save_data = site.save_site_config()
+    diff = unified_diff(previous.split('\n'), save_data.split('\n'), fromfile='__old_config_', tofile=config_file)
+    print("\n".join(diff))
+
+    site_report(locus, site.publish())
     with open(config_file, 'w', encoding='utf-8') as cf:
         cf.write(save_data)
     return 0
