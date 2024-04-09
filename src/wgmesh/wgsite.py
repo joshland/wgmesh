@@ -6,13 +6,12 @@ import os
 import sys
 import typer
 from typing_extensions import Annotated
-from difflib import ndiff, unified_diff
 
 from loguru import logger
 from munch import munchify, unmunchify, Munch
 
 from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
-from .lib import site_report, decode_domain, encode_domain, dns_query
+from .lib import site_report, decode_domain, encode_domain, dns_query, filediff
 from .lib import InvalidHostName, InvalidMessage
 from .lib import Sitecfg, LoggerConfig
 
@@ -54,6 +53,14 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     if os.path.exists(config_file) and not force and not dryrun:
         logger.error(f'Error: {config_file} exists. Aborting. (use --force to overwrite)')
         sys.exit(1)
+
+    if os.path.exists(config_file):
+        with open(config_file, 'r', encoding='utf-8') as cf:
+            old_data = cf.read()
+            pass
+    else:
+        old_data = ""
+        pass
 
     if not secret_key_file:
         secret_path=os.path.join(config_path, f'{locus}_priv')
@@ -103,8 +110,10 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     site = Sitecfg(**arguments)
     site.open_keys()
     save_data = site.save_site_config()
+    print(filediff(old_data, save_data, f"{config_file}.old", config_file))
+
     if dryrun:
-        print(save_data)
+        print("dryrun, no changes saved")
     else:
         with open(config_file, 'w', encoding='utf-8') as cf:
             cf.write(save_data)
@@ -186,8 +195,8 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
         pass
 
     save_data = site.save_site_config()
-    diff = unified_diff(previous.split('\n'), save_data.split('\n'), fromfile='__old_config_', tofile=config_file)
-    print("\n".join(diff))
+    diff = filediff(previous, save_data, f"{config_file}.old", config_file)
+    print(diff)
 
     site_report(locus, site.publish())
     with open(config_file, 'w', encoding='utf-8') as cf:
@@ -340,8 +349,8 @@ def rmhost(locus:           Annotated[str, typer.Argument(help='short/familiar n
     save_data = site.save_site_config()
 
 
-    diff = unified_diff(old_data.split('\n'), save_data.split('\n'), fromfile='previous', tofile='current')
-    print("\n".join(diff))
+    diff = filediff(old_data, save_data, f"{config_file}.old", config_file)
+    print(diff)
 
     if dryrun:
         sys.exit(1)
@@ -366,6 +375,7 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
     with open(config_file, encoding='utf-8') as cf:
         site = Sitecfg.load_site_config(cf)
 
+    old_data = site.save_site_config()
     if os.path.exists(host_message):
         logger.debug(f'{host_message} is a file.')
         with open(host_message, 'r', encoding='utf-8') as msg:
@@ -402,8 +412,11 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
         site.host_add(new_host)
         pass
 
+    save_data = site.save_site_config()
+    print(filediff(old_data, save_data, f"{config_file}.old", config_file))
+
     if dryrun:
-        print("DO DRYRUN STUFF")
+        print("dryrun mode, no changes written")
     else:
         logger.trace(f'Save site: {site}')
         site_yaml = site.save_site_config()

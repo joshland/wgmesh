@@ -178,7 +178,7 @@ class Host(object):
         if self.asn == -1:
             self.asn = self.sitecfg.checkout_asn()
         if self.octet == -1:
-            self.octet = self.sitecfg.checkut_octet()
+            self.octet = self.sitecfg.checkout_octet()
 
     def encrypt_message(self, message: str) -> str:
         ''' encrypt a message with the host public key for transmission or posting '''
@@ -449,8 +449,10 @@ class Sitecfg:
         ''' retrieve an available ASN from the pool '''
         # fixme: we need a --fix-asns options
         if not len(self._open_asn):
+            logger.trace(f'_open_asn empty, rebuilding')
             self.calculate_open_asn()
         retval = self._open_asn.pop(0)
+        logger.trace(f'asn: {retval}')
         self.register_asn(retval, uuid)
         return retval
 
@@ -481,9 +483,9 @@ class Sitecfg:
         sset = set(self.asn_range)
         logger.trace(f'Available ASNs: {sset}')
         aset = set(self.asn_used)
-        logger.trace(f'Used ASNs: {sset}')
+        logger.trace(f'Used ASNs: {aset}')
         self._open_asn = list(sset - aset)
-        logger.debug(f'Open ASN Set: {sset}')
+        logger.debug(f'Open ASN Set: {self._open_asn}')
         if len(self._open_asn) == 0:
             logger.error("ASN Space Exhausted")
             sys.exit(4)

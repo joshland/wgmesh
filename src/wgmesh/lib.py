@@ -7,6 +7,7 @@ import json
 import base64
 
 from io import StringIO
+from difflib import unified_diff
 from typing import Callable, TextIO, List, Tuple
 from textwrap import wrap
 from munch import munchify, unmunchify
@@ -48,6 +49,12 @@ def LoggerConfig(debug: bool, trace: bool):
 
     pass
 
+def filediff(before, after, before_name, after_name):
+    ''' perform a diff of two files '''
+    diff = unified_diff(before.split('\n'), after.split('\n'), fromfile=before_name, tofile=after_name)
+    return "\n".join([ x for x in diff if x.strip > '' ])
+
+
 def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
     ''' load site config from disk
 
@@ -84,43 +91,6 @@ def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
 
     yaml.dump(output, dest_file)
     return True
-
-def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
-    ''' load site config from disk
-
-        fn: YAML file.
-    '''
-    yaml = YAML(typ='rt')
-
-    y = yaml.load(source_file)
-    logger.trace(f'{y}')
-    logger.trace(f'Global: {y.get("global")}')
-    logger.trace(f'Hosts: {y.get("hosts")}')
-
-    sitecfg = Sitecfg(**y.get('global', {}))
-    sitecfg.open_keys()
-
-    logger.trace(f'{sitecfg._master_site_key.public_key} /-/ {sitecfg.publickey}')
-
-    hosts = []
-    for k, v in y.get('hosts',{}).items():
-        h = Host(k, sitecfg, **v)
-        hosts.append(h)
-        continue
-    check_asn_sanity(sitecfg, hosts)
-    return sitecfg, hosts
-
-def safe_save_site_config(site: Sitecfg, hosts: list, filename: str):
-    ''' wait until a save has completed successfully before rewriting a file. '''
-    buffer = StringIO()
-
-    save_site_config(site, hosts, buffer)
-    buffer.seek(0)
-
-    with open(filename, 'w') as cf:
-        cf.write(buffer.read())
-
-    return
 
 def sort_and_join_encoded_data(data):
     ''' take incoming encoded text, look for split order markers '''
@@ -172,10 +142,10 @@ def create_public_txt_record(sitepayload: dict) -> List[str]:
     return txt_record
 
 def encode_domain(sitepayload: dict) -> str:
-   ''' return the decoded domain package '''
-   payload = json.dumps(sitepayload)
-   retval = message_encode(payload)
-   return retval
+    ''' return the decoded domain package '''
+    payload = json.dumps(sitepayload)
+    retval = message_encode(payload)
+    return retval
 
 def decode_domain(dnspayload: str) -> str:
     ''' return the decoded domain package '''

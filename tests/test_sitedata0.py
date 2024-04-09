@@ -3,11 +3,11 @@ import pytest
 
 from loguru import logger
 from munch import munchify
-from wgmesh.crypto import keyimport, load_public_key
+from ipaddress import IPv4Address, IPv6Address
+from wgmesh.crypto import load_public_key
 from wgmesh.sitedata import Sitecfg, Host, expandRange, collapse_asn_list
 from wgmesh.lib import LoggerConfig
 from wgmesh.transforms import SitePublicRecord
-#from wgmesh.datalib import asdict as wgmesh_asdict
 
 blank_data = {
     'global': {
@@ -97,6 +97,16 @@ hosts:
     private_key_file: dev/example_endpoint_priv
 """[1:]
 
+host_add_test_data = {
+        'uuid': '36d6d7fc-9157-4ab8-8d0b-cb1298b8aaec',
+        'hostname': 'wgtest01.ashbyte.com',
+        'public_key': '',
+        'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_pub',
+        'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_priv',
+        'local_ipv4': [IPv4Address('192.0.2.1')],
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:1::1')]
+}
+
 with open('tests/test_pub', 'r') as pubf:
     test_public_key_encoded = pubf.read()
     test_public_key_decoded = load_public_key(test_public_key_encoded)
@@ -111,7 +121,7 @@ test_collapse_expanded_list = [ 22, 23, 24, 25, 1, 2, 3, 4, 10, 11, 12, 13 ]
 test_collapse_collapsed_list = "1:4,10:13,22:25"
 
 def test_init():
-    LoggerConfig(1, 1)
+    LoggerConfig(True, True)
     pass
 
 def test_expandRange_single():
@@ -164,10 +174,9 @@ def test_site_public_record():
     assert tuple(export.keys()) == ('locus', 'publickey')
 
 def test_site_loaddata():
-    buffer = StringIO()
-    buffer.write(host_yaml_raw_data)
-    buffer.seek(0)
-    spr= Sitecfg.load_site_config(buffer)
+    site = Sitecfg.load_site_config(host_yaml_raw_data)
+    save_data = site.save_site_config()
+    spr = Sitecfg.load_site_config(save_data)
     assert isinstance(spr, Sitecfg)
 
 def test_spr_integration_test():
@@ -187,6 +196,12 @@ def test_site_host_integration_save():
     s = Sitecfg(**test_data['global'])
     h = Host(sitecfg=s, **host_data_test)
     yaml_data = s.save_site_config()
+
+def test_site_add_host():
+    ''' test adding a host to a site '''
+    s = Sitecfg(**test_data['global'])
+    h = Host(sitecfg=s, **host_data_test)
+    h2 = Host(sitecfg=s, **host_add_test_data)
 
 #def test_endpoint_export():
 #    ep = Endpoint(**test_data)
