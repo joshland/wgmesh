@@ -9,8 +9,12 @@ from loguru import logger
 
 from nacl.public import PrivateKey, PublicKey, Box
 
-class InvalidPublicKey(Exception): pass
-class InvalidSecretKey(Exception): pass
+class InvalidPublicKey(Exception):
+    ''' raised when an incorrect or empty is key is passed to a crypto function '''
+    pass
+class InvalidSecretKey(Exception):
+    ''' raised when an incorrect or empty is key is passed to a crypto function '''
+    pass
 
 #warning: this function was never used. {???}
 def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: str|bytes) -> bytes:
@@ -27,14 +31,14 @@ def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: str|byte
         raise InvalidPublicKey
 
     if isinstance(cipher_text, str):
-        logger.trace(f'convert cipher_text[str] to ASCII.')
+        logger.trace('convert cipher_text[str] to ASCII.')
         cipher_text = cipher_text.encode('ascii')
         pass
 
     try:
         cipher_text = base64.decodebytes(cipher_text)
     except binascii.Error:
-        logger.trace(f'cipher_text appears to be raw')
+        logger.trace('cipher_text appears to be raw')
 
     sBox = Box(secret_key, public_key)
     payload = sBox.decrypt(cipher_text)
@@ -50,7 +54,7 @@ def generate_site_key(secret_path: str, dryrun: bool) -> PrivateKey:
     newkey = generate_key()
     if dryrun:
         return newkey
-    with open(secret_path, 'w') as keyfile:
+    with open(secret_path, 'w', encoding='utf-8') as keyfile:
         keyfile.write(keyexport(newkey))
         pass
     return newkey
@@ -116,4 +120,3 @@ if __name__ == "__main__":
     assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
     assert testkey == secret_import == secret_import_from_bytes    # validate that the library can export/import public keys
     assert pubkey == secret_import.public_key # validate that all the keys match
-

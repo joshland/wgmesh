@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 ''' lib.py - resource library for file and configuration operations '''
 
-from logging import warning
 import sys
 import json
-import base64
 
-from io import StringIO
-from typing import Callable, TextIO, List, Tuple
 from textwrap import wrap
-from munch import munchify, unmunchify
+from difflib import unified_diff
+from typing import Callable, TextIO, List, Tuple
 
 import dns.resolver
 from loguru import logger
-from netaddr import expand_partial_ipv4_address
 from ruamel.yaml import YAML
 from natsort import natsorted
-from munch import munchify
+from munch import munchify, unmunchify
 
-from .sitedata import Sitecfg, Host, check_asn_sanity
+from .sitedata import Site, Sitecfg
 from .endpointdata import Endpoint
 from .datalib import message_encode, message_decode
 
-class InvalidHostName(Exception): pass
-class InvalidMessage(Exception): pass
+class InvalidHostName(Exception):
+    ''' DNS subsystem returned that a domain name was invalid / nonexistent '''
+    pass
+class InvalidMessage(Exception):
+    ''' JSON document errors, or JSON decoding errors '''
+    pass
 
 def LoggerConfig(debug: bool, trace: bool):
     '''
@@ -47,6 +47,12 @@ def LoggerConfig(debug: bool, trace: bool):
         pass
 
     pass
+
+def filediff(before, after, before_name, after_name):
+    ''' perform a diff of two files '''
+    diff = unified_diff(before.split('\n'), after.split('\n'), fromfile=before_name, tofile=after_name)
+    return "\n".join([ x for x in diff if x.strip() > '' ])
+
 
 def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
     ''' load site config from disk
@@ -85,50 +91,14 @@ def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
     yaml.dump(output, dest_file)
     return True
 
-def load_site_config(source_file: TextIO) -> tuple[Sitecfg, list]:
-    ''' load site config from disk
-
-        fn: YAML file.
-    '''
-    yaml = YAML(typ='rt')
-
-    y = yaml.load(source_file)
-    logger.trace(f'{y}')
-    logger.trace(f'Global: {y.get("global")}')
-    logger.trace(f'Hosts: {y.get("hosts")}')
-
-    sitecfg = Sitecfg(**y.get('global', {}))
-    sitecfg.open_keys()
-
-    logger.trace(f'{sitecfg._master_site_key.public_key} /-/ {sitecfg.publickey}')
-
-    hosts = []
-    for k, v in y.get('hosts',{}).items():
-        h = Host(k, sitecfg, **v)
-        hosts.append(h)
-        continue
-    check_asn_sanity(sitecfg, hosts)
-    return sitecfg, hosts
-
-def safe_save_site_config(site: Sitecfg, hosts: list, filename: str):
-    ''' wait until a save has completed successfully before rewriting a file. '''
-    buffer = StringIO()
-
-    save_site_config(site, hosts, buffer)
-    buffer.seek(0)
-
-    with open(filename, 'w') as cf:
-        cf.write(buffer.read())
-
-    return
-
 def sort_and_join_encoded_data(data):
     ''' take incoming encoded text, look for split order markers '''
     if data[0].find(':') > -1:
         logger.trace(f'Ordered DNS List Published: {data}')
         slist = []
         for r in data:
-            if not r or r.strip() == '': continue
+            if not r or r.strip() == '':
+                continue
             k, v = r.split(':')
             slist.append((k, v))
             continue
@@ -172,10 +142,10 @@ def create_public_txt_record(sitepayload: dict) -> List[str]:
     return txt_record
 
 def encode_domain(sitepayload: dict) -> str:
-   ''' return the decoded domain package '''
-   payload = json.dumps(sitepayload)
-   retval = message_encode(payload)
-   return retval
+    ''' return the decoded domain package '''
+    payload = json.dumps(sitepayload)
+    retval = message_encode(payload)
+    return retval
 
 def decode_domain(dnspayload: str) -> str:
     ''' return the decoded domain package '''
@@ -194,6 +164,7 @@ def decode_domain(dnspayload: str) -> str:
     return retval
 
 def fetch_and_decode_record(domain_name: str) -> dict:
+    ''' gather a DNS record, and decode the embedded data '''
     dns_data = dns_query(domain_name)
     decoded_data = decode_domain(sort_and_join_encoded_data(dns_data))
     return decoded_data
@@ -220,7 +191,7 @@ def domain_report(site: Sitecfg) -> bool:
         if published_data:
             existing_records = decode_domain(published_data)
     except InvalidMessage:
-        logger.warning(f'DNS holds invalid data.')
+        logger.warning('DNS holds invalid data.')
         existing_records = "[Invalid data]"
 
     dns_payload = site.publish_public_payload()
@@ -239,8 +210,6 @@ def domain_report(site: Sitecfg) -> bool:
 
 def site_report(locus: str, published_data: dict) -> str:
     ''' compile a text report of the published site data '''
-    from munch import munchify
-
     logger.trace(f"Site Report: {published_data}")
     data = munchify(published_data)
     print()
@@ -252,5 +221,3 @@ def site_report(locus: str, published_data: dict) -> str:
     optprint(data.route53, 'AWS Route53 Zone: %s')
     optprint(data.aws_access_key, 'AWS Route53 Access Cred: %s')
     optprint('x' * len(data.aws_secret_access_key), 'AWS Route53 Secret Cred: %s')
-
-

@@ -6,21 +6,20 @@ import os
 import sys
 import typer
 from typing_extensions import Annotated
-from difflib import ndiff, unified_diff
 
 from loguru import logger
-from munch import munchify, unmunchify, Munch
+from munch import munchify
 
-from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
-from .lib import site_report, decode_domain, encode_domain, dns_query
+from .lib import create_public_txt_record, domain_report, fetch_and_decode_record, split_encoded_data
+from .lib import site_report, filediff
 from .lib import InvalidHostName, InvalidMessage
-from .lib import Sitecfg, LoggerConfig
+from .lib import LoggerConfig
 
-from .transforms import SiteEncryptedHostRegistration
+from .transforms import SiteEncryptedHostRegistration, RemoteHostRecord, DeployMessage
 
-from .crypto import generate_site_key, load_secret_key, load_public_key, keyexport
+from .crypto import generate_site_key, load_secret_key, keyexport
 from .route53 import Route53
-from .sitedata import Host
+from .sitedata import Host, Site
 
 app = typer.Typer()
 
@@ -54,6 +53,14 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
     if os.path.exists(config_file) and not force and not dryrun:
         logger.error(f'Error: {config_file} exists. Aborting. (use --force to overwrite)')
         sys.exit(1)
+
+    if os.path.exists(config_file):
+        with open(config_file, 'r', encoding='utf-8') as cf:
+            old_data = cf.read()
+            pass
+    else:
+        old_data = ""
+        pass
 
     if not secret_key_file:
         secret_path=os.path.join(config_path, f'{locus}_priv')
@@ -100,11 +107,12 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         arguments.aws_secret_access_key = aws_secret
         pass
 
-    site = Sitecfg(**arguments)
-    site.open_keys()
+    site = Site(sitecfg_args=arguments)
     save_data = site.save_site_config()
+    print(filediff(old_data, save_data, f"{config_file}.old", config_file))
+
     if dryrun:
-        print(save_data)
+        print("dryrun, no changes saved")
     else:
         with open(config_file, 'w', encoding='utf-8') as cf:
             cf.write(save_data)
@@ -112,7 +120,7 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
     site_report(locus, site.publish())
     print("New mesh created")
-    print(f"Now, you can run 'wgsite publish {site.locus}'")
+    print(f"Now, you can run 'wgsite publish {site.site.locus}'")
     return 0
 
 @app.command()
@@ -121,8 +129,6 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
           debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' check config, publish site report '''
-    from io import StringIO
-
     LoggerConfig(debug, trace)
 
     if locus[-4:] in ['yaml']:
@@ -130,7 +136,7 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
         locus = locus[:-5]
     config_file = os.path.join(config_path, f'{locus}.yaml')
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site= Sitecfg.load_site_config(cf)
+        site= Site(cf)
 
     site_report(locus, site.publish())
 
@@ -144,52 +150,61 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     return 0
 
 @app.command()
-def config(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-           domain:          Annotated[str,
-           typer.Argument(help='primary domain where the locus TXT record will be published.')] = '',
-           asn:             Annotated[str, typer.Argument(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
-           config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
-           secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
-           tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
-           tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
-           portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
-           aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
-           aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
-           aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
-           suggest:         Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
-           force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
-           dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
-           debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
-           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+def setsite(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+            domain:          Annotated[str, typer.Option(help='primary domain where the locus TXT record will be published.')] = '',
+            asn:             Annotated[str, typer.Option(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
+            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
+            tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
+            tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
+            portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
+            aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
+            aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
+            aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
+            suggest:         Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
+            asnfix:          Annotated[bool, typer.Option(help='Update ASNs, supply any which are empty.')] = False,
+            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+            trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' (re)configure site settings '''
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site= Sitecfg.load_site_config(cf)
+        site= Site(cf)
         pass
     previous = site.save_site_config()
 
-    update = ( 'asn','secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
+    update = ( 'secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
 
     for x in update:
         val = locals().get(x)
         if val:
-            site.__setattr__(x, val)
+            setattr(site.site, x, val)
             continue
         continue
 
+    if asn:
+        ## fixup asn range
+        site.site.asn_range = asn
+
     if aws_zone and aws_access and aws_secret:
-        arguments.route53 = aws_zone
-        arguments.aws_access_key = aws_access
-        arguments.aws_secret_access_key = aws_secret
+        logger.debug("Set AWS Credentials")
+        site.site.route53 = aws_zone
+        site.site.aws_access_key = aws_access
+        site.site.aws_secret_access_key = aws_secret
+        logger.trace(f"Zone:{site.site.route53} {site.site.aws_access_key}::{'x'*len(site.site.aws_secret_access_key)}")
         pass
 
-    save_data = site.save_site_config()
-    diff = unified_diff(previous.split('\n'), save_data.split('\n'), fromfile='__old_config_', tofile=config_file)
-    print("\n".join(diff))
+    if asnfix:
+        site.check_asn_sanity()
 
-    site_report(locus, site.publish())
+    save_data = site.save_site_config()
+    diff = filediff(previous, save_data, f"{config_file}.old", config_file)
+    print(diff)
+
+    #site_report(locus, site.publish())
     with open(config_file, 'w', encoding='utf-8') as cf:
         cf.write(save_data)
     return 0
@@ -201,13 +216,13 @@ def genkeys(locus: Annotated[str, typer.Argument(help='short/familiar name, shor
     ''' generate new site key '''
     config_file = os.path.join(config_path, f'{locus}.yaml')
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site= Sitecfg.load_site_config(cf)
+        site= Site(cf)
         pass
-    if os.path.exists(site.privatekey) and not force:
-        print(f'Key already exists: {site.privatekey}. Use --force to overwrite it.')
+    if os.path.exists(site.site.privatekey) and not force:
+        print(f'Key already exists: {site.site.privatekey}. Use --force to overwrite it.')
         sys.exit(4)
 
-    key = generate_site_key(site.privatekey, False)
+    key = generate_site_key(site.site.privatekey, False)
 
     print('Key overwritten, good luck')
     return 0
@@ -224,6 +239,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
             trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' publish site and host records to dns '''
     LoggerConfig(debug, trace)
+
     if dryrun:
         commit = False
     else:
@@ -235,17 +251,17 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
         pass
 
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
 
     current_records = None
     try:
-        current_records = fetch_and_decode_record(site.domain)
+        current_records = fetch_and_decode_record(site.site.domain)
     except InvalidHostName:
-        logger.debug(f'No records found for {site.domain}')
+        logger.debug(f'No records found for {site.site.domain}')
     except InvalidMessage:
-        logger.warning(f'Invalid JSON Payload for {site.domain}')
+        logger.warning(f'Invalid JSON Payload for {site.site.domain}')
 
-    public_message = site.publish_public_payload()
+    public_message = site.site.publish_public_payload()
 
     if public_message == current_records:
         print("DNS Correct")
@@ -256,18 +272,60 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
 
     new_txt_record = create_public_txt_record(public_message)
 
-    logger.info(f'Refreshing Records')
-    r53con = Route53(site.route53, site.domain,
-                     aws_access_key=site.aws_access_key, aws_secret_access_key=site.aws_secret_access_key)
+    logger.info('Refreshing Records')
+    if aws_zone and aws_access and aws_secret:
+        logger.debug("CLI-override for AWS Zone and Credentials")
+        zone_name = aws_zone
+        access_key = aws_access
+        secret_key = aws_secret
+    else:
+        logger.debug("Using configured AWS Zone and Credentials")
+        zone_name = site.site.route53
+        access_key = site.site.aws_access_key
+        secret_key = site.site.aws_secret_access_key
+        pass
 
-    r53con.save_txt_record(site.domain, new_txt_record, commit)
+    r53con = Route53(zone_name, site.site.domain, aws_access_key=access_key, aws_secret_access_key=secret_key)
+    r53con.save_txt_record(site.site.domain, new_txt_record, commit)
 
-    for host in hosts:
-        dns_data = host.publish_peer_deploy()
-        host.encrypt_message(dns_data)
+    for me in site.hosts:
+        myport = me.endport()
+        if me.asn == -1:
+            logger.error(f"{my.hostname}/({str(me.uuid)} is missing a valid ASN, skipping Deployment Publishing")
+            continue
+        logger.trace(f'Assemble Deployment for Host: {me.hosname}/({str(me.uuid)})')
+        deploy_message = DeployMessage(asn=me.asn,
+                                       site=site.site.domain,
+                                       octet=me.octet,
+                                       portbase=site.site.portbase,
+                                       remote=site.site.ipv6)
+        for host in site.hosts:
+            if host.uuid == me.uuid:
+                continue
+            if host.asn == -1:
+                logger.error(f"{my.hostname}/({str(me.uuid)} is missing a valid ASN, skipping this Mesh Inclusion")
+                continue
+            host_record = RemoteHostRecord(key=host.publickey,
+                                           hostname=host.hostname,
+                                           asn=host.asn,
+                                           localport=host.endport(),
+                                           remoteport=myport,
+                                           remote=host.endpoint_addresses())
+            logger.trace(f' - Add Mesh Host: {host.hosname}/({str(host.uuid)})')
+            deploy_message.hosts[str(host.uuid)] = host_record
+            continue
+        ## deploy_message should be a complete mesh deployment record.
+        logger.trace('Publish Deployer Record:')
+        message_box = site.get_site_message_box(me.publickey)
+        encrypted_deploy_message = deploy_message.publish_encrypted(message_box)
+        dns_record = split_encoded_data(encrypted_deploy_message)
+        dns_rr_name = f'{str(me.uuid)}.{site.site.domain}'
+        logger.trace(f'Encrypt and Package: {deploy_message.publish()}')
+        logger.debug(f'Package DNS Record {len(encrypted_deploy_message)}bytes -> {len(dns_record)}lines')
+        r53con.save_txt_record(dns_rr_name, dns_record, commit)
 
-    logger.error(f"Host publishing unwritten")
-    print("warning: host publishing incomplete")
+
+
     #for me in hosts:
     #    docroot = me.publish_peer_deploy()
     #    docroot.hosts = []
@@ -305,16 +363,16 @@ def listhost(locus:           Annotated[str, typer.Argument(help='short/familiar
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
     if names:
-        for x in site._hosts:
+        for x in site.hosts:
             print(f"{x.uuid}{t}{x.hostname}")
             continue
     else:
-        for x in site._hosts:
+        for x in site.hosts:
             print(f'Host: {x.hostname}')
             print(f'UUID: {x.uuid}')
-            print(f'ASN:{x.asn} Octet:=>[{site.portbase+x.octet}] [{x.octet}]')
+            print(f'ASN:{x.asn} Octet:=>[{site.site.portbase+x.octet}] [{x.octet}]')
             print(f'Address_v4:{x.local_ipv4}')
             print(f'Address_v6:{x.local_ipv6}')
             continue
@@ -333,15 +391,15 @@ def rmhost(locus:           Annotated[str, typer.Argument(help='short/familiar n
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
 
     old_data = site.save_site_config()
     site.host_delete(uuid)
     save_data = site.save_site_config()
 
 
-    diff = unified_diff(old_data.split('\n'), save_data.split('\n'), fromfile='previous', tofile='current')
-    print("\n".join(diff))
+    diff = filediff(old_data, save_data, f"{config_file}.old", config_file)
+    print(diff)
 
     if dryrun:
         sys.exit(1)
@@ -364,24 +422,25 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
 
+    old_data = site.save_site_config()
     if os.path.exists(host_message):
         logger.debug(f'{host_message} is a file.')
         with open(host_message, 'r', encoding='utf-8') as msg:
             message = msg.read()
     else:
-        logger.debug(f'Message supplied through command line')
+        logger.debug('Message supplied through command line')
         message = host_message
         pass
 
-    logger.debug(f'transform stage 1, decode')
+    logger.debug('transform stage 1, decode')
     logger.trace(f'raw message: {message}')
     encrypted_record = SiteEncryptedHostRegistration.from_base64_json(message)
     logger.trace(f'(Decoded Message: {encrypted_record}')
 
-    logger.debug(f'transform stage 2, decrypt')
-    decryption_box = site.get_message_box(encrypted_record.publickey)
+    logger.debug('transform stage 2, decrypt')
+    decryption_box = site.get_site_message_box(encrypted_record.publickey)
     host_record = encrypted_record.decrypt(decryption_box)
     logger.trace(f'decrypted host record: {host_record}')
 
@@ -398,12 +457,14 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
         logger.debug(f'Update host {host.uuid}/{host.hostname}')
         host.update(host)
     else:
-        new_host = Host(sitecfg=site, **host_record)
-        site.host_add(new_host)
+        site.host_add(host_record)
         pass
 
+    save_data = site.save_site_config()
+    print(filediff(old_data, save_data, f"{config_file}.old", config_file))
+
     if dryrun:
-        print("DO DRYRUN STUFF")
+        print("dryrun mode, no changes written")
     else:
         logger.trace(f'Save site: {site}')
         site_yaml = site.save_site_config()

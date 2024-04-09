@@ -40,6 +40,7 @@ def configure(filenames: dict,
               trust_addrs: str,
               public_iface: str,
               public_addrs: str,
+              asn:          int,
               dryrun: bool) -> Endpoint:
     ''' handle configuration '''
 
@@ -53,6 +54,8 @@ def configure(filenames: dict,
         ep.trust_address = trust_addrs.split(',')
     if public_addrs:
         ep.public_address = public_addrs.split(',')
+    if public_addrs:
+        ep.asn = asn
 
     if dryrun:
         f = StringIO()
@@ -78,6 +81,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
          trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
          public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
          public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')] = False,
+         asn:             Annotated[int,   t.Option(help='ASN number')] = -1,
          force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
          dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
          debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
@@ -117,7 +121,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
                   secret_key_file = filenames.privkey, public_key_file = filenames.pubkey)
 
     configure(filenames, ep, hostname,
-              trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
+              trust_iface, trust_addrs, public_iface, public_addrs, asn, dryrun)
 
 @app.command()
 def config(locus:           Annotated[str, t.Argument(help='Site locus')],
@@ -128,6 +132,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
            trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
            public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
            public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')] = '',
+           asn:             Annotated[int,   t.Option(help='ASN number')] = -1,
            force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
            dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
            debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
@@ -146,7 +151,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
         ep = load_endpoint_config(cf)
 
     configure(filenames, ep, hostname,
-              trust_iface, trust_addrs, public_iface, public_addrs, dryrun)
+              trust_iface, trust_addrs, public_iface, public_addrs, asn, dryrun)
 
     # set hostname
     # public interface

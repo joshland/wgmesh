@@ -16,17 +16,19 @@ from .transforms import EndpointHostRegistrationMessage
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
-    if arg == None:
+    if arg is None:
         return ''
     return arg
 
 def convert_hostname(arg: str) -> str:
+    ''' coerce empty strings into the hostname of localhost() '''
     if arg.strip() in emptyValuesTuple:
         return socket.gethostname()
     return arg
 
 @define
 class Endpoint:
+    ''' dataclass for system endpoints '''
     locus:                  str = field()
     site_domain:            str = field()
     site_pubkey:            str = field()
@@ -39,6 +41,7 @@ class Endpoint:
     public_address:         str = field(default='', converter=nonone)
     trust_iface:            str = field(default='', converter=nonone)
     trust_address:          str = field(default='', converter=nonone)
+    asn:                    int = field(default=-1)
 
     _site_key:        PublicKey = field(default='')
     _secret_key:     PrivateKey = field(default='')
@@ -53,6 +56,7 @@ class Endpoint:
         return retval
 
     def get_public_key(self) -> str:
+        ''' get the local endpoint public key '''
         return keyexport(self._public_key)
 
     def encrypt_message(self, message: str) -> str:
@@ -73,10 +77,12 @@ class Endpoint:
         logger.trace('no open_keys')
         self._site_key = load_public_key(self.site_pubkey)
         if self._secret_key in emptyValuesTuple:
-            self._secret_key = load_secret_key(open(self.secret_key_file, 'r').read())
+            with open(self.secret_key_file, 'r', encoding='utf-8') as keyfile:
+                self._secret_key = load_secret_key(keyfile.read())
             self._public_key = self._secret_key.public_key
-        elif self._public_keyfile not in emptyValuesTuple and self._public_key in emptyValuesTuple:
-            self._public_key = load_public_key(open(self.public_key_file, 'r').read())
+        elif self.public_key_file not in emptyValuesTuple and self._public_key in emptyValuesTuple:
+            with open(self.public_key_file, 'r', encoding='utf-8') as keyfile:
+                self._public_key = load_public_key(keyfile.read())
         else:
             raise ValueError('Key Already Exists')
 
@@ -93,6 +99,6 @@ class Endpoint:
             'public_key': self.get_public_key(),
             'public_key_file': self.public_key_file,
             'private_key_file': self.secret_key_file,
+            'asn': self.asn,
             'remote_addr': ",".join(self.public_address) }
         return munchify(retval)
-

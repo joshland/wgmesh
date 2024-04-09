@@ -3,19 +3,19 @@
 
 # Create the host basics locally
 import re
-import sys
 import ifaddr
-import netaddr
+import ipaddress
 
 from typing import List, Dict, Tuple
 from loguru import logger
 
 from .version import VERSION
 
-import ipaddress
 
-class MixedInterface(Exception): pass
-class NoInterface(Exception): pass
+class MixedInterface(Exception):
+    pass
+class NoInterface(Exception):
+    pass
 
 def get_local_addresses_with_interfaces(filter: List[str] = []) -> Tuple[list, list]:
     ''' return a list of tuples, (iface, address) '''
@@ -48,7 +48,7 @@ def get_local_addresses() -> Tuple[list, list]:
 
 def find_trust():
     ''' return the trust(private) interface '''
-    public, private = find_interfaces()
+    private = find_interfaces()[1]
     if private:
         return private
     else:
@@ -56,7 +56,7 @@ def find_trust():
 
 def find_public():
     ''' return the trust(private) interface '''
-    public, private = find_interfaces()
+    public = find_interfaces()[0]
     if public:
         return public
     else:
@@ -74,6 +74,7 @@ def filter_private(addr: list) -> list:
     return retval
 
 def is_valid_hostname(hostname):
+    ''' rudimentary attempts to validate hostname '''
     if hostname[-1] == ".":
         # strip exactly one dot from the right, if present
         hostname = hostname[:-1]
@@ -91,14 +92,14 @@ def is_valid_hostname(hostname):
 
 def find_interfaces():
     ''' return the public interface '''
-    all = get_local_addresses_with_interfaces()
+    all_interfaces = get_local_addresses_with_interfaces()
     public4  = []
     trust4 = []
     public6  = []
     trust6 = []
     retval = (None, None)
 
-    for iface, addr in all[0] + all[1]:
+    for iface, addr in all_interfaces[0] + all_interfaces[1]:
         logger.trace(f'Located IP Address: {iface} / {addr}')
         addr = ipaddress.ip_address(addr)
         if addr.version == 4:
@@ -110,15 +111,17 @@ def find_interfaces():
             pass
 
         if addr.is_private:
-            if iface in atru: continue
+            if iface in atru:
+                continue
             if getattr(addr, 'is_link_local', False):
                 continue
-            if iface in apub: 
+            if iface in apub:
                 raise MixedInterface
             logger.debug(f'Private address {addr} on interface {iface}.')
             atru.append(iface)
         else:
-            if iface in apub: continue
+            if iface in apub:
+                continue
             if iface in atru:
                 raise MixedInterface
             logger.debug(f'Public address {addr} on interface {iface}.')

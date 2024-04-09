@@ -1,13 +1,12 @@
-from io import StringIO
 import pytest
 
 from loguru import logger
 from munch import munchify
-from wgmesh.crypto import keyimport, load_public_key
-from wgmesh.sitedata import Sitecfg, Host, expandRange, collapse_asn_list
+from ipaddress import IPv4Address, IPv6Address
+from wgmesh.crypto import load_public_key
+from wgmesh.sitedata import Site, Host, expandRange, collapse_asn_list
 from wgmesh.lib import LoggerConfig
 from wgmesh.transforms import SitePublicRecord
-#from wgmesh.datalib import asdict as wgmesh_asdict
 
 blank_data = {
     'global': {
@@ -37,6 +36,23 @@ test_data = {
         'privatekey': "tests/test_priv",
     }
 }
+
+test_contrained_data = {
+    'global': {
+        'alerts': "alerts@example.com",
+        'domain': "example.com",
+        'tunnel_ipv4': "172.16.42.0/24",
+        'tunnel_ipv6': "fd86:ea04:1116::/64",
+        # Examples: https://simpledns.plus/private-ipv6
+        'locus': "wgmesh",
+        'portbase': 21100,
+        'asn_range': '64512:64513',
+        'publickey': '',
+        'privatekey': "tests/test_priv",
+    }
+}
+
+test_contrained_asn_range = [64512, 64513]
 
 host_data_blank = {
     'hostname': '',
@@ -97,6 +113,39 @@ hosts:
     private_key_file: dev/example_endpoint_priv
 """[1:]
 
+host_add_test_data0 = {
+        'uuid': '36d6d7fc-9157-4ab8-8d0b-cb1298b8aaec',
+        'hostname': 'wgtest01.ashbyte.com',
+        'asn': -1,
+        'public_key': '',
+        'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_pub',
+        'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_priv',
+        'local_ipv4': [IPv4Address('192.0.2.1')],
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:1::1')]
+}
+
+host_add_test_data1 = {
+        'uuid': '7ff9fb7c-53d7-4e64-b298-1bc89998c1c9',
+        'hostname': 'wgtest02.ashbyte.com',
+        'asn': -1,
+        'public_key': '',
+        'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
+        'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
+        'local_ipv4': [IPv4Address('192.0.3.1')],
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:2::1')],
+}
+
+host_add_test_invalid_uuid = {
+        'uuid': '7ff9fb7c-53d7-4e64-b298-1bc89998c1c',
+        'hostname': 'wgtest02.ashbyte.com',
+        'asn': -1,
+        'public_key': '',
+        'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
+        'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
+        'local_ipv4': [IPv4Address('192.0.3.1')],
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:2::1')],
+}
+
 with open('tests/test_pub', 'r') as pubf:
     test_public_key_encoded = pubf.read()
     test_public_key_decoded = load_public_key(test_public_key_encoded)
@@ -111,7 +160,7 @@ test_collapse_expanded_list = [ 22, 23, 24, 25, 1, 2, 3, 4, 10, 11, 12, 13 ]
 test_collapse_collapsed_list = "1:4,10:13,22:25"
 
 def test_init():
-    LoggerConfig(1, 1)
+    LoggerConfig(True, True)
     pass
 
 def test_expandRange_single():
@@ -127,26 +176,25 @@ def test_collapse_list():
     assert test_collapse_collapsed_list == values
 
 def test_site_emtpy():
-    ''' validate that Sitecfg will fail on required fields '''
+    ''' validate that Site will fail on required fields '''
     with pytest.raises(ValueError) as exc_info:
-        s = Sitecfg()
+        s = Site()
 
 def test_site_blank():
-    ''' validate that Sitecfg can generate an object '''
+    ''' validate that Site can generate an object '''
     with pytest.raises(ValueError) as exc_info:
-        s = Sitecfg(**blank_data['global'])
+        s = Site(sitecfg_args=blank_data['global'])
 
 def test_site_testdata():
-    ''' validate that Sitecfg can generate an object '''
+    ''' validate that Site can generate an object '''
     logger.trace(f'testdata')
-    s = Sitecfg(**test_data['global'])
-    assert isinstance(s, Sitecfg)
+    s = Site(sitecfg_args=test_data['global'])
+    assert isinstance(s, Site)
 
 def test_site_publish():
-    ''' validate that Sitecfg can generate an object '''
+    ''' validate that Site can generate an object '''
     logger.trace(f'site_publish')
-    s = Sitecfg(**test_data['global'])
-    s.open_keys()
+    s = Site(sitecfg_args=test_data['global'])
     s = s.publish()
     print(s)
 
@@ -164,11 +212,10 @@ def test_site_public_record():
     assert tuple(export.keys()) == ('locus', 'publickey')
 
 def test_site_loaddata():
-    buffer = StringIO()
-    buffer.write(host_yaml_raw_data)
-    buffer.seek(0)
-    spr= Sitecfg.load_site_config(buffer)
-    assert isinstance(spr, Sitecfg)
+    site = Site(sourcefile=host_yaml_raw_data)
+    save_data = site.save_site_config()
+    spr = Site(save_data)
+    assert isinstance(spr, Site)
 
 def test_spr_integration_test():
     jsonpayload = munchify(spr_integration_payload).toJSON()
@@ -177,16 +224,41 @@ def test_spr_integration_test():
     assert tuple(export.keys()) == ('locus', 'publickey')
 
 def test_site_host_integration():
-    ''' validate that Sitecfg can generate an object '''
-    s = Sitecfg(**test_data['global'])
-    h = Host(sitecfg=s, **host_data_test)
+    ''' validate that Site can generate an object '''
+    s = Site(sitecfg_args=test_data['global'])
+    h = s.host_add(host_data_test)
     assert isinstance(h, Host)
 
 def test_site_host_integration_save():
-    ''' validate that Sitecfg can generate an object '''
-    s = Sitecfg(**test_data['global'])
-    h = Host(sitecfg=s, **host_data_test)
+    ''' validate that Site can generate an object '''
+    s = Site(sitecfg_args=test_data['global'])
+    h = s.host_add(host_data_test)
     yaml_data = s.save_site_config()
+
+def test_site_add_host_invalid_uuid():
+    ''' test adding a host to a site '''
+    s = Site(sitecfg_args=test_contrained_data['global'])
+    h = s.host_add(host_add_test_data0)
+    with pytest.raises(ValueError) as exc:
+        h2 = s.host_add(host_add_test_invalid_uuid)
+
+def test_site_add_host():
+    ''' test adding two hosts, with only two ASNs available '''
+    s = Site(sitecfg_args=test_contrained_data['global'])
+    h = s.host_add(host_add_test_data0)
+    h2 = s.host_add(host_add_test_data1)
+
+def test_site_add_host_asn_fix_01():
+    ''' test adding two hosts, with only two ASNs available, validate ASNs '''
+    global s, h, h2
+
+    s = Site(sitecfg_args=test_contrained_data['global'])
+    assert s.site.asn_range == test_contrained_asn_range
+    h = s.host_add(host_add_test_data0)
+    h2 = s.host_add(host_add_test_data1)
+    s.check_asn_sanity()
+    assert s.hosts[0].asn == 64512
+    assert s.hosts[1].asn == 64513
 
 #def test_endpoint_export():
 #    ep = Endpoint(**test_data)
