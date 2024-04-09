@@ -64,7 +64,7 @@ def configure(filenames: dict,
         print("===[snip]==")
     else:
         logger.info(f'Save file {filenames.cfg_file}')
-        with open(filenames.cfg_file, 'w') as cf:
+        with open(filenames.cfg_file, 'w', encoding='utf-8') as cf:
             save_endpoint_config(ep, cf)
 
     return ep
@@ -105,10 +105,10 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
     if dryrun:
         print(f'Generated key, ignoring (dryrun)')
     else:
-        with open(filenames.privkey, 'w') as keyf:
+        with open(filenames.privkey, 'w', encoding='utf-8') as keyf:
             keyf.write(keyexport(newkey))
             pass
-        with open(filenames.pubkey, 'w') as keyf:
+        with open(filenames.pubkey, 'w', encoding='utf-8') as keyf:
             keyf.write(keyexport(newkey.public_key))
             pass
         pass
@@ -142,7 +142,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
         logger.error(f"Failed to fetch record, aborting")
         sys.exit(1)
 
-    with open(filenames.cfg_file, 'r') as cf:
+    with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
         ep = load_endpoint_config(cf)
 
     configure(filenames, ep, hostname,
@@ -167,7 +167,7 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
     LoggerConfig(debug, trace)
 
     filenames = hostfile(locus, domain, config_path)
-    with open(filenames.cfg_file, 'r') as cf:
+    with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
         ep = load_endpoint_config(cf)
         pass
 
@@ -187,7 +187,7 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
         if os.path.exists(outfile) and not force:
             print(f'Error: {outfile} exists, use --force to override')
             sys.exit(4)
-        with open(outfile, 'w') as mf:
+        with open(outfile, 'w', encoding='utf-8') as mf:
             mf.write(host_message)
     else:
         print('Transmit the following b64 string, and use "wgsite host"')
