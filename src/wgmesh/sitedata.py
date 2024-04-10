@@ -451,8 +451,9 @@ class Sitecfg:
         if not len(self._open_asn):
             logger.trace(f'_open_asn empty, rebuilding')
             self.calculate_open_asn()
+        logger.trace(f'open_asn before: {self._open_asn}')
         retval = self._open_asn.pop(0)
-        logger.trace(f'asn: {retval}')
+        logger.trace(f'fetch asn: {retval} => open_asn before: {self._open_asn}')
         self.register_asn(retval, uuid)
         return retval
 

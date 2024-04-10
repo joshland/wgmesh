@@ -39,6 +39,7 @@ class Endpoint:
     public_address:         str = field(default='', converter=nonone)
     trust_iface:            str = field(default='', converter=nonone)
     trust_address:          str = field(default='', converter=nonone)
+    asn:                    int = field(default=-1)
 
     _site_key:        PublicKey = field(default='')
     _secret_key:     PrivateKey = field(default='')
@@ -93,6 +94,7 @@ class Endpoint:
             'public_key': self.get_public_key(),
             'public_key_file': self.public_key_file,
             'private_key_file': self.secret_key_file,
+            'asn': self.asn
             'remote_addr': ",".join(self.public_address) }
         return munchify(retval)
 

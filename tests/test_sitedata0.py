@@ -38,6 +38,21 @@ test_data = {
     }
 }
 
+test_contrained_data = {
+    'global': {
+        'alerts': "alerts@example.com",
+        'domain': "example.com",
+        'tunnel_ipv4': "172.16.42.0/24",
+        'tunnel_ipv6': "fd86:ea04:1116::/64",
+        # Examples: https://simpledns.plus/private-ipv6
+        'locus': "wgmesh",
+        'portbase': 21100,
+        'asn_range': '64512:64513',
+        'publickey': '',
+        'privatekey': "tests/test_priv",
+    }
+}
+
 host_data_blank = {
     'hostname': '',
     'asn': '-1',
@@ -97,7 +112,7 @@ hosts:
     private_key_file: dev/example_endpoint_priv
 """[1:]
 
-host_add_test_data = {
+host_add_test_data0 = {
         'uuid': '36d6d7fc-9157-4ab8-8d0b-cb1298b8aaec',
         'hostname': 'wgtest01.ashbyte.com',
         'public_key': '',
@@ -105,6 +120,16 @@ host_add_test_data = {
         'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_priv',
         'local_ipv4': [IPv4Address('192.0.2.1')],
         'local_ipv6': [IPv6Address('fd86:ea04:1116:1::1')]
+}
+
+host_add_test_data1 = {
+        'uuid': '7ff9fb7c-53d7-4e64-b298-1bc89998c1c',
+        'hostname': 'wgtest02.ashbyte.com',
+        'public_key': '',
+        'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
+        'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
+        'local_ipv4': [IPv4Address('192.0.3.1')],
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:2::1')]
 }
 
 with open('tests/test_pub', 'r') as pubf:
@@ -199,9 +224,10 @@ def test_site_host_integration_save():
 
 def test_site_add_host():
     ''' test adding a host to a site '''
-    s = Sitecfg(**test_data['global'])
-    h = Host(sitecfg=s, **host_data_test)
-    h2 = Host(sitecfg=s, **host_add_test_data)
+    s = Sitecfg(**test_contrained_data['global'])
+    h = Host(sitecfg=s, **host_add_test_data0)
+    with pytest.raises(ValueError) as exc:
+        h2 = Host(sitecfg=s, **host_add_test_data1)
 
 #def test_endpoint_export():
 #    ep = Endpoint(**test_data)
