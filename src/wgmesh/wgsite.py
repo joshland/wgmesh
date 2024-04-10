@@ -11,7 +11,7 @@ from loguru import logger
 from munch import munchify, unmunchify, Munch
 
 from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
-from .lib import site_report, decode_domain, encode_domain, dns_query, filediff
+from .lib import site_report, decode_domain, encode_domain, dns_query, filediff, check_asn_sanity
 from .lib import InvalidHostName, InvalidMessage
 from .lib import Sitecfg, LoggerConfig
 
@@ -166,6 +166,7 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
            aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
            aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
            suggest:         Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
+           asnfix:          Annotated[bool, typer.Option(help='Update ASNs, supply any which are empty.')] = False,
            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
@@ -193,6 +194,9 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
         arguments.aws_access_key = aws_access
         arguments.aws_secret_access_key = aws_secret
         pass
+
+    if asnfix:
+        check_asn_sanity(site, site._hosts)
 
     save_data = site.save_site_config()
     diff = filediff(previous, save_data, f"{config_file}.old", config_file)

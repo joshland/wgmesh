@@ -94,7 +94,7 @@ class Endpoint:
             'public_key': self.get_public_key(),
             'public_key_file': self.public_key_file,
             'private_key_file': self.secret_key_file,
-            'asn': self.asn
+            'asn': self.asn,
             'remote_addr': ",".join(self.public_address) }
         return munchify(retval)
 

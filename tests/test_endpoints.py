@@ -22,6 +22,7 @@ blank_data = {
     'public_address': '',
     'trust_iface': '',
     'trust_address': '',
+    'asn': -1,
 }
 
 test_data = {
@@ -35,10 +36,12 @@ test_data = {
     'cmdfping': '',
     'secret_key_file': 'tests/test_priv',
     'public_key_file': 'tests/test_pub',
+    'asn': '',
     'public_iface': 'enp0s25',
     'public_address': '172.16.1.1',
     'trust_iface': 'ens0',
     'trust_address': '10.1.1.1',
+    'asn': -1,
 }
 
 ep_yaml_file = """
@@ -55,6 +58,7 @@ local:
   public_address: 172.16.1.1
   trust_iface: ens0
   trust_address: 10.1.1.1
+  asn: -1
 """[1:]
 
 def test_init():
@@ -69,7 +73,6 @@ def test_endpoint_blank():
 def test_endpoint():
     ''' test endpoint with the test dataset '''
     ep = Endpoint(**test_data)
-    #[ assert v == test_data[k] for k, v in asdict(ep).items if k[0] != '_' ]
     for k, v in asdict(ep).items():
         if k[0] == "_": continue
         if isinstance(v, UUID):

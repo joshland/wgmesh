@@ -52,7 +52,7 @@ def LoggerConfig(debug: bool, trace: bool):
 def filediff(before, after, before_name, after_name):
     ''' perform a diff of two files '''
     diff = unified_diff(before.split('\n'), after.split('\n'), fromfile=before_name, tofile=after_name)
-    return "\n".join([ x for x in diff if x.strip > '' ])
+    return "\n".join([ x for x in diff if x.strip() > '' ])
 
 
 def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:

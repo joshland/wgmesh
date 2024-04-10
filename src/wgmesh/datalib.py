@@ -16,6 +16,47 @@ def convert_uuid_uuid(value):
     else:
         return UUID(value)
 
+def expandRange(arg):
+    ''' expand a range '''
+    try:
+        low, high = [ int(x) for x in arg.split(":") ]
+        high += 1
+    except ValueError:
+        low = int(arg)
+        high = low + 1
+    return list(range(low, high))
+
+def collapse_asn_list(arg):
+    ''' collapse the asn list into a minimalist range list '''
+    # Sort the list of VLAN IDs and exclude any with state set to absent
+    list_elements: list[list[int]] = []
+    consecutive: list[int] = []
+
+    asn_list = sorted(arg)
+    for asn in asn_list:
+        if consecutive:
+            if (asn - consecutive[-1]) <= 1:
+                consecutive.append(asn)
+            else:
+                list_elements.append(consecutive)
+                consecutive = [asn,]
+        else:
+            # Populate consecutive with the first element
+            consecutive.append(asn)
+        continue
+    list_elements.append(consecutive)
+
+    # Format the elements into a string
+    str_elements: list[str] = []
+    for element in list_elements:
+        if len(element) == 1:
+            str_elements.append(str(element[0]))
+        else:
+            sorted_asns = sorted(element)
+            str_elements.append(f'{sorted_asns[0]}:{sorted_asns[-1]}')
+        continue
+    return ','.join(str_elements)
+
 def message_decode(payload: str|bytes, binary=False) -> str|bytes:
     ''' decode a base64 encoded message '''
     if isinstance(payload, str):

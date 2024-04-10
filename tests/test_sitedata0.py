@@ -1,4 +1,3 @@
-from io import StringIO
 import pytest
 
 from loguru import logger
@@ -115,6 +114,7 @@ hosts:
 host_add_test_data0 = {
         'uuid': '36d6d7fc-9157-4ab8-8d0b-cb1298b8aaec',
         'hostname': 'wgtest01.ashbyte.com',
+        'asn': -1,
         'public_key': '',
         'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_pub',
         'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_priv',
@@ -125,11 +125,12 @@ host_add_test_data0 = {
 host_add_test_data1 = {
         'uuid': '7ff9fb7c-53d7-4e64-b298-1bc89998c1c',
         'hostname': 'wgtest02.ashbyte.com',
+        'asn': -1,
         'public_key': '',
         'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
         'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
         'local_ipv4': [IPv4Address('192.0.3.1')],
-        'local_ipv6': [IPv6Address('fd86:ea04:1116:2::1')]
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:2::1')],
 }
 
 with open('tests/test_pub', 'r') as pubf:
