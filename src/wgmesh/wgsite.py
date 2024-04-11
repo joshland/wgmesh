@@ -11,15 +11,15 @@ from loguru import logger
 from munch import munchify, unmunchify, Munch
 
 from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
-from .lib import site_report, decode_domain, encode_domain, dns_query, filediff, check_asn_sanity
+from .lib import site_report, decode_domain, encode_domain, dns_query, filediff
 from .lib import InvalidHostName, InvalidMessage
-from .lib import Sitecfg, LoggerConfig
+from .lib import LoggerConfig
 
 from .transforms import SiteEncryptedHostRegistration
 
 from .crypto import generate_site_key, load_secret_key, load_public_key, keyexport
 from .route53 import Route53
-from .sitedata import Host
+from .sitedata import Host, Site
 
 app = typer.Typer()
 
@@ -107,7 +107,7 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         arguments.aws_secret_access_key = aws_secret
         pass
 
-    site = Sitecfg(**arguments)
+    site = Site(sitecfg_args=arguments)
     site.open_keys()
     save_data = site.save_site_config()
     print(filediff(old_data, save_data, f"{config_file}.old", config_file))
@@ -139,7 +139,7 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
         locus = locus[:-5]
     config_file = os.path.join(config_path, f'{locus}.yaml')
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site= Sitecfg.load_site_config(cf)
+        site= Site(cf)
 
     site_report(locus, site.publish())
 
@@ -176,7 +176,7 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site= Sitecfg.load_site_config(cf)
+        site= Site(cf)
         pass
     previous = site.save_site_config()
 
@@ -190,19 +190,21 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
         continue
 
     if aws_zone and aws_access and aws_secret:
-        arguments.route53 = aws_zone
-        arguments.aws_access_key = aws_access
-        arguments.aws_secret_access_key = aws_secret
+        logger.debug("Set AWS Credentials")
+        site.site.route53 = aws_zone
+        site.site.aws_access_key = aws_access
+        site.site.aws_secret_access_key = aws_secret
+        logger.trace(f"Zone:{site.site.route53} {site.site.aws_access_key}::{'x'*len(site.site.aws_secret_access_key)}")
         pass
 
     if asnfix:
-        check_asn_sanity(site, site._hosts)
+        site.check_asn_sanity()
 
     save_data = site.save_site_config()
     diff = filediff(previous, save_data, f"{config_file}.old", config_file)
     print(diff)
 
-    site_report(locus, site.publish())
+    #site_report(locus, site.publish())
     with open(config_file, 'w', encoding='utf-8') as cf:
         cf.write(save_data)
     return 0
@@ -214,7 +216,7 @@ def genkeys(locus: Annotated[str, typer.Argument(help='short/familiar name, shor
     ''' generate new site key '''
     config_file = os.path.join(config_path, f'{locus}.yaml')
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site= Sitecfg.load_site_config(cf)
+        site= Site(cf)
         pass
     if os.path.exists(site.privatekey) and not force:
         print(f'Key already exists: {site.privatekey}. Use --force to overwrite it.')
@@ -248,7 +250,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
         pass
 
     with open(config_file, 'r', encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
 
     current_records = None
     try:
@@ -318,7 +320,7 @@ def listhost(locus:           Annotated[str, typer.Argument(help='short/familiar
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
     if names:
         for x in site._hosts:
             print(f"{x.uuid}{t}{x.hostname}")
@@ -346,7 +348,7 @@ def rmhost(locus:           Annotated[str, typer.Argument(help='short/familiar n
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
 
     old_data = site.save_site_config()
     site.host_delete(uuid)
@@ -377,7 +379,7 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
     config_file = os.path.join(config_path, f'{locus}.yaml')
 
     with open(config_file, encoding='utf-8') as cf:
-        site = Sitecfg.load_site_config(cf)
+        site = Site(cf)
 
     old_data = site.save_site_config()
     if os.path.exists(host_message):

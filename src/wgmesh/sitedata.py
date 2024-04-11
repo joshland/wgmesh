@@ -7,11 +7,9 @@ import uuid
 import ipaddress
 from uuid import UUID
 from io import StringIO
-from base64 import b64encode, b64decode
 from itertools import chain
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 
-from attr import asdict
 from loguru import logger
 from typing import Any, Dict, List, TextIO
 
@@ -25,42 +23,8 @@ from .datalib import nonone, collapse_asn_list, expandRange
 from .datalib import message_encode, message_decode
 from .transforms import EncryptedAWSSecrets
 
-class HostMismatch(Exception): pass
-class MissingAsnConfig(Exception): pass
-
-def check_asn_sanity(site, hosts):
-    ''' check and return asns to site '''
-    found = []
-    needs_update = []
-    for x in hosts:
-        logger.trace(f'ASN sanity check: {x.hostname}->{x.asn}')
-        if x.asn in ['', None, -1]:
-            needs_update.append(x)
-        else:
-            found.append(x.asn)
-            logger.warning(f'Invalid ASN removed, {x.hostname}->{x.asn}')
-            continue
-        continue
-    ## overwrite the asn_used
-    logger.trace(f'ASN Sanity Check: Used/Found: {site.asn_used} => {found}')
-    logger.trace(f'ASN Sanity Check: Needs Update: {needs_update}')
-    site.asn_used = found
-    complete_range = set(site.asn_range)
-    logger.trace(f'Available ASNs: {complete_range}')
-    used_range = set(found)
-    logger.trace(f'Used ASNs: {used_range}')
-    open_range = list(complete_range - used_range)
-    logger.debug(f'Open ASN Set: {open_range}')
-    if len(needs_update) > len(open_range):
-        logger.warning(f'Exhausted ASN Range')
-    for x in needs_update:
-        if len(complete_range) == 0:
-            logger.warning(f'Insufficient ASN range. Aborting.')
-            break
-        x.asn = complete_range.pop()
-        site.asn_used.append(x.asn)
-        logger.trace(f'Updated ASN: {x.hostname}({str(x.uuid)})=>{x.asn}')
-        continue
+class HostMismatch(Exception):
+    ''' Mismach in the host'''
     pass
 
 def convertAsnRange(arg):
@@ -101,13 +65,14 @@ def convertAddressBlocks(arg: str|list) -> list:
 
 def convertIPAddress(arg):
     ''' validate and clean up network addressing '''
-    if arg.strip() == '': return ''
+    if arg.strip() == '':
+        return ''
     split = arg.split('/')
     logger.trace(f'convert network address: {split}')
     if split != '':
         retval = ipaddress.ip_address(split[0])
     else:
-        logger.warning(f'Host with invalid ip address.')
+        logger.warning('Host with invalid ip address.')
         retval = ''
         pass
     return retval
@@ -121,6 +86,7 @@ def convertUUID(arg):
 
 @define
 class Host(object):
+    ''' dataclass for host objects '''
     uuid:                UUID = field(converter=convertUUID)
     hostname:             str = field()
     sitecfg:           object = field()
@@ -216,8 +182,10 @@ class Host(object):
             pass
 
         for k, v in hdict.items():
-            if k == 'asn': continue
-            if k == 'octet': continue
+            if k == 'asn':
+                continue
+            if k == 'octet':
+                continue
             logger.trace(f'host update: {k}: {getattr(self, k)} => {v}')
             setattr(self, k, v)
             continue
@@ -227,6 +195,7 @@ class Host(object):
 
 @define
 class Sitecfg:
+    ''' dataclass for site configuration '''
     locus:                 str = field(default='')
     domain:                str = field(default='')
     tunnel_ipv4:   IPv4Network = field(default='', converter=convertNetworkAddress)
@@ -257,78 +226,47 @@ class Sitecfg:
             raise ValueError(f'{attr} address incorrect/incomplete: {arg}')
         return
 
-    @classmethod
-    def load_site_config(cls, source_file: TextIO):
-        ''' load site config from disk
+    def open_keys(self):
+        ''' try to unpack the keys '''
+        logger.trace('open_keys')
+        if self._master_site_key:
+            logger.error("Attempting to re-load the site key. Abort")
+            sys.exit(2)
 
-            source_file: YAML file.
-        '''
-        yaml = YAML(typ='rt')
+        if self.privatekey > '':
+            if os.path.exists(self.privatekey):
+                logger.trace(f'Open and read: {self.privatekey}')
+                with open(self.privatekey, 'r', encoding='utf-8') as keyfile:
+                    self._master_site_key = load_secret_key(keyfile.read())
+                    pass
+                pass
+        else:
+            logger.error('Missing global->secret_key. Run init?')
+            sys.exit(3)
 
-        y = yaml.load(source_file)
-        logger.trace(f'{y}')
-        logger.trace(f'Global: {y.get("global")}')
-        logger.trace(f'Hosts: {y.get("hosts")}')
+        if self.publickey:
+            public_key = load_public_key(self.publickey)
+            if public_key != self._master_site_key.public_key:
+                logger.error(f'Public key in Site config does not match {self.privatekey}')
+                sys.exit(1)
+            logger.trace('Public key matches site key.')
+        else:
+            self.publickey = keyexport(self._master_site_key.public_key)
 
-        sitecfg = Sitecfg(**y.get('global', {}))
-        sitecfg.open_keys()
+        if (self.aws_access_key and self.aws_secret_access_key) and self.aws_credentials == '':
+            self._master_aws_secrets = EncryptedAWSSecrets(self.aws_access_key, self.aws_secret_access_key)
+            self.aws_access_key = ''
+            self.aws_secret_access_key = ''
+        elif self.aws_credentials > '':
+            box = self.get_message_box(self._master_site_key.public_key)
+            self._master_aws_secrets = EncryptedAWSSecrets.load_encrypted_credentials(self.aws_credentials, box)
+            pass
 
-        logger.trace(f'{sitecfg._master_site_key.public_key} /-/ {sitecfg.publickey}')
-
-        hosts = []
-        for k, v in y.get('hosts',{}).items():
-            logger.trace(f'Load Host: {k}:{v}')
-            h = Host(sitecfg=sitecfg, **v)
-            sitecfg.host_add(h)
-            continue
-        check_asn_sanity(sitecfg, hosts)
-        return sitecfg
-
-    def host_add(self, host: Host):
-        ''' add host '''
-        self._hosts.append(host)
-
-    def host_delete(self, uuid):
-        ''' delete a host by UUID '''
-        host = None
-        for index, h in enumerate(self._hosts):
-            if str(h.uuid) == uuid:
-                logger.debug(f'Matched UUID: {uuid}=>{h}')
-                host = h
-                break
-            continue
-
-        if not host:
-            raise ValueError('no matching uuid found')
-
-        logger.debug(f'Remove Host: {index}=>{host}')
-        logger.trace(f'cleaning: {self._hosts}')
-        del self._hosts[index]
-        logger.debug(f"Clean Octet Map: {self._octet_map[host.uuid]}")
-        del self._octet_map[host.uuid]
-        logger.trace(f'cleaning: {self._octet_map}')
-        return True
-
-    def save_site_config(self):
-        ''' commit config to disk
-
-            site: Sitecfg
-            hosts: List of Hosts
-        '''
-        logger.trace(f'Save - Site:{self}')
-        sitedata = self.publish()
-        logger.debug(f'{list(sitedata.keys())}')
-
-        publish = { 'global': unmunchify(sitedata),
-                    'hosts': { h.uuid: unmunchify(h) for h in [ h.publish() for h in self._hosts if h ] },}
-
-        logger.trace(f'Serialize Yaml Data: {publish}')
-        yaml = YAML(typ='rt')
-        buffer = StringIO()
-        yaml.dump(publish, buffer)
-        buffer.seek(0)
-
-        return buffer.read()
+    def checkout_octet(self, host_uuid):
+        ''' checkout the next octet '''
+        retval = self._octets[-1] + 1
+        self.register_octet(retval, host_uuid)
+        return retval
 
     def get_message_box(self, publickey: PublicKey) -> Box:
         ''' setup an SBox for decryption
@@ -342,12 +280,20 @@ class Sitecfg:
         retval = Box(self._master_site_key, publickey)
         return retval
 
-    def get_host_by_uuid(self, uuid: UUID):
-        ''' lookup a host by a UUID '''
-        for x in self._hosts:
-            if x.uuid == uuid:
-                return x
-        return None
+    def register_octet(self, arg, host_uuid):
+        ''' register a new octet as being used '''
+        try:
+            if self._octet_map[host_uuid] == arg:
+                return True
+        except KeyError:
+            pass
+        if arg in self._octets:
+            logger.warning('Attempted to register an existing octet: {octet}')
+        else:
+            self._octets.append(arg)
+            self._octet_map[host_uuid] = arg
+            logger.trace(f'assign octet {arg}')
+        return arg
 
     def publish_public_payload(self):
         ''' return the site payload dictionay '''
@@ -379,67 +325,154 @@ class Sitecfg:
         if self._master_aws_secrets:
             retval.aws_credentials = self._master_aws_secrets.export_encrypted_credentials(
                 self.get_message_box(self._master_site_key.public_key))
+            del retval['aws_access_key']
+            del retval['aws_secret_access_key']
 
         if isinstance(retval.publickey, PublicKey):
             retval.publickey = keyexport(self.publickey)
 
         return retval
 
-    def register_octet(self, arg, uuid):
-        ''' register a new octet as being used '''
-        try:
-            if self._octet_map[uuid] == arg:
-                return True
-        except KeyError:
-            pass
-        if arg in self._octets:
-            logger.warning('Attempted to register an existing octet: {octet}')
-        else:
-            self._octets.append(arg)
-            self._octet_map[uuid] = arg
-            logger.trace(f'assign octet {arg}')
-        return arg
+    def unregister_octet(self, host_uuid):
+        ''' remove a host from the octet map '''
+        logger.debug(f"Clean Octet Map: {self._octet_map[host_uuid]}")
+        del self._octet_map[host_uuid]
 
-    def checkout_octet(self, uuid):
+class Site:
+    ''' site=>*hosts site handler class '''
+    def __init__(self, sourcefile: str =  None, sitecfg_args: dict = {}):
+        if sourcefile and sitecfg_args:
+            raise ValueError('Use either sourcefile or sitecfg_args')
+        if sourcefile:
+            self._load_from_file(sourcefile)
+        else:
+            self.site = Sitecfg(**sitecfg_args)
+            self.hosts = []
+
+    def _load_from_file(self, source_file):
+        ''' load data from the source_file '''
+        yaml = YAML(typ='rt')
+
+        y = yaml.load(source_file)
+        logger.debug(f'{list(y.keys())}')
+        logger.trace(f'Global: {y.get("global")}')
+        logger.trace(f'Hosts: {y.get("hosts")}')
+        self.site = Sitecfg(**y.get('global', {}))
+        logger.trace('Open Site Keys.')
+        self.site.open_keys()
+        logger.trace(f'Site Public Key: {self.site.publickey}')
+
+        self.hosts = []
+        for k, v in y.get('hosts',{}).items():
+            logger.trace(f'Load Host: {k}:{v}')
+            self.host_add(v)
+            continue
+
+    def check_asn_sanity(self):
+        ''' check and return asns to site '''
+        found = []
+        needs_update = []
+        for x in self.hosts:
+            logger.trace(f'ASN sanity check: {x.hostname}->{x.asn}')
+            if x.asn in ['', None, -1]:
+                needs_update.append(x)
+            else:
+                found.append(x.asn)
+                logger.warning(f'Invalid ASN removed, {x.hostname}->{x.asn}')
+                continue
+            continue
+        ## overwrite the asn_used
+        logger.trace(f'ASN Sanity Check: Used/Found: {self.site.asn_used} => {found}')
+        logger.trace(f'ASN Sanity Check: Needs Update: {needs_update}')
+        self.site.asn_used = found
+        complete_range = set(self.site.asn_range)
+        logger.trace(f'Available ASNs: {complete_range}')
+        used_range = set(found)
+        logger.trace(f'Used ASNs: {used_range}')
+        open_range = list(complete_range - used_range)
+        logger.debug(f'Open ASN Set: {open_range}')
+        if len(needs_update) > len(open_range):
+            logger.warning('Exhausted ASN Range')
+        for x in needs_update:
+            if len(complete_range) == 0:
+                logger.warning('Insufficient ASN range. Aborting.')
+                break
+            x.asn = complete_range.pop()
+            self.site.asn_used.append(x.asn)
+            logger.trace(f'Updated ASN: {x.hostname}({str(x.uuid)})=>{x.asn}')
+            continue
+        pass
+
+    def save_site_config(self):
+        ''' export Site and Hosts as a Yaml File
+
+            site: Sitecfg
+            hosts: List of Hosts
+        '''
+        logger.trace('save site to yaml')
+        sitedata = self.site.publish()
+        logger.debug(f'{list(sitedata.keys())}')
+
+        publish = { 'global': unmunchify(sitedata),
+                    'hosts': { h.uuid: unmunchify(h) for h in [ h.publish() for h in self.hosts if h ] },}
+
+        logger.trace(f'Serialize Yaml Data: {publish}')
+        yaml = YAML(typ='rt')
+        buffer = StringIO()
+        yaml.dump(publish, buffer)
+        buffer.seek(0)
+
+        return buffer.read()
+
+
+    def checkout_octet(self, host_uuid):
         ''' checkout the next octet '''
-        retval = self._octets[-1] + 1
-        self.register_octet(retval, uuid)
-        return retval
+        return self.site.checkout_octet(host_uuid)
 
-    def open_keys(self):
-        ''' try to unpack the keys '''
-        logger.trace('open_keys')
-        if self._master_site_key:
-            logger.error("Attempting to re-load the site key. Abort")
-            sys.exit(2)
+    def get_host_by_uuid(self, host_uuid: UUID):
+        ''' lookup a host by a UUID '''
+        for x in self.hosts:
+            if x.uuid == host_uuid:
+                return x
+        return None
 
-        if self.privatekey > '':
-            if os.path.exists(self.privatekey):
-                logger.trace(f'Open and read: {self.privatekey}')
-                with open(self.privatekey, 'r') as keyfile:
-                    self._master_site_key = load_secret_key(keyfile.read())
-                    pass
-                pass
-        else:
-            logger.error('Missing global->secret_key. Run init?')
-            sys.exit(3)
+    def publish(self):
+        '''return site publisher '''
+        return self.site.publish()
 
-        if self.publickey:
-            public_key = load_public_key(self.publickey)
-            if public_key != self._master_site_key.public_key:
-                logger.error(f'Public key in Site config does not match {self.privatekey}')
-                sys.exit(1)
-            logger.trace(f'Public key matches site key.')
-        else:
-            self.publickey = keyexport(self._master_site_key.public_key)
+    def host_add(self, host_args):
+        ''' create/register a host '''
+        host = Host(sitecfg=self, **host_args)
+        self.hosts.append(host)
+        return host
 
-        if (self.aws_access_key and self.aws_secret_access_key) and self.aws_credentials == '':
-            self._master_aws_secrets = EncryptedAWSSecrets(self.aws_access_key, self.aws_secret_access_key)
-            self.aws_access_key = ''
-            self.aws_secret_access_key = ''
-        elif self.aws_credentials > '':
-            box = self.get_message_box(self._master_site_key.public_key)
-            self._master_aws_secrets = EncryptedAWSSecrets.load_encrypted_credentials(self.aws_credentials, box)
-            pass
+    def host_delete(self, host_uuid):
+        ''' delete a host by UUID '''
+        host = None
+        index = -1
+        for index, h in enumerate(self.hosts):
+            if str(h.uuid) == host_uuid:
+                logger.debug(f'Matched UUID: {host_uuid}=>{h}')
+                host = h
+                break
+            continue
 
+        if not host or index == -1:
+            logger.debug(f'no host found for removal: {host_uuid}')
+            raise ValueError('no matching uuid found')
 
+        logger.debug(f'Remove Host: {index}=>{host.uuid}({host.uuid}')
+        logger.trace(f'cleaning: {self.hosts}')
+        del self.hosts[index]
+        self.site.unregister_octet(uuid)
+        return True
+
+    def get_site_message_box(self, publickey: PublicKey) -> Box:
+        ''' setup an SBox for decryption
+        publickey: public key from the host who encrypted the message
+        '''
+        return self.site.get_message_box(publickey)
+
+    def register_octet(self, arg, host_uuid):
+        ''' register a new octet as being used '''
+        return self.site.register_octet(arg, host_uuid)

@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 ''' command data functions '''
 import typing
-import attrs
 import base64
 from uuid import UUID, uuid4
 
+import attrs
 from loguru import logger
 from munch import munchify
 
 emptyValuesTuple = (None, '')
 
 def convert_uuid_uuid(value):
+    ''' convert a UUID string into a UUID object, or create a new UUID '''
     if value.strip() in emptyValuesTuple:
-        return str( uuid4() )
+        retval = str( uuid4() )
     else:
-        return UUID(value)
+        retval = UUID(value)
+    return retval
 
 def expandRange(arg):
     ''' expand a range '''
@@ -76,7 +78,7 @@ def message_encode(payload: str|bytes) -> str:
 
 def nonone(arg):
     ''' eliminate the None and blanks '''
-    if arg == None:
+    if arg is None:
         return ''
     return arg
 
@@ -123,4 +125,3 @@ def format_protected(attribute_name: str) -> str:
     :returns: attribute_name without a preceding underscore character.
     """
     return attribute_name[1:] if attribute_name[0] == "_" else attribute_name
-

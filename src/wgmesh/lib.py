@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 ''' lib.py - resource library for file and configuration operations '''
 
-from logging import warning
 import sys
 import json
-import base64
 
-from io import StringIO
+from textwrap import wrap
 from difflib import unified_diff
 from typing import Callable, TextIO, List, Tuple
-from textwrap import wrap
-from munch import munchify, unmunchify
 
 import dns.resolver
 from loguru import logger
-from netaddr import expand_partial_ipv4_address
 from ruamel.yaml import YAML
 from natsort import natsorted
-from munch import munchify
+from munch import munchify, unmunchify
 
-from .sitedata import Sitecfg, Host, check_asn_sanity
+from .sitedata import Site, Sitecfg
 from .endpointdata import Endpoint
 from .datalib import message_encode, message_decode
 
-class InvalidHostName(Exception): pass
-class InvalidMessage(Exception): pass
+class InvalidHostName(Exception):
+    ''' DNS subsystem returned that a domain name was invalid / nonexistent '''
+    pass
+class InvalidMessage(Exception):
+    ''' JSON document errors, or JSON decoding errors '''
+    pass
 
 def LoggerConfig(debug: bool, trace: bool):
     '''
@@ -98,7 +97,8 @@ def sort_and_join_encoded_data(data):
         logger.trace(f'Ordered DNS List Published: {data}')
         slist = []
         for r in data:
-            if not r or r.strip() == '': continue
+            if not r or r.strip() == '':
+                continue
             k, v = r.split(':')
             slist.append((k, v))
             continue
@@ -164,6 +164,7 @@ def decode_domain(dnspayload: str) -> str:
     return retval
 
 def fetch_and_decode_record(domain_name: str) -> dict:
+    ''' gather a DNS record, and decode the embedded data '''
     dns_data = dns_query(domain_name)
     decoded_data = decode_domain(sort_and_join_encoded_data(dns_data))
     return decoded_data
@@ -190,7 +191,7 @@ def domain_report(site: Sitecfg) -> bool:
         if published_data:
             existing_records = decode_domain(published_data)
     except InvalidMessage:
-        logger.warning(f'DNS holds invalid data.')
+        logger.warning('DNS holds invalid data.')
         existing_records = "[Invalid data]"
 
     dns_payload = site.publish_public_payload()
@@ -209,8 +210,6 @@ def domain_report(site: Sitecfg) -> bool:
 
 def site_report(locus: str, published_data: dict) -> str:
     ''' compile a text report of the published site data '''
-    from munch import munchify
-
     logger.trace(f"Site Report: {published_data}")
     data = munchify(published_data)
     print()
@@ -222,5 +221,3 @@ def site_report(locus: str, published_data: dict) -> str:
     optprint(data.route53, 'AWS Route53 Zone: %s')
     optprint(data.aws_access_key, 'AWS Route53 Access Cred: %s')
     optprint('x' * len(data.aws_secret_access_key), 'AWS Route53 Secret Cred: %s')
-
-
