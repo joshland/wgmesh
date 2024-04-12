@@ -1,3 +1,13 @@
+## 2024-04-11 18:18
+
+Lint cleanups after refactoring, lots of variable name adjustments to recognize the new site structure.
+
+Goal: return basic transforms which broke to service
+
+Bug: Outstading problems with refactoring the ASN and Octets. Host import broken. (should this be renamed to 
+adopt?)
+
+
 ## 2024-04-10 22:00
 
 ASN logic is gone, but the object<->data model was broken too.  This has been rewritten.

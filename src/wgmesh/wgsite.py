@@ -8,16 +8,16 @@ import typer
 from typing_extensions import Annotated
 
 from loguru import logger
-from munch import munchify, unmunchify, Munch
+from munch import munchify
 
 from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
-from .lib import site_report, decode_domain, encode_domain, dns_query, filediff
+from .lib import site_report, filediff
 from .lib import InvalidHostName, InvalidMessage
 from .lib import LoggerConfig
 
 from .transforms import SiteEncryptedHostRegistration
 
-from .crypto import generate_site_key, load_secret_key, load_public_key, keyexport
+from .crypto import generate_site_key, load_secret_key, keyexport
 from .route53 import Route53
 from .sitedata import Host, Site
 
@@ -108,7 +108,6 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
 
     site = Site(sitecfg_args=arguments)
-    site.open_keys()
     save_data = site.save_site_config()
     print(filediff(old_data, save_data, f"{config_file}.old", config_file))
 
@@ -121,7 +120,7 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
         pass
     site_report(locus, site.publish())
     print("New mesh created")
-    print(f"Now, you can run 'wgsite publish {site.locus}'")
+    print(f"Now, you can run 'wgsite publish {site.site.locus}'")
     return 0
 
 @app.command()
@@ -130,8 +129,6 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
           debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' check config, publish site report '''
-    from io import StringIO
-
     LoggerConfig(debug, trace)
 
     if locus[-4:] in ['yaml']:
@@ -185,7 +182,7 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
     for x in update:
         val = locals().get(x)
         if val:
-            site.__setattr__(x, val)
+            setattr(site, x, val)
             continue
         continue
 
@@ -218,11 +215,11 @@ def genkeys(locus: Annotated[str, typer.Argument(help='short/familiar name, shor
     with open(config_file, 'r', encoding='utf-8') as cf:
         site= Site(cf)
         pass
-    if os.path.exists(site.privatekey) and not force:
-        print(f'Key already exists: {site.privatekey}. Use --force to overwrite it.')
+    if os.path.exists(site.site.privatekey) and not force:
+        print(f'Key already exists: {site.site.privatekey}. Use --force to overwrite it.')
         sys.exit(4)
 
-    key = generate_site_key(site.privatekey, False)
+    key = generate_site_key(site.site.privatekey, False)
 
     print('Key overwritten, good luck')
     return 0
@@ -239,6 +236,7 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
             trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' publish site and host records to dns '''
     LoggerConfig(debug, trace)
+
     if dryrun:
         commit = False
     else:
@@ -254,13 +252,13 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
 
     current_records = None
     try:
-        current_records = fetch_and_decode_record(site.domain)
+        current_records = fetch_and_decode_record(site.site.domain)
     except InvalidHostName:
-        logger.debug(f'No records found for {site.domain}')
+        logger.debug(f'No records found for {site.site.domain}')
     except InvalidMessage:
-        logger.warning(f'Invalid JSON Payload for {site.domain}')
+        logger.warning(f'Invalid JSON Payload for {site.site.domain}')
 
-    public_message = site.publish_public_payload()
+    public_message = site.site.publish_public_payload()
 
     if public_message == current_records:
         print("DNS Correct")
@@ -271,17 +269,27 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
 
     new_txt_record = create_public_txt_record(public_message)
 
-    logger.info(f'Refreshing Records')
-    r53con = Route53(site.route53, site.domain,
-                     aws_access_key=site.aws_access_key, aws_secret_access_key=site.aws_secret_access_key)
+    logger.info('Refreshing Records')
+    if aws_zone and aws_access and aws_secret:
+        logger.debug("CLI-override for AWS Zone and Credentials")
+        zone_name = aws_zone
+        access_key = aws_access
+        secret_key = aws_secret
+    else:
+        logger.debug("Using configured AWS Zone and Credentials")
+        zone_name = site.site.route53
+        access_key = site.site.aws_access_key
+        secret_key = site.site.aws_secret_access_key
+        pass
 
-    r53con.save_txt_record(site.domain, new_txt_record, commit)
+    r53con = Route53(zone_name, site.site.domain, aws_access_key=access_key, aws_secret_access_key=secret_key)
+    r53con.save_txt_record(site.site.domain, new_txt_record, commit)
 
     for host in hosts:
         dns_data = host.publish_peer_deploy()
         host.encrypt_message(dns_data)
 
-    logger.error(f"Host publishing unwritten")
+    logger.error("Host publishing unwritten")
     print("warning: host publishing incomplete")
     #for me in hosts:
     #    docroot = me.publish_peer_deploy()
@@ -322,14 +330,14 @@ def listhost(locus:           Annotated[str, typer.Argument(help='short/familiar
     with open(config_file, encoding='utf-8') as cf:
         site = Site(cf)
     if names:
-        for x in site._hosts:
+        for x in site.hosts:
             print(f"{x.uuid}{t}{x.hostname}")
             continue
     else:
-        for x in site._hosts:
+        for x in site.hosts:
             print(f'Host: {x.hostname}')
             print(f'UUID: {x.uuid}')
-            print(f'ASN:{x.asn} Octet:=>[{site.portbase+x.octet}] [{x.octet}]')
+            print(f'ASN:{x.asn} Octet:=>[{site.site.portbase+x.octet}] [{x.octet}]')
             print(f'Address_v4:{x.local_ipv4}')
             print(f'Address_v6:{x.local_ipv6}')
             continue
@@ -387,17 +395,17 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
         with open(host_message, 'r', encoding='utf-8') as msg:
             message = msg.read()
     else:
-        logger.debug(f'Message supplied through command line')
+        logger.debug('Message supplied through command line')
         message = host_message
         pass
 
-    logger.debug(f'transform stage 1, decode')
+    logger.debug('transform stage 1, decode')
     logger.trace(f'raw message: {message}')
     encrypted_record = SiteEncryptedHostRegistration.from_base64_json(message)
     logger.trace(f'(Decoded Message: {encrypted_record}')
 
-    logger.debug(f'transform stage 2, decrypt')
-    decryption_box = site.get_message_box(encrypted_record.publickey)
+    logger.debug('transform stage 2, decrypt')
+    decryption_box = site.get_site_message_box(encrypted_record.publickey)
     host_record = encrypted_record.decrypt(decryption_box)
     logger.trace(f'decrypted host record: {host_record}')
 
