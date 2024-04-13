@@ -218,5 +218,7 @@ def site_report(locus: str, published_data: dict) -> str:
     optprint(data.tunnel_ipv4, 'Tunel Routing(v4): %s')
     optprint(data.tunnel_ipv6, 'Tunel Routing(v6): %s')
     optprint(data.route53, 'AWS Route53 Zone: %s')
-    optprint(data.aws_access_key, 'AWS Route53 Access Cred: %s')
-    optprint('x' * len(data.aws_secret_access_key), 'AWS Route53 Secret Cred: %s')
+    if data.aws_credentials:
+        optprint('present', 'Encrypted AWS Credentials: %s')
+    else:
+        optprint('*absent*', 'Encrypted AWS Credentials: %s')

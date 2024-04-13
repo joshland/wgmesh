@@ -67,4 +67,15 @@ Updates to several core functions, working on deployment records for the nodes. 
 Down in the bottom, we have severl bugs, including the old/ugly site_report, which needs to be fixed for the
 changes in the ABI.
 
+## 2024-04-13 12:30
+
+Merged ASN disablement into wgmesh-2 branch.  Continuing with production of the publishing setup. I'm concerned
+about the deletion process, auditting the DNS records, and managing old/stale/dead records. Eventually the API
+will eliminte this, but the DNS method is going to be around for a while since it's in use.
+
+I think that a general DNS/storage abstraction needs to be written. We need the ability to find records, validate
+records, and store versions of the encrypted records locally. The DNS will probably need to be sync'd with a sqlite
+database or something similar.
+
+THen, we can have Record Creation -> Record Sync -> Record Verification -> Record Audits.
 

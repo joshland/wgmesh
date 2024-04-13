@@ -140,7 +140,7 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
 
     site_report(locus, site.publish())
 
-    domain_report(site)
+    domain_report(site.site)
 
     # todo: check for Octet and ASN collisions
     # check for output
@@ -265,10 +265,10 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
 
     if public_message == current_records:
         print("DNS Correct")
-        if not force:
-            site_report(locus, site.publish())
-            domain_report(site)
-            sys.exit(0)
+    else:
+        print("DNS Needs to be Updated")
+        site_report(locus, site.publish())
+        domain_report(site.site)
 
     new_txt_record = create_public_txt_record(public_message)
 
