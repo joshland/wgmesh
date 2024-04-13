@@ -207,7 +207,6 @@ def domain_report(site: Sitecfg) -> bool:
 
     return True
 
-
 def site_report(locus: str, published_data: dict) -> str:
     ''' compile a text report of the published site data '''
     logger.trace(f"Site Report: {published_data}")
