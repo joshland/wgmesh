@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ''' command data functions '''
-import typing
 import base64
 from uuid import UUID, uuid4
+from typing import Union, Any, Callable
 
 import attrs
 from loguru import logger
@@ -59,7 +59,7 @@ def collapse_asn_list(arg):
         continue
     return ','.join(str_elements)
 
-def message_decode(payload: str|bytes, binary=False) -> str|bytes:
+def message_decode(payload: Union[str,bytes], binary=False) -> Union[str,bytes]:
     ''' decode a base64 encoded message '''
     if isinstance(payload, str):
         payload = payload.encode('ascii')
@@ -70,7 +70,7 @@ def message_decode(payload: str|bytes, binary=False) -> str|bytes:
         retval = base64.b64decode(payload).decode('utf-8')
     return retval
 
-def message_encode(payload: str|bytes) -> str:
+def message_encode(payload: Union[str,bytes]) -> str:
     ''' base64 encode a message '''
     if isinstance(payload, str):
         payload = payload.encode('ascii')
@@ -82,9 +82,9 @@ def nonone(arg):
         return ''
     return arg
 
-def asdict(inst: typing.Any,
-           formatter: typing.Callable[[str], str] | None = None,
-           *args: typing.Any, **kwargs: typing.Any) -> dict[str, typing.Any]:
+def asdict(inst: Any,
+           formatter: Union[Callable[[str], str],None] = None,
+           *args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     A utility version of :func:`attrs.asdict`.
 

@@ -4,7 +4,7 @@
 import base64
 import binascii
 
-from typing import Callable
+from typing import Callable, Union
 from loguru import logger
 
 from nacl.public import PrivateKey, PublicKey, Box
@@ -17,7 +17,7 @@ class InvalidSecretKey(Exception):
     pass
 
 #warning: this function was never used. {???}
-def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: str|bytes) -> bytes:
+def decrypt(secret_key: PrivateKey, public_key: PublicKey, cipher_text: Union[str,bytes]) -> bytes:
     ''' encrypt a host blob target
 
     secret_key is either a UUEncoded Key or a realized PrivateKey
@@ -74,12 +74,12 @@ def load_public_key(key_string: str) -> PublicKey:
     logger.debug(f'Loaded Public: {validation_string}/{len(validation_string)} bytes')
     return retval
 
-def loadkey(key_string: str, method: Callable[[str, Callable[[str], PublicKey | PrivateKey]], PrivateKey | PublicKey]) -> PrivateKey|PublicKey:
+def loadkey(key_string: str, method: Callable[[str, Callable[[str], Union[PublicKey, PrivateKey]]], Union[PrivateKey,PublicKey]]) -> Union[PrivateKey,PublicKey]:
     ''' read key from a key_string '''
     pk = keyimport(key_string, method)
     return pk
 
-def keyimport(key: str,  method: Callable[[str], PublicKey | PrivateKey]) -> PrivateKey|PublicKey:
+def keyimport(key: str, method: Callable[[str], Union[PublicKey, PrivateKey]]) -> Union[PrivateKey, PublicKey]:
     ''' uudecode a key '''
     logger.trace(f'keyimport: {type(key)}')
     if isinstance(key, bytes):
@@ -94,7 +94,7 @@ def keyimport(key: str,  method: Callable[[str], PublicKey | PrivateKey]) -> Pri
     retval = method(content)
     return retval
 
-def keyexport(key: PublicKey|PrivateKey) -> str:
+def keyexport(key: Union[PublicKey,PrivateKey]) -> str:
     ''' encode a key '''
     logger.trace(f'keydecode: {type(key)}-{repr(key)}')
     retval = base64.b64encode(key.encode()).decode('utf-8')

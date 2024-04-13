@@ -11,7 +11,7 @@ from itertools import chain
 from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 
 from loguru import logger
-from typing import Any, Dict, List, TextIO
+from typing import Dict, List, Union
 
 from ruamel.yaml import YAML
 from munch import munchify, unmunchify, Munch
@@ -50,7 +50,7 @@ def convertNetworkAddress(arg):
         retval = arg
     return retval
 
-def convertAddressBlocks(arg: str|list) -> list:
+def convertAddressBlocks(arg: Union[str, list]) -> list:
     ''' validate and clean up network addressing '''
     retval = []
     if isinstance(arg, str):
@@ -103,7 +103,7 @@ class Host(object):
         pass
     local_ipv4: List[IPv4Address] = field(default='', converter=convertAddressBlocks)
     local_ipv6: List[IPv6Address] = field(default='', converter=convertAddressBlocks)
-    public_key: PublicKey|str = field(default='')
+    public_key: Union[PublicKey,str] = field(default='')
     local_networks:       str = field(default='')
     public_key_file:      str = field(default='')
     private_key_file:     str = field(default='')
@@ -214,7 +214,7 @@ class Sitecfg:
     _octet_map:           Dict = field(default={})
     _octets:         List[int] = field(default=[0])
     _master_aws_secrets: EncryptedAWSSecrets = field(default=None)
-    _master_site_key:PrivateKey|None = field(default=None)
+    _master_site_key:Union[PrivateKey,None] = field(default=None)
     @alerts.validator
     def _check_alerts(self, attr, arg):
         ''' check for valid email address '''
