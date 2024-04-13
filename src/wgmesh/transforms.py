@@ -6,11 +6,11 @@ from ipaddress import ip_address
 
 from loguru import logger
 from attr import define, field, asdict
-from munch import munchify, unmunchify, Munch
+from munch import munchify, Munch
 from nacl.public import Box, PublicKey, PrivateKey
 
-from .crypto import keyexport
 
+from .crypto import keyexport
 ##
 ## Document transformations
 ##
@@ -111,6 +111,33 @@ class SiteEncryptedHostRegistration:
                                   hidden_message.public_key_file,)
         retval.split_remotes(hidden_message.remote_addr)
         return retval
+
+@define
+class RemoteHostRecord:
+    key:        str = field()
+    asn:        int = field()
+    hostname:   str = field()
+    localport:  int = field()
+    remoteport: int = field()
+    remote:     str = field()
+
+@define
+class DeployMessage:
+    asn:        int = field()
+    site:       str = field()
+    octet:      int = field()
+    portbase:   int = field()
+    remote:     str = field()
+    hosts:      dict = field(default={})
+    def publish(self):
+        ''' publish a DeployMessage + RemoteHostRecords '''
+        retval = munchify(asdict(self))
+        return retval
+    def publish_encrypted(self, box: Box):
+        raw_content = self.publish().toJSON()
+        raw_message = box.encrypt(raw_content)
+        text_message = b64encode(raw_message).decode('utf-8')
+        return text_message
 
 @define
 class EndpointHostRegistrationMessage:

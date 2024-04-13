@@ -1,12 +1,13 @@
-## 2024-04-11 18:18
+## 2024-04-09 21:15
 
-Lint cleanups after refactoring, lots of variable name adjustments to recognize the new site structure.
+ASN automation logic removed.
 
-Goal: return basic transforms which broke to service
+ASN loading from site file still broken. Conflicting details on load, either incomplete setup or a 
+function is resetting the asn_used range.
 
-Bug: Outstading problems with refactoring the ASN and Octets. Host import broken. (should this be renamed to 
-adopt?)
-
+- unit tests passing
+- addhost -> does not set asn
+- --asnfix working, but subsequent operations are breaking asn_used
 
 ## 2024-04-10 22:00
 
@@ -50,15 +51,20 @@ Host -> Uuid -> Key(s) -> Registration -> Adoption -> Deployment
 
 that is the entire working pipeline for today
 
-## 2024-04-09 21:15
+## 2024-04-11 18:18
 
-ASN automation logic removed.
+Lint cleanups after refactoring, lots of variable name adjustments to recognize the new site structure.
 
-ASN loading from site file still broken. Conflicting details on load, either incomplete setup or a 
-function is resetting the asn_used range.
+Goal: return basic transforms which broke to service
 
-- unit tests passing
-- addhost -> does not set asn
-- --asnfix working, but subsequent operations are breaking asn_used
+Bug: Outstading problems with refactoring the ASN and Octets. Host import broken. (should this be renamed to 
+adopt?)
+
+
+## 2024-04-12 22:26
+
+Updates to several core functions, working on deployment records for the nodes.  Working with wgsite.publish.
+Down in the bottom, we have severl bugs, including the old/ugly site_report, which needs to be fixed for the
+changes in the ABI.
 
 

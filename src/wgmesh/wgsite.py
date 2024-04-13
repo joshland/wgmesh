@@ -10,12 +10,12 @@ from typing_extensions import Annotated
 from loguru import logger
 from munch import munchify
 
-from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
+from .lib import create_public_txt_record, domain_report, fetch_and_decode_record, split_encoded_data
 from .lib import site_report, filediff
 from .lib import InvalidHostName, InvalidMessage
 from .lib import LoggerConfig
 
-from .transforms import SiteEncryptedHostRegistration
+from .transforms import SiteEncryptedHostRegistration, RemoteHostRecord, DeployMessage
 
 from .crypto import generate_site_key, load_secret_key, keyexport
 from .route53 import Route53
@@ -150,24 +150,23 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     return 0
 
 @app.command()
-def config(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-           domain:          Annotated[str,
-           typer.Argument(help='primary domain where the locus TXT record will be published.')] = '',
-           asn:             Annotated[str, typer.Argument(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
-           config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
-           secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
-           tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
-           tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
-           portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
-           aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
-           aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
-           aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
-           suggest:         Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
-           asnfix:          Annotated[bool, typer.Option(help='Update ASNs, supply any which are empty.')] = False,
-           force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
-           dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
-           debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
-           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+def setsite(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+            domain:          Annotated[str, typer.Option(help='primary domain where the locus TXT record will be published.')] = '',
+            asn:             Annotated[str, typer.Option(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
+            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+            secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
+            tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
+            tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
+            portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
+            aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
+            aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
+            aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
+            suggest:         Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
+            asnfix:          Annotated[bool, typer.Option(help='Update ASNs, supply any which are empty.')] = False,
+            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
+            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
+            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
+            trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' (re)configure site settings '''
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f'{locus}.yaml')
@@ -177,14 +176,18 @@ def config(locus:           Annotated[str, typer.Argument(help='short/familiar n
         pass
     previous = site.save_site_config()
 
-    update = ( 'asn','secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
+    update = ( 'secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
 
     for x in update:
         val = locals().get(x)
         if val:
-            setattr(site, x, val)
+            setattr(site.site, x, val)
             continue
         continue
+
+    if asn:
+        ## fixup asn range
+        site.site.asn_range = asn
 
     if aws_zone and aws_access and aws_secret:
         logger.debug("Set AWS Credentials")
@@ -285,12 +288,44 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     r53con = Route53(zone_name, site.site.domain, aws_access_key=access_key, aws_secret_access_key=secret_key)
     r53con.save_txt_record(site.site.domain, new_txt_record, commit)
 
-    for host in hosts:
-        dns_data = host.publish_peer_deploy()
-        host.encrypt_message(dns_data)
+    for me in site.hosts:
+        myport = me.endport()
+        if me.asn == -1:
+            logger.error(f"{my.hostname}/({str(me.uuid)} is missing a valid ASN, skipping Deployment Publishing")
+            continue
+        logger.trace(f'Assemble Deployment for Host: {me.hosname}/({str(me.uuid)})')
+        deploy_message = DeployMessage(asn=me.asn,
+                                       site=site.site.domain,
+                                       octet=me.octet,
+                                       portbase=site.site.portbase,
+                                       remote=site.site.ipv6)
+        for host in site.hosts:
+            if host.uuid == me.uuid:
+                continue
+            if host.asn == -1:
+                logger.error(f"{my.hostname}/({str(me.uuid)} is missing a valid ASN, skipping this Mesh Inclusion")
+                continue
+            host_record = RemoteHostRecord(key=host.publickey,
+                                           hostname=host.hostname,
+                                           asn=host.asn,
+                                           localport=host.endport(),
+                                           remoteport=myport,
+                                           remote=host.endpoint_addresses())
+            logger.trace(f' - Add Mesh Host: {host.hosname}/({str(host.uuid)})')
+            deploy_message.hosts[str(host.uuid)] = host_record
+            continue
+        ## deploy_message should be a complete mesh deployment record.
+        logger.trace('Publish Deployer Record:')
+        message_box = site.get_site_message_box(me.publickey)
+        encrypted_deploy_message = deploy_message.publish_encrypted(message_box)
+        dns_record = split_encoded_data(encrypted_deploy_message)
+        dns_rr_name = f'{str(me.uuid)}.{site.site.domain}'
+        logger.trace(f'Encrypt and Package: {deploy_message.publish()}')
+        logger.debug(f'Package DNS Record {len(encrypted_deploy_message)}bytes -> {len(dns_record)}lines')
+        r53con.save_txt_record(dns_rr_name, dns_record, commit)
 
-    logger.error("Host publishing unwritten")
-    print("warning: host publishing incomplete")
+
+
     #for me in hosts:
     #    docroot = me.publish_peer_deploy()
     #    docroot.hosts = []
@@ -422,8 +457,7 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
         logger.debug(f'Update host {host.uuid}/{host.hostname}')
         host.update(host)
     else:
-        new_host = Host(sitecfg=site, **host_record)
-        site.host_add(new_host)
+        site.host_add(host_record)
         pass
 
     save_data = site.save_site_config()

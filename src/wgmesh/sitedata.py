@@ -264,6 +264,7 @@ class Sitecfg:
 
     def checkout_octet(self, host_uuid):
         ''' checkout the next octet '''
+        self._octets.sort()
         retval = self._octets[-1] + 1
         self.register_octet(retval, host_uuid)
         return retval
@@ -288,7 +289,8 @@ class Sitecfg:
         except KeyError:
             pass
         if arg in self._octets:
-            logger.warning('Attempted to register an existing octet: {octet}')
+            logger.warning(f'Attempted to register an existing octet: {arg}')
+            logger.warning(f'Octets: {self._octet_map}')
         else:
             self._octets.append(arg)
             self._octet_map[host_uuid] = arg
@@ -378,8 +380,6 @@ class Site:
                 needs_update.append(x)
             else:
                 found.append(x.asn)
-                logger.warning(f'Invalid ASN removed, {x.hostname}->{x.asn}')
-                continue
             continue
         ## overwrite the asn_used
         logger.trace(f'ASN Sanity Check: Used/Found: {self.site.asn_used} => {found}')

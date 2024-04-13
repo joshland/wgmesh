@@ -33,7 +33,7 @@ function wg_import(){
     HOSTFILE=${TESTPATH}/${1}-registration.txt
     echo "===================== HOST IMPORT [${HOSTFILE}] ==========================="
     echo "wgsite host example ${HOSTFILE} --config-path ${WGM_CONFIG} --debug"
-    wgsite host example ${HOSTFILE} --config-path ${WGM_CONFIG} --debug
+    wgsite addhost example ${HOSTFILE} --config-path ${WGM_CONFIG} --debug
 }
 
 wg_config wgtest01 192.0.2.1       fd86:ea04:1116:1::1 172.16.142.1
