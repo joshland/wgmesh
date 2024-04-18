@@ -323,29 +323,6 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
         logger.trace(f'Encrypt and Package: {deploy_message.publish()}')
         logger.debug(f'Package DNS Record {len(encrypted_deploy_message)}bytes -> {len(dns_record)}lines')
         r53con.save_txt_record(dns_rr_name, dns_record, commit)
-
-
-
-    #for me in hosts:
-    #    docroot = me.publish_peer_deploy()
-    #    docroot.hosts = []
-    #    for h in hosts:
-    #        if h.uuid == me.uuid:
-    #            continue
-    #        docroot.hosts.append(h.publish_peer_deploy())
-    #        continue
-    #    print(docroot)
-    #    print(unmunchify(docroot))
-    #    #generating host config
-
-        #create host package
-        # Create connection package for msh endpoints
-
-        # list host
-        # compile message
-        # break into uuid.domain
-        # base64 and save
-     #   continue
     return 0
 
 t = "\t"

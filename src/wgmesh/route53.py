@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+''' route53 interface library '''
 
 import route53
 from attrs import define, validators, field
