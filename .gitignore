@@ -76,4 +76,5 @@ local
 s2cfg
 *.tar.gz
 wgmesh-1
-aws_creds.sh
+aws_creds*
+

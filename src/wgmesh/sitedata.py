@@ -22,6 +22,7 @@ from .crypto import keyexport, load_secret_key, load_public_key
 from .datalib import nonone, collapse_asn_list, expandRange
 from .datalib import message_encode, message_decode
 from .transforms import EncryptedAWSSecrets
+from .store_dns import DNSDataClass
 
 class HostMismatch(Exception):
     ''' Mismach in the host'''
@@ -260,6 +261,8 @@ class Sitecfg:
         elif self.aws_credentials > '':
             box = self.get_message_box(self._master_site_key.public_key)
             self._master_aws_secrets = EncryptedAWSSecrets.load_encrypted_credentials(self.aws_credentials, box)
+            self.aws_access_key = self._master_aws_secrets.access_key
+            self.aws_secret_access_key = self._master_aws_secrets.secret_key
             pass
 
     def checkout_octet(self, host_uuid):

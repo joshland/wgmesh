@@ -4,7 +4,6 @@
 import sys
 import json
 
-from textwrap import wrap
 from difflib import unified_diff
 from typing import Callable, TextIO, List, Tuple
 
@@ -111,11 +110,6 @@ def sort_and_join_encoded_data(data):
 
     return retval
 
-def split_encoded_data(data):
-    ''' split base64 encoded string to a 76-character line length '''
-    retval = [ f'{i}:{x}' for i, x in enumerate(wrap(data, width=74)) if x > '' ]
-    return retval
-
 def dns_query(domain: str) -> str:
     ''' return the record from the DNS '''
     try:
@@ -138,8 +132,7 @@ def dns_query(domain: str) -> str:
 def create_public_txt_record(sitepayload: dict) -> List[str]:
     ''' encode and split the public record '''
     encoded_record = encode_domain(sitepayload)
-    txt_record = split_encoded_data(encoded_record)
-    return txt_record
+    return encoded_record
 
 def encode_domain(sitepayload: dict) -> str:
     ''' return the decoded domain package '''

@@ -23,9 +23,9 @@ def domain_separator(hostname, domainname):
 @define
 class DNSDataClass:
     zoneid: str = field()                  # Route53 Zone ID
+    site_domain: str = field(converter=convert_site_domain) # Domain name of Site
     access: str = field()                # AWS Access Key
     secret: str = field()                # AWS Secret Access Key
-    site_domain: str = field(converter=convert_site_domain) # Domain name of Site
     site_record: str = field(default='')
     zone_domain: str = field(default='') # Zone portion of site_domain, auto-detected
     records: list = field(default=[])    # Zone record from route53, for domain
@@ -34,16 +34,17 @@ class DNSDataClass:
     _zone: object = field(default=None)  # route53 Zone object
 
     @classmethod
-    def openZone(cls, zoneid, access, secret, domain):
-        retval = cls(zoneid, access, secret, domain)
-        logger.trace(f'Connect to AWS Zone: {zoneid}')
+    def openZone(cls, zoneid, domain, access, secret):
+        ''' explicitly establish a connection with Route53 '''
+        retval = cls(zoneid, domain, access, secret)
         retval.connect()
         return retval
 
     def connect(self):
         ''' setup conn with route53 '''
+        logger.trace(f'Connect to AWS Zone: {self.zoneid}/{self.access}')
         self._conn = route53.connect(self.access, self.secret)
-        logger.trace(f'Update Hosted Zones: {self._conn}')
+        logger.trace(f'Refreshed Hosted Zones: {self._conn}')
         for x in self._conn.list_hosted_zones():
             if x.id == self.zoneid:
                 logger.trace(f'Locate Zone: {x.id}/{x.name}')
@@ -75,6 +76,9 @@ class DNSDataClass:
 
     def write_site(self, payload: str) -> str:
         ''' write an updated site record '''
+        if not self._conn:
+            self.connect()
+
         chunked_data = self.chunk_data(payload)
         if self.site_record:
             if self.site_record.records != chunked_data:
@@ -93,6 +97,8 @@ class DNSDataClass:
 
     def write_host(self, uuid: str, payload: str) -> str:
         ''' prepare and store a base64 encoded message in DNS '''
+        if not self._conn:
+            self.connect()
 
         chunked_data = self.chunk_data(payload)
         logger.trace(f'Encoded data for storage: {chunked_data}')

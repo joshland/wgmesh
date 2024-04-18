@@ -10,7 +10,7 @@ from typing_extensions import Annotated
 from loguru import logger
 from munch import munchify
 
-from .lib import create_public_txt_record, domain_report, fetch_and_decode_record, split_encoded_data
+from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
 from .lib import site_report, filediff
 from .lib import InvalidHostName, InvalidMessage
 from .lib import LoggerConfig
@@ -19,6 +19,7 @@ from .transforms import SiteEncryptedHostRegistration, RemoteHostRecord, DeployM
 
 from .crypto import generate_site_key, load_secret_key, keyexport
 from .route53 import Route53
+from .store_dns import DNSDataClass
 from .sitedata import Host, Site
 
 app = typer.Typer()
@@ -285,8 +286,9 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
         secret_key = site.site.aws_secret_access_key
         pass
 
-    r53con = Route53(zone_name, site.site.domain, aws_access_key=access_key, aws_secret_access_key=secret_key)
-    r53con.save_txt_record(site.site.domain, new_txt_record, commit)
+    dns = DNSDataClass.openZone(zone_name, site.site.domain, access_key, secret_key)
+    logger.trace(f'Commit Record: {new_txt_record}')
+    dns.write_site(new_txt_record)
 
     for me in site.hosts:
         myport = me.endport()
@@ -318,11 +320,10 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
         logger.trace('Publish Deployer Record:')
         message_box = site.get_site_message_box(me.publickey)
         encrypted_deploy_message = deploy_message.publish_encrypted(message_box)
-        dns_record = split_encoded_data(encrypted_deploy_message)
         dns_rr_name = f'{str(me.uuid)}.{site.site.domain}'
         logger.trace(f'Encrypt and Package: {deploy_message.publish()}')
         logger.debug(f'Package DNS Record {len(encrypted_deploy_message)}bytes -> {len(dns_record)}lines')
-        r53con.save_txt_record(dns_rr_name, dns_record, commit)
+        dns.write_host(dns_rr_name, encrypted_deploy_message)
     return 0
 
 t = "\t"
