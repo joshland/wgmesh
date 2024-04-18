@@ -79,3 +79,25 @@ database or something similar.
 
 THen, we can have Record Creation -> Record Sync -> Record Verification -> Record Audits.
 
+## 2024-04-17 21:34
+
+Implemented store_dns.  It is a simpler API, the data is simpler, and it is fast and easy.  It needs a little
+detail written on how to use it.  However, the essentials are clear.
+
+DNSDataClass(zone, sitename, aws_access, aws_secret)
+
+The classmethod openZone allows immediate connection, otherwise, it connects on the first operation. I think
+that I might want to jsue use the EncryptedAwsSecret class for this, but instead, I am just mapping details
+around.
+
+The key opportunities is the fact that create_text_record returns an rrset, and the save() operation only
+returns the AWS JSON Body.
+
+It seemlessly handles and enumerates all the records in a site, and it allows easy access, listing, and removal.
+
+Ultimately, there are two mthods, 'write_site', and "write_host".  These make updating the DNS details
+trivial, and it creates the opportunity for further details.  I think that I will extend the classes just
+a little bit - the key that I want is to retain a local records of the unencrypted site data so that i 
+don't endlessly update encrypted messages.
+
+
