@@ -338,6 +338,13 @@ class Sitecfg:
 
         return retval
 
+    def update_aws_credentials(self, access_key: str, secret_key: str):
+        ''' set the AWS credentials '''
+        logger.debug(f'Update AWS Credentials: {access_key} / [{"*"*len(secret_key)}]')
+        self._master_aws_secrets.access_key = access_key
+        self._master_aws_secrets.secret_key = secret_key
+        return True
+
     def unregister_octet(self, host_uuid):
         ''' remove a host from the octet map '''
         logger.debug(f"Clean Octet Map: {self._octet_map[host_uuid]}")

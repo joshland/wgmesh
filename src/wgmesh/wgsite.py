@@ -151,23 +151,23 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     return 0
 
 @app.command()
-def setsite(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
-            domain:          Annotated[str, typer.Option(help='primary domain where the locus TXT record will be published.')] = '',
-            asn:             Annotated[str, typer.Option(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
-            config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+def setsite(locus:  Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
+            domain: Annotated[str, typer.Option(help='primary domain where the locus TXT record will be published.')] = '',
+            asn:         Annotated[str, typer.Option(help="Range of ASN Number (32bit ok) ex. 64512:64550")] = '',
+            config_path: Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
             secret_key_file: Annotated[str, typer.Option(help="secret key filename.")] = '',
-            tunnel_ipv6:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
-            tunnel_ipv4:     Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
-            portbase:        Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
-            aws_zone:        Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
-            aws_access:      Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
-            aws_secret:      Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
-            suggest:         Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
-            asnfix:          Annotated[bool, typer.Option(help='Update ASNs, supply any which are empty.')] = False,
-            force:           Annotated[bool, typer.Option(help='force overwrite')] = False,
-            dryrun:          Annotated[bool, typer.Option(help='do not write anything')] = False,
-            debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
-            trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
+            tunnel_ipv6: Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
+            tunnel_ipv4: Annotated[str, typer.Option(help="/64 ipv6 network block for tunnel routing")] = '',
+            portbase:   Annotated[int, typer.Option(help="Starting Point for inter-system tunnel connections.")] = 0,
+            aws_zone:   Annotated[str, typer.Option(help='AWS Route53 Records Zone.')] = '',
+            aws_access: Annotated[str, typer.Option(envvar='AWS_ACCESS_KEY',help='AWS Access Key')] = '',
+            aws_secret: Annotated[str, typer.Option(envvar='AWS_SECRET_KEY',help='AWS Secret Key')] = '',
+            suggest:    Annotated[bool, typer.Option(help="Auto suggest tunnel networks")] = False,
+            asnfix:     Annotated[bool, typer.Option(help='Update ASNs, supply any which are empty.')] = False,
+            force:      Annotated[bool, typer.Option(help='force overwrite')] = False,
+            dryrun:     Annotated[bool, typer.Option(help='do not write anything')] = False,
+            debug:      Annotated[bool, typer.Option(help='debug logging')] = False,
+            trace:      Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' (re)configure site settings '''
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f'{locus}.yaml')
@@ -177,11 +177,12 @@ def setsite(locus:           Annotated[str, typer.Argument(help='short/familiar 
         pass
     previous = site.save_site_config()
 
-    update = ( 'secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
+    update = ( 'domain', 'secret_key_file','tunnel_ipv6','tunnel_ipv4','portbase',)
 
     for x in update:
         val = locals().get(x)
         if val:
+            logger.trace(f'Update Site Setting: {x} => {val}')
             setattr(site.site, x, val)
             continue
         continue
@@ -190,12 +191,14 @@ def setsite(locus:           Annotated[str, typer.Argument(help='short/familiar 
         ## fixup asn range
         site.site.asn_range = asn
 
-    if aws_zone and aws_access and aws_secret:
+    if (aws_zone or site.site.route53) and aws_access and aws_secret:
         logger.debug("Set AWS Credentials")
-        site.site.route53 = aws_zone
+        if aws_zone:
+            logger.trace(f'AWS Zone Changed: {site.site.route53} => {aws_zone}')
+            site.site.route53 = aws_zone
         site.site.aws_access_key = aws_access
         site.site.aws_secret_access_key = aws_secret
-        logger.trace(f"Zone:{site.site.route53} {site.site.aws_access_key}::{'x'*len(site.site.aws_secret_access_key)}")
+        site.site.update_aws_credentials(aws_access, aws_secret)
         pass
 
     if asnfix:
@@ -342,6 +345,16 @@ def listhost(locus:           Annotated[str, typer.Argument(help='short/familiar
 
     with open(config_file, encoding='utf-8') as cf:
         site = Site(cf)
+        pass
+
+    logger.info('Refreshing Records')
+    if site.site.aws_credentials:
+        logger.debug("Using configured AWS Zone and Credentials")
+        zone_name = site.site.route53
+        access_key = site.site.aws_access_key
+        secret_key = site.site.aws_secret_access_key
+        dns = DNSDataClass.openZone(zone_name, site.site.domain, access_key, secret_key)
+
     if names:
         for x in site.hosts:
             print(f"{x.uuid}{t}{x.hostname}")
@@ -349,10 +362,12 @@ def listhost(locus:           Annotated[str, typer.Argument(help='short/familiar
     else:
         for x in site.hosts:
             print(f'Host: {x.hostname}')
-            print(f'UUID: {x.uuid}')
-            print(f'ASN:{x.asn} Octet:=>[{site.site.portbase+x.octet}] [{x.octet}]')
-            print(f'Address_v4:{x.local_ipv4}')
-            print(f'Address_v6:{x.local_ipv6}')
+            print(f'   UUID: {x.uuid}')
+            print(f'   ASN:{x.asn} Octet:=>[{site.site.portbase+x.octet}] [{x.octet}]')
+            print(f'   Address_v4:{x.local_ipv4}')
+            print(f'   Address_v6:{x.local_ipv6}')
+            if dns.maps.get(str(x.uuid)):
+                print(f'   Route 53 DNS: *PRESENT* {str(x.uuid)}')
             continue
     pass
 
