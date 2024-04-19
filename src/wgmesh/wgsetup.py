@@ -17,7 +17,6 @@ from .endpointdata import Endpoint
 from .datalib import message_encode, message_decode
 from .lib import LoggerConfig, load_endpoint_config, save_endpoint_config, fetch_and_decode_record
 from .version import VERSION
-from .route53 import Route53
 from .crypto import *
 from .hostlib import get_local_addresses_with_interfaces
 

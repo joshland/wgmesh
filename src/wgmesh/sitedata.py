@@ -116,41 +116,19 @@ class Host(object):
 
     def encrypt_message(self, message: str) -> str:
         ''' encrypt a message with the host public key for transmission or posting '''
-        message_box = self.sitecfg.get_message_box(self.public_key)
+        message_box = self.sitecfg.get_site_message_box(self.public_key)
         secure_message = message_box.encrypt( message )
         retval = message_encode(secure_message)
         return retval
 
     def endport(self):
         ''' returns the octet added to the site.portbase '''
-        retval = self.sitecfg.portbase + self.octet
+        retval = self.sitecfg.site.portbase + self.octet
         return retval
 
     def endpoint_addresses(self):
         ''' return a formatted list of endpoint IP addresses '''
         return ','.join([ str(x) for x in self.local_ipv4 + self.local_ipv6 if str(x) > '' ]),
-
-    def publish_peer_deploy(self):
-        ''' publish wgdeploy node details '''
-        retval = munchify ({
-            'locus':     self.site.locus,
-            'site':      self.sitecfg.domain,
-            'portbase':  self.sitecfg.portbase,
-            'octet':     self.octet,
-            'asn':       self.asn,
-            'localport': self.endport(),
-            'remote':    self.endpoint_addresses(),
-            'hosts':     [] })
-
-        for host in self.sitecfg.hosts:
-            retval.hosts.append( {
-                                'key': host.key,
-                                'asn': host.asn,
-                                'localport': host.endport(),
-                                'remoteport': self.endport(),
-                                'remote': host.endpoint_addresses(), })
-
-        return retval
 
     def publish(self):
         ''' export the class data as a dictionary, render objects as lists '''
@@ -461,7 +439,7 @@ class Site:
         host = None
         index = -1
         for index, h in enumerate(self.hosts):
-            if str(h.uuid) == host_uuid:
+            if h.uuid == host_uuid:
                 logger.debug(f'Matched UUID: {host_uuid}=>{h}')
                 host = h
                 break
@@ -474,7 +452,7 @@ class Site:
         logger.debug(f'Remove Host: {index}=>{host.uuid}({host.uuid}')
         logger.trace(f'cleaning: {self.hosts}')
         del self.hosts[index]
-        self.site.unregister_octet(uuid)
+        self.site.unregister_octet(host_uuid)
         return True
 
     def get_site_message_box(self, publickey: PublicKey) -> Box:

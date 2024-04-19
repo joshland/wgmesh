@@ -1,6 +1,6 @@
 import pytest
 import wgmesh
-from wgmesh.lib import sort_and_join_encoded_data, dns_query, decode_domain, encode_domain, split_encoded_data, InvalidHostName
+from wgmesh.lib import sort_and_join_encoded_data, dns_query, decode_domain, encode_domain, InvalidHostName
 from loguru import logger
 
 host_dns_response_encoded = [

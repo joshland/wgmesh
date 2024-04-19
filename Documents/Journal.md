@@ -100,4 +100,14 @@ trivial, and it creates the opportunity for further details.  I think that I wil
 a little bit - the key that I want is to retain a local records of the unencrypted site data so that i 
 don't endlessly update encrypted messages.
 
+## 2024-04-18
+
+Import/Export problems: host import doesn't render the public key, and it's not getting imported
+
+    published host: Munch({'uuid': 'aee8a79f-c608-4fe9-8484-cdef6911366f', 'hostname': 'AtomBattler.ashbyte.com', 'asn': -1, 'octet': 2, 'local_ipv4': ['4.2.2.2/32', '8.8.8.8/32'], 'local_ipv6': ['fd86:ea04:1116::1/128'], 'public_key': '', 'local_networks': '', 'public_key_file': 'dev/example_endpoint_pub', 'private_key_file': 'dev/example_endpoint_priv'})
+
+The endpoint either isn't loading the key, or else isn't exporting it - since we have the message,
+and it should be signed, we should have confidence that this is actually present. 
+
+ - Examine the key, and then re-reun the tests.
 
