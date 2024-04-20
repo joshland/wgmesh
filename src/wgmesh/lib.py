@@ -76,7 +76,7 @@ def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
     retval = Endpoint(**ep_values)
     return retval
 
-def save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
+def old_save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
     ''' load site config from disk
 
         fn: YAML file.

@@ -15,7 +15,7 @@ from munch import munchify, Munch
 
 from .endpointdata import Endpoint
 from .datalib import message_encode, message_decode
-from .lib import LoggerConfig, load_endpoint_config, save_endpoint_config, fetch_and_decode_record
+from .lib import LoggerConfig, filediff, load_endpoint_config, save_endpoint_config, fetch_and_decode_record
 from .version import VERSION
 from .crypto import *
 from .hostlib import get_local_addresses_with_interfaces
@@ -42,6 +42,7 @@ def configure(filenames: dict,
               asn:          int,
               dryrun: bool) -> Endpoint:
     ''' handle configuration '''
+    old_data = ep.save_endpoint_config()
 
     if hostname:
         ep.hostname = hostname
@@ -56,19 +57,15 @@ def configure(filenames: dict,
     if public_addrs:
         ep.asn = asn
 
+    new_data = ep.save_endpoint_config()
+    diffdata = filediff(old_data, new_data, f'{filenames.cfg_file}.old', filenames.cfg_file)
     if dryrun:
-        f = StringIO()
-        save_endpoint_config(ep, f)
-        f.seek(0)
-        print("Dryrun Mode")
-        print("===[snip]==")
-        print(f.read())
-        print("===[snip]==")
+        print(diffdata)
     else:
         logger.info(f'Save file {filenames.cfg_file}')
+        print(diffdata)
         with open(filenames.cfg_file, 'w', encoding='utf-8') as cf:
-            save_endpoint_config(ep, cf)
-
+            cf.write(new_data)
     return ep
 
 @app.command()

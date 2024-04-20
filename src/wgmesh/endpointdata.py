@@ -3,11 +3,15 @@
 
 import socket
 from uuid import UUID
+from io import StringIO
+from typing import List, Union
+from ipaddress import IPv4Address, IPv6Address
 
 from loguru import logger
-from nacl.public import PrivateKey, PublicKey, Box
+from ruamel.yaml import YAML
 from attrs import define, field
-from munch import munchify
+from munch import munchify, unmunchify
+from nacl.public import PrivateKey, PublicKey, Box
 
 from .crypto  import keyexport, load_public_key, load_secret_key
 from .datalib import asdict as wgmesh_asdict, convert_uuid_uuid, emptyValuesTuple
@@ -38,14 +42,13 @@ class Endpoint:
     secret_key_file:        str = field(default='', converter=nonone)
     public_key_file:        str = field(default='', converter=nonone)
     public_iface:           str = field(default='', converter=nonone)
-    public_address:         str = field(default='', converter=nonone)
-    trust_iface:            str = field(default='', converter=nonone)
+    public_address: List[Union[IPv4Address,IPv6Address]] = field(default=[], converter=nonone)
+    trust_iface:    List[Union[IPv4Address,IPv6Address]] = field(default=[], converter=nonone)
     trust_address:          str = field(default='', converter=nonone)
     asn:                    int = field(default=-1)
-
     _site_key:        PublicKey = field(default='')
     _secret_key:     PrivateKey = field(default='')
-    _public_key:      PublicKey = field(default='')
+    public_key:       PublicKey = field(default='')
 
     def get_message_box(self, publickey: PublicKey) -> Box:
         ''' setup an SBox for decryption
@@ -57,7 +60,7 @@ class Endpoint:
 
     def get_public_key(self) -> str:
         ''' get the local endpoint public key '''
-        return keyexport(self._public_key)
+        return keyexport(self.public_key)
 
     def encrypt_message(self, message: str) -> str:
         ''' encrypt a message with the host public key for transmission or posting '''
@@ -76,15 +79,30 @@ class Endpoint:
         ''' try to unpack the keys '''
         logger.trace('no open_keys')
         self._site_key = load_public_key(self.site_pubkey)
+        pubkey = keyexport(self._site_key)
+        if self.public_key != pubkey:
+            logger.warning(f'Updating Invalid PubicKey: {self.public_key} => pubkey')
+            pass
         if self._secret_key in emptyValuesTuple:
             with open(self.secret_key_file, 'r', encoding='utf-8') as keyfile:
                 self._secret_key = load_secret_key(keyfile.read())
-            self._public_key = self._secret_key.public_key
-        elif self.public_key_file not in emptyValuesTuple and self._public_key in emptyValuesTuple:
+            self.public_key = self._secret_key.public_key
+        elif self.public_key_file not in emptyValuesTuple and self.public_key in emptyValuesTuple:
             with open(self.public_key_file, 'r', encoding='utf-8') as keyfile:
-                self._public_key = load_public_key(keyfile.read())
+                self.public_key = load_public_key(keyfile.read())
         else:
             raise ValueError('Key Already Exists')
+
+    def save_endpoint_config(self):
+        ''' return a yaml bundle for storing endpoint config'''
+        yaml = YAML(typ='rt')
+        buffer = StringIO()
+        logger.trace('save site to yaml')
+        output = { 'local': unmunchify(self.export()) }
+        logger.debug(f'{output}')
+        yaml.dump(output, buffer)
+        buffer.seek(0)
+        return buffer.read()
 
     def send_host_message(self):
         ''' export local configuration for transport '''
