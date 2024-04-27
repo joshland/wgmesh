@@ -4,7 +4,7 @@
 import socket
 from uuid import UUID
 from io import StringIO
-from typing import List, Union
+from typing import List, TextIO, Union
 from ipaddress import IPv4Address, IPv6Address
 
 from loguru import logger
@@ -15,7 +15,7 @@ from nacl.public import PrivateKey, PublicKey, Box
 
 from .crypto  import keyexport, load_public_key, load_secret_key
 from .datalib import asdict as wgmesh_asdict, convert_uuid_uuid, emptyValuesTuple
-from .datalib import message_encode
+from .datalib import message_encode, fetch_and_decode_record
 from .transforms import EndpointHostRegistrationMessage
 
 def nonone(arg):
@@ -47,8 +47,27 @@ class Endpoint:
     trust_address:          str = field(default='', converter=nonone)
     asn:                    int = field(default=-1)
     _site_key:        PublicKey = field(default='')
+    public_key_encoded:     str = field(default='')
     _secret_key:     PrivateKey = field(default='')
-    public_key:       PublicKey = field(default='')
+    _public_key:      PublicKey = field(default='')
+
+    @classmethod
+    def load_endpoint_config(cls, source_file: TextIO, validate: bool = True):
+        ''' load config from file '''
+        yaml = YAML(typ='rt')
+        y = yaml.load(source_file)
+        logger.trace(f'Local: {y.get("local")}')
+        ep_values = munchify(y.get('local'))
+        if validate:
+            site_dict = {'locus': ep_values.locus, 'publickey': ep_values.site_pubkey }
+            public_records = fetch_and_decode_record(ep_values.site_domain)
+            if public_records != site_dict:
+                logger.error(f"Locus Mismatch: {y['host']['domain']}")
+                logger.error(f"Config: {y['site']}")
+                logger.error(f"DNS: {public_records}")
+                pass
+        retval = cls(**ep_values)
+        return retval
 
     def get_message_box(self, publickey: PublicKey) -> Box:
         ''' setup an SBox for decryption
@@ -57,10 +76,6 @@ class Endpoint:
         logger.trace(f"create encrypted with box {self.hostname} -> {publickey}")
         retval = Box(self._secret_key, publickey)
         return retval
-
-    def get_public_key(self) -> str:
-        ''' get the local endpoint public key '''
-        return keyexport(self.public_key)
 
     def encrypt_message(self, message: str) -> str:
         ''' encrypt a message with the host public key for transmission or posting '''
@@ -77,21 +92,13 @@ class Endpoint:
 
     def open_keys(self):
         ''' try to unpack the keys '''
-        logger.trace('no open_keys')
+        logger.trace('open_keys begins')
         self._site_key = load_public_key(self.site_pubkey)
-        pubkey = keyexport(self._site_key)
-        if self.public_key != pubkey:
-            logger.warning(f'Updating Invalid PubicKey: {self.public_key} => pubkey')
-            pass
-        if self._secret_key in emptyValuesTuple:
-            with open(self.secret_key_file, 'r', encoding='utf-8') as keyfile:
-                self._secret_key = load_secret_key(keyfile.read())
-            self.public_key = self._secret_key.public_key
-        elif self.public_key_file not in emptyValuesTuple and self.public_key in emptyValuesTuple:
-            with open(self.public_key_file, 'r', encoding='utf-8') as keyfile:
-                self.public_key = load_public_key(keyfile.read())
-        else:
-            raise ValueError('Key Already Exists')
+        with open(self.secret_key_file, 'r', encoding='utf-8') as keyfile:
+            self._secret_key = load_secret_key(keyfile.read())
+        if self.public_key_encoded in emptyValuesTuple:
+            self.public_key_encoded = keyexport(self._secret_key.public_key)
+        assert self.public_key_encoded not in emptyValuesTuple
 
     def save_endpoint_config(self):
         ''' return a yaml bundle for storing endpoint config'''
@@ -111,10 +118,11 @@ class Endpoint:
 
     def publish(self):
         ''' export local configuration for transport '''
+        assert self.public_key_encoded not in emptyValuesTuple
         retval = {
             'hostname': self.hostname,
             'uuid': str(self.uuid),
-            'public_key': self.get_public_key(),
+            'public_key_encoded': self.public_key_encoded,
             'public_key_file': self.public_key_file,
             'private_key_file': self.secret_key_file,
             'asn': self.asn,

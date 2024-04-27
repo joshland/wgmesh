@@ -1,11 +1,12 @@
-from munch import unmunchify
+from munch import munchify, unmunchify
 import pytest
 from uuid import UUID
 from io import StringIO
 
+from wgmesh.crypto import keyexport
 from wgmesh.endpointdata import Endpoint
 from wgmesh.datalib import asdict as wgmesh_asdict
-from wgmesh.lib import LoggerConfig, load_endpoint_config
+from wgmesh.lib import LoggerConfig
 from loguru import logger
 from attrs import asdict
 
@@ -41,7 +42,7 @@ test_data = {
     'trust_iface': 'ens0',
     'trust_address': '10.1.1.1',
     'asn': -1,
-    'public_key': '',
+    'public_key_encoded': '8BanecEAEKcByL4BDslkHNfPXiiljOgfd68g4A/cJlQ=',
 }
 
 ep_yaml_file = """
@@ -59,12 +60,10 @@ local:
   trust_iface: ens0
   trust_address: 10.1.1.1
   asn: -1
-  public_key: ''
+  public_key_encoded: 8BanecEAEKcByL4BDslkHNfPXiiljOgfd68g4A/cJlQ=
 """[1:]
 
-def test_init():
-    LoggerConfig(0, 0)
-    pass
+LoggerConfig(True, True)
 
 def test_endpoint_blank():
     ''' test loading an endpoint with a blank dataset '''
@@ -74,18 +73,28 @@ def test_endpoint_blank():
 def test_endpoint():
     ''' test endpoint with the test dataset '''
     ep = Endpoint(**test_data)
-    for k, v in asdict(ep).items():
-        if k[0] == "_": continue
-        if isinstance(v, UUID):
-            assert str(v) == test_data[k]
-        else:
-            assert v == test_data[k]
-            continue
-        continue
+    logger.trace(ep)
+    compare = munchify(test_data)
+    logger.trace(compare)
+    export_dict = munchify(asdict(ep))
+    logger.trace(export_dict)
+    assert compare.locus == export_dict.locus
+    assert compare.site_domain == export_dict.site_domain
+    assert compare.site_pubkey == export_dict.site_pubkey
+    assert compare.hostname == export_dict.hostname
+    assert compare.uuid == str(export_dict.uuid)
+    assert compare.public_key_encoded == export_dict.public_key_encoded
+    assert compare.cmdfping == export_dict.cmdfping
+    assert compare.secret_key_file == export_dict.secret_key_file
+    assert compare.public_key_file == export_dict.public_key_file
+    assert compare.public_iface == export_dict.public_iface
+    assert compare.public_address == export_dict.public_address
+    assert compare.trust_iface == export_dict.trust_iface
+    assert compare.trust_address == export_dict.trust_address
+    assert compare.asn == export_dict.asn
 
 def test_endpoint_export():
     ''' test exporting the blank data set '''
-    global output, ep
     ep = Endpoint(**test_data)
     output = unmunchify( ep.export() )
     assert output == test_data
@@ -95,7 +104,7 @@ def test_load_endpoint():
     fn = StringIO()
     fn.write(ep_yaml_file)
     fn.seek(0)
-    ep = load_endpoint_config(fn, validate=False)
+    ep = Endpoint.load_endpoint_config(fn, validate=False)
 
 def test_save_endpoint():
     ''' test saving the endpoint, test dataset '''
@@ -103,11 +112,20 @@ def test_save_endpoint():
     output = ep.save_endpoint_config()
     assert output == ep_yaml_file
 
-def test_endpoint_keys():
-    ''' test the key storing and loading behavior '''
+def test_save_endpoint_keys():
+    ''' test saving the endpoint, test dataset '''
     ep = Endpoint(**test_data)
     ep.open_keys()
-    assert ep.public_key != ''
+    output = ep.save_endpoint_config()
+    assert output == ep_yaml_file
+
+def test_endpoint_keys():
+    ''' test the key storing and loading behavior '''
+    global ep
+
+    ep = Endpoint(**test_data)
+    ep.open_keys()
+    assert ep.public_key_encoded != ''
     assert ep._secret_key != ''
 
 def test_endpoint_export_empty():

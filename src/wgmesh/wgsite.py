@@ -11,10 +11,11 @@ from typing_extensions import Annotated
 from loguru import logger
 from munch import munchify
 
-from .lib import create_public_txt_record, domain_report, fetch_and_decode_record
+from .lib import create_public_txt_record, domain_report
 from .lib import site_report, filediff
 from .lib import InvalidHostName, InvalidMessage
 from .lib import LoggerConfig
+from .datalib import fetch_and_decode_record
 
 from .transforms import SiteEncryptedHostRegistration, RemoteHostRecord, DeployMessage
 
@@ -431,6 +432,7 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
         message = host_message
         pass
 
+    logger.warning('Unlock Message')
     logger.debug('transform stage 1, decode')
     logger.trace(f'raw message: {message}')
     encrypted_record = SiteEncryptedHostRegistration.from_base64_json(message)
@@ -441,6 +443,7 @@ def addhost(locus:           Annotated[str, typer.Argument(help='short/familiar 
     host_record = encrypted_record.decrypt(decryption_box)
     logger.trace(f'decrypted host record: {host_record}')
 
+    logger.warning('Import Decrypted Host')
     ## override for old system
     if host_record.get('publickey'):
         logger.info(f'old host message: publickey -> public_key')

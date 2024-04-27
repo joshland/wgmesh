@@ -7,7 +7,6 @@ import json
 from difflib import unified_diff
 from typing import Callable, TextIO, List, Tuple
 
-import dns.resolver
 from loguru import logger
 from ruamel.yaml import YAML
 from natsort import natsorted
@@ -15,11 +14,8 @@ from munch import munchify, unmunchify
 
 from .sitedata import Site, Sitecfg
 from .endpointdata import Endpoint
-from .datalib import message_encode, message_decode
+from .datalib import message_encode, message_decode, dns_query, InvalidHostName
 
-class InvalidHostName(Exception):
-    ''' DNS subsystem returned that a domain name was invalid / nonexistent '''
-    pass
 class InvalidMessage(Exception):
     ''' JSON document errors, or JSON decoding errors '''
     pass
@@ -53,7 +49,7 @@ def filediff(before, after, before_name, after_name):
     return "\n".join([ x for x in diff if x.strip() > '' ])
 
 
-def load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
+def old_load_endpoint_config(source_file: TextIO, validate=True) -> Tuple[Endpoint]:
     ''' load site config from disk
 
         fn: YAML file.
@@ -110,25 +106,6 @@ def sort_and_join_encoded_data(data):
 
     return retval
 
-def dns_query(domain: str) -> str:
-    ''' return the record from the DNS '''
-    try:
-        answer = dns.resolver.resolve(domain,"TXT").response.answer[0]
-    except dns.resolver.NXDOMAIN as exc:
-        logger.error(f"Invalid Hostname {domain} / No TXT Record.")
-        raise InvalidHostName from exc
-
-    response = []
-    for item in answer:
-        logger.trace(f'{item} // {type(item)}')
-        item = str(item).replace(' ', '\n').replace('"', '')
-        response += item.split('\n')
-        continue
-
-    retval = sort_and_join_encoded_data(response)
-    logger.trace(f'Avengers Assembled: {retval}')
-    return retval
-
 def create_public_txt_record(sitepayload: dict) -> List[str]:
     ''' encode and split the public record '''
     encoded_record = encode_domain(sitepayload)
@@ -155,12 +132,6 @@ def decode_domain(dnspayload: str) -> str:
             continue
         continue
     return retval
-
-def fetch_and_decode_record(domain_name: str) -> dict:
-    ''' gather a DNS record, and decode the embedded data '''
-    dns_data = dns_query(domain_name)
-    decoded_data = decode_domain(sort_and_join_encoded_data(dns_data))
-    return decoded_data
 
 def optprint(arg, string):
     ''' optionally print a string if arg has a value '''

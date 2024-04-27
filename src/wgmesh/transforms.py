@@ -96,7 +96,7 @@ class SiteEncryptedHostRegistration:
         logger.trace(f'Decrypted message: {hidden_message}')
         retval = HostRegistration(hidden_message.uuid,
                                   hidden_message.hostname,
-                                  hidden_message.public_key,
+                                  hidden_message.public_key_encoded,
                                   hidden_message.public_key_file,
                                   hidden_message.private_key_file,)
         retval.split_remotes(hidden_message.remote_addr)
@@ -152,7 +152,7 @@ class EndpointHostRegistrationMessage:
 class HostRegistration:
     uuid:             str = field(converter=str)
     hostname:         str = field()
-    public_key:       str = field()
+    public_key_encoded: str = field()
     public_key_file:  str = field()
     private_key_file: str = field()
     local_ipv4:      list = field(default=[])

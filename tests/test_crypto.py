@@ -2,7 +2,10 @@ import pytest
 
 from nacl.public import PrivateKey, PublicKey, Box
 from wgmesh.lib import LoggerConfig
-from wgmesh.crypto import generate_key, keyimport, keyexport, load_public_key, load_secret_key 
+from wgmesh.crypto import generate_key, keyimport, keyexport, load_public_key, load_secret_key
+
+test_key_secret = 'OSm+bnxiopuxZU75TDaCF4mOOlZDBw11KrDDGshol9A='
+test_key_public = '8BanecEAEKcByL4BDslkHNfPXiiljOgfd68g4A/cJlQ='
 
 def test_init():
     LoggerConfig(0, 0)
@@ -22,6 +25,16 @@ def test_keyexport():
 
     assert isinstance(public_export, str)
     assert isinstance(private_export, str)
+
+def test_local_keys():
+    ''' test theprocess of importing and exporting the keys '''
+    sk = load_secret_key(test_key_secret)
+    pk = load_public_key(test_key_public)
+    export_sk = keyexport(sk)
+    export_pk = keyexport(pk)
+    export_sk_pk = keyexport(sk.public_key)
+    assert test_key_secret == export_sk
+    assert test_key_public == export_pk == export_sk_pk
 
 def test_throw_key_padding_exception():
     import binascii

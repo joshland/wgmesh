@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' sited data definition and validator functions '''
 
+from logging import warning
 import os
 import sys
 import uuid
@@ -104,7 +105,7 @@ class Host(object):
         pass
     local_ipv4: List[IPv4Address] = field(default='', converter=convertAddressBlocks)
     local_ipv6: List[IPv6Address] = field(default='', converter=convertAddressBlocks)
-    public_key: Union[PublicKey,str] = field(default='')
+    public_key_encoded: Union[PublicKey,str] = field(default='')
     local_networks:       str = field(default='')
     public_key_file:      str = field(default='')
     private_key_file:     str = field(default='')
@@ -139,7 +140,7 @@ class Host(object):
                   'octet': self.octet,
                   'local_ipv4': [ str(x) for x in self.local_ipv4 ],
                   'local_ipv6': [ str(x) for x in self.local_ipv6 ],
-                  'public_key': keyexport(self.public_key),
+                  'public_key_encoded': self.public_key_encoded,
                   'local_networks': self.local_networks,
                   'public_key_file': self.public_key_file,
                   'private_key_file': self.private_key_file,

@@ -15,7 +15,8 @@ from munch import munchify, Munch
 
 from .endpointdata import Endpoint
 from .datalib import message_encode, message_decode
-from .lib import LoggerConfig, filediff, load_endpoint_config, save_endpoint_config, fetch_and_decode_record
+from .datalib import fetch_and_decode_record
+from .lib import LoggerConfig, filediff
 from .version import VERSION
 from .crypto import *
 from .hostlib import get_local_addresses_with_interfaces
@@ -144,7 +145,7 @@ def config(locus:           Annotated[str, t.Argument(help='Site locus')],
         sys.exit(1)
 
     with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
-        ep = load_endpoint_config(cf)
+        ep = Endpoint.load_endpoint_config(cf)
 
     configure(filenames, ep, hostname,
               trust_iface, trust_addrs, public_iface, public_addrs, asn, dryrun)
@@ -169,19 +170,18 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
 
     filenames = hostfile(locus, domain, config_path)
     with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
-        ep = load_endpoint_config(cf)
+        ep = Endpoint.load_endpoint_config(cf)
         pass
+    ep.open_keys()
 
     clear_payload = ep.publish().toJSON()
     logger.trace(f'Site Registration Package: {clear_payload}')
-
-    ep.open_keys()
     b64_cipher_payload = ep.encrypt_message(clear_payload)
 
     logger.debug(f'Encrypted Package: {len(clear_payload)}/{len(b64_cipher_payload)}')
     logger.trace(f'Payload: {b64_cipher_payload}')
 
-    host_package = munchify({'publickey': ep.get_public_key(), 'message': b64_cipher_payload }).toJSON()
+    host_package = munchify({'publickey': ep.public_key_encoded, 'message': b64_cipher_payload }).toJSON()
     host_message = message_encode(host_package)
 
     if outfile:
@@ -226,7 +226,7 @@ def list(ignore:          Annotated[str,  t.Option(help='Comma-delimited list of
 
     for x in glob(f"{config_path}/*.yaml"):
         try:
-            ep = load_endpoint_config(x)
+            ep = Endpoint.load_endpoint_config(x)
         except:
             print(f"Not an endpoint / invalid endpoint: {x}")
             continue
