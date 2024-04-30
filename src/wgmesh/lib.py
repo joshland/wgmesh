@@ -86,26 +86,6 @@ def old_save_endpoint_config(endpoint: Endpoint, dest_file: TextIO) -> bool:
     yaml.dump(output, dest_file)
     return True
 
-def sort_and_join_encoded_data(data):
-    ''' take incoming encoded text, look for split order markers '''
-    if data[0].find(':') > -1:
-        logger.trace(f'Ordered DNS List Published: {data}')
-        slist = []
-        for r in data:
-            if not r or r.strip() == '':
-                continue
-            k, v = r.split(':')
-            slist.append((k, v))
-            continue
-        sortlist = natsorted(slist)
-        retval = "".join([ x[1] for x in sortlist ])
-    else:
-        logger.trace('Unordered DNS List Published.')
-        retval = "".join(data)
-        pass
-
-    return retval
-
 def create_public_txt_record(sitepayload: dict) -> List[str]:
     ''' encode and split the public record '''
     encoded_record = encode_domain(sitepayload)
@@ -115,22 +95,6 @@ def encode_domain(sitepayload: dict) -> str:
     ''' return the decoded domain package '''
     payload = json.dumps(sitepayload)
     retval = message_encode(payload)
-    return retval
-
-def decode_domain(dnspayload: str) -> str:
-    ''' return the decoded domain package '''
-    text = message_decode(dnspayload)
-    logger.trace(f'Output: {text} // {type(text)}')
-    try:
-        retval = json.loads(text)
-    except json.JSONDecodeError as exc:
-        logger.debug(f'Invalid JSON payload from DNS: {text}')
-        raise InvalidMessage from exc
-    for k, v in retval.items():
-        if isinstance(v, bytes):
-            retval[k] = v.decode()
-            continue
-        continue
     return retval
 
 def optprint(arg, string):

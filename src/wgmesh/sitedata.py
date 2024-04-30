@@ -89,11 +89,11 @@ def convertUUID(arg):
 @define
 class Host(object):
     ''' dataclass for host objects '''
-    uuid:                UUID = field(converter=convertUUID)
-    hostname:             str = field()
-    sitecfg:           object = field()
-    asn:                  int = field(default=-1, converter=int)
-    octet:                int = field(default=-1, converter=int)
+    uuid:             UUID = field(converter=convertUUID)
+    hostname:          str = field()
+    sitecfg:        object = field()
+    asn:               int = field(default=-1, converter=int)
+    octet:             int = field(default=-1, converter=int)
     @octet.validator
     def validateOctet(self, attr, arg):
         ''' register valid octets with the siteobject '''
@@ -105,10 +105,10 @@ class Host(object):
         pass
     local_ipv4: List[IPv4Address] = field(default='', converter=convertAddressBlocks)
     local_ipv6: List[IPv6Address] = field(default='', converter=convertAddressBlocks)
-    public_key_encoded: Union[PublicKey,str] = field(default='')
-    local_networks:       str = field(default='')
-    public_key_file:      str = field(default='')
-    private_key_file:     str = field(default='')
+    public_key_encoded: str = field(default='')
+    local_networks:     str = field(default='')
+    public_key_file:    str = field(default='')
+    private_key_file:   str = field(default='')
 
     def validate(self):
         ''' ensure that asn and octet are set for this node '''
@@ -153,14 +153,11 @@ class Host(object):
         ''' update host from a new record '''
         if self.uuid != host.uuid:
             raise HostMismatch
-
         hostname, hdict = host.publish()
-
         if self.hostname != hostname:
             self.info(f'Hostname Update: {self.hostname} => {hostname}')
             self.hostname = hostname
             pass
-
         for k, v in hdict.items():
             if k == 'asn':
                 continue
@@ -169,7 +166,6 @@ class Host(object):
             logger.trace(f'host update: {k}: {getattr(self, k)} => {v}')
             setattr(self, k, v)
             continue
-
         return True
     pass
 
@@ -331,7 +327,7 @@ class Sitecfg:
 
 class Site:
     ''' site=>*hosts site handler class '''
-    def __init__(self, sourcefile: str =  None, sitecfg_args: dict = {}):
+    def __init__(self, sourcefile: str = None, sitecfg_args: dict = {}):
         if sourcefile and sitecfg_args:
             raise ValueError('Use either sourcefile or sitecfg_args')
         if sourcefile:
@@ -352,7 +348,6 @@ class Site:
         logger.trace('Open Site Keys.')
         self.site.open_keys()
         logger.trace(f'Site Public Key: {self.site.publickey}')
-
         self.hosts = []
         for k, v in y.get('hosts',{}).items():
             logger.trace(f'Load Host: {k}:{v}')
@@ -401,16 +396,13 @@ class Site:
         logger.trace('save site to yaml')
         sitedata = self.site.publish()
         logger.debug(f'{list(sitedata.keys())}')
-
         publish = { 'global': unmunchify(sitedata),
                     'hosts': { h.uuid: unmunchify(h) for h in [ h.publish() for h in self.hosts if h ] },}
-
         logger.trace(f'Serialize Yaml Data: {publish}')
         yaml = YAML(typ='rt')
         buffer = StringIO()
         yaml.dump(publish, buffer)
         buffer.seek(0)
-
         return buffer.read()
 
 
@@ -445,11 +437,9 @@ class Site:
                 host = h
                 break
             continue
-
         if not host or index == -1:
             logger.debug(f'no host found for removal: {host_uuid}')
             raise ValueError('no matching uuid found')
-
         logger.debug(f'Remove Host: {index}=>{host.uuid}({host.uuid}')
         logger.trace(f'cleaning: {self.hosts}')
         del self.hosts[index]

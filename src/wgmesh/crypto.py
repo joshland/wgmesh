@@ -120,3 +120,11 @@ if __name__ == "__main__":
     assert pubkey == public_import == public_import_from_bytes      # validate the library can export/import public keys
     assert testkey == secret_import == secret_import_from_bytes    # validate that the library can export/import public keys
     assert pubkey == secret_import.public_key # validate that all the keys match
+
+    message = "nhvoNFM/DrMKgvRDSb7ii1SP8xbPoDThHzzMA17Vk8FKFedmgnaKI14FFIwuh7R9oRD6BpC3IAvJmV5oULE3/ieK0UOp0EOx5JxwUFQy+DQQUkj8pM1Equ4xXEd3yrjHn63CAx/gYgOf5iA83WZq7pUOAtqY/xVvpJd1juv3cvPByghLd/IKna29tEo4xkBNCc0THorx63xlhp8MNVLbS0mntQqHScT1GQMjrNL48Sc5aOCuMBjLrtAZN9pwajA9TgSqTkwhvOus7uk0RtMvYkZ24Lrqe+UArpEqpwVWMYWgx+WELrUjOaKqM+g8mUqMQV9I07ZScjPbZOtoNkRB8l4JrAWVF1Dc8iu8cgvI1+IBBnPFk/SpDJzxWnsOBp43aUqVDrBp7eyo/AK3/xrtJQeCvSHuMG5/Jma1gB1ZAoU99rJv3r99FN2NNVU020vctPhDCgg+fjXNbWzzb6b6EhTvWL8x0+ZTmCvkhUS8imNYnwxFj+Sjebj3PNnP+EtpGIklwX6NLZeOy1RxRbdryjzblUZnl6UNV29LpiSfBXkN6fg1G43ZQDbHNaZEbUlmWVGN47w+fnP1B4Kx9vDf1is86VC3BHlpvgIHc93mKKcEeng3+YERwO0VSPfILbTIhdfk0eTWNpDduTo0r0M8d/dUbngsH+MIa30HIObB3/mpOltfhtrXIqiONrqJEjnpI6531rcVfCegRNLw+CBwdxDbbeDXdAniHAuJEdWj7M51V7E1oLIMoxw7wEoONBo8ck3fNMDoGlEVAkhs/LA8gT3hekCK+FcjnG8aZVtXL81O7SAk8nL78PBHseh4gRGwcBmtEKv/QUFi9BXvwJfmPo2NyTfugSSgnaBO643F02kjUDWrXIDrEU02TnslxvaaCcFOW2ZxDQ2S0yJCF843//dvU2Ti5yjo6X1eNW3aanNhlfCuhjHAQg+P3SCGOjFYBTsQugGOgh7L3mrOixF4DAYbTRFdULI7AcVFPqQxN26kjHvlUp+geXwHYbWlph113i0EFleyAECmY8TWqrpvNIMhAqyITrF9Udo/rf+N6ztTRVM2l7YROiQ/nzpXcShWo7E67gMRHDcrZZ6dtS/fStA0v3uRc7kqq/DbyuoKsqebxDDOmSKxBfeSx8zN1AVsesgLbU2ZRwvzGy2DUuynqFOiZTwLORw="
+    site_pub = "bVEY8bpWDjKY/K7w1u3i+noShGhRHfFpzPEb1hebBAE="
+    node_key = "/Txyv8HEBIaiTXlVWcNIY2FHDI8rwS5EstGBk9Po8B8=%"
+    spkey = load_public_key(site_pub)
+    nskey = load_secret_key(node_key)
+    retval = decrypt(nskey, spkey, message)
+    print(retval)

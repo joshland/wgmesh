@@ -102,6 +102,7 @@ class DNSDataClass:
 
         chunked_data = self.chunk_data(payload)
         logger.trace(f'Encoded data for storage: {chunked_data}')
+        logger.debug('Lookup for exinsting record: {str(uuid)}')
         record = self.maps.get(uuid, None)
 
         if record:

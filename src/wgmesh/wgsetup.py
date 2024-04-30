@@ -11,10 +11,11 @@ from glob import glob
 import typer as t
 from loguru import logger
 from typing import Annotated
-from munch import munchify, Munch
+from munch import munchify, Munch, unmunchify
+from ruamel.yaml import YAML
 
 from .endpointdata import Endpoint
-from .datalib import message_encode, message_decode
+from .datalib import message_encode, message_decode, dns_query
 from .datalib import fetch_and_decode_record
 from .lib import LoggerConfig, filediff
 from .version import VERSION
@@ -23,12 +24,13 @@ from .hostlib import get_local_addresses_with_interfaces
 
 app = t.Typer()
 
-def hostfile(locus: str, domain: str, config_path:str) ->Munch:
+def hostfile(locus: str, config_path:str) ->Munch:
     ''' common filename configuration '''
     retval = {
-        'cfg_file': os.path.join(config_path, f'{domain}.yaml'),
-        'pubkey':   os.path.join(config_path, f'{locus}_endpoint_pub'),
-        'privkey':  os.path.join(config_path, f'{locus}_endpoint_priv'),
+        'cfg_file': os.path.join(config_path, f'node_{locus}.yaml'),
+        'sync_file': os.path.join(config_path, f'node_{locus}_siterecord.yaml'),
+        'privkey': os.path.join(config_path, f'node_{locus}.key'),
+        'pubkey': os.path.join(config_path, f'node_{locus}.pub'),
     }
 
     return munchify(retval)
@@ -73,16 +75,16 @@ def configure(filenames: dict,
 def init(locus:           Annotated[str, t.Argument(help='Site locus')],
          domain:          Annotated[str, t.Argument(help='Locus domain name')],
          config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
-         hostname:        Annotated[str,   t.Option(help='Explicitly Set Hostname')] = None,
-         trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')] = '',
-         trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
-         public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
-         public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')] = False,
-         asn:             Annotated[int,   t.Option(help='ASN number')] = -1,
-         force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
-         dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
-         debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
-         trace:           Annotated[bool,  t.Option(help='trace logging')] = False):
+         hostname:        Annotated[str, t.Option(help='Explicitly Set Hostname')] = None,
+         trust_iface:     Annotated[str, t.Option(help='Trusted Interface')] = '',
+         trust_addrs:     Annotated[str, t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
+         public_iface:    Annotated[str, t.Option(help='Public Interface')] = '',
+         public_addrs:    Annotated[str, t.Option(help='Public Addresses (delimt w/ comma')] = False,
+         asn:             Annotated[int, t.Option(help='ASN number')] = -1,
+         force:           Annotated[bool, t.Option(help='force overwrite')] = False,
+         dryrun:          Annotated[bool, t.Option(help='do not write anything')] = False,
+         debug:           Annotated[bool, t.Option(help='debug logging')] = False,
+         trace:           Annotated[bool, t.Option(help='trace logging')] = False):
     '''
     initial wgmesh site configuration, key generation and site buildout
 
@@ -90,7 +92,7 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
     '''
     LoggerConfig(debug, trace)
 
-    filenames = hostfile(locus, domain, config_path)
+    filenames = hostfile(locus, config_path)
 
     for x in (filenames.cfg_file, filenames.pubkey, filenames.privkey):
         if os.path.exists(x) and not (force or dryrun):
@@ -119,46 +121,49 @@ def init(locus:           Annotated[str, t.Argument(help='Site locus')],
 
     configure(filenames, ep, hostname,
               trust_iface, trust_addrs, public_iface, public_addrs, asn, dryrun)
+    return 0
 
 @app.command()
 def config(locus:           Annotated[str, t.Argument(help='Site locus')],
-           domain:          Annotated[str, t.Argument(help='Locus domain name')],
            config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
-           hostname:        Annotated[str,   t.Option(help='Explicitly Set Hostname')] = None,
-           trust_iface:     Annotated[str,   t.Option(help='Trusted Interface')] = '',
-           trust_addrs:     Annotated[str,   t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
-           public_iface:    Annotated[str,   t.Option(help='Public Interface')] = '',
-           public_addrs:    Annotated[str,   t.Option(help='Public Addresses (delimt w/ comma')] = '',
-           asn:             Annotated[int,   t.Option(help='ASN number')] = -1,
-           force:           Annotated[bool,  t.Option(help='force overwrite')] = False,
-           dryrun:          Annotated[bool,  t.Option(help='do not write anything')] = False,
-           debug:           Annotated[bool,  t.Option(help='debug logging')] = False,
-           trace:           Annotated[bool,  t.Option(help='trace logging')] = False):
+           domain:          Annotated[str, t.Option(help='Locus domain name')] = None,
+           hostname:        Annotated[str, t.Option(help='Explicitly Set Hostname')] = None,
+           trust_iface:     Annotated[str, t.Option(help='Trusted Interface')] = '',
+           trust_addrs:     Annotated[str, t.Option(help='Trusted Addresses (delimit w/ comma')] = '',
+           public_iface:    Annotated[str, t.Option(help='Public Interface')] = '',
+           public_addrs:    Annotated[str, t.Option(help='Public Addresses (delimt w/ comma')] = '',
+           asn:             Annotated[int, t.Option(help='ASN number')] = -1,
+           force:           Annotated[bool, t.Option(help='force overwrite')] = False,
+           dryrun:          Annotated[bool, t.Option(help='do not write anything')] = False,
+           debug:           Annotated[bool, t.Option(help='debug logging')] = False,
+           trace:           Annotated[bool, t.Option(help='trace logging')] = False):
     ''' site (re)configuration '''
     LoggerConfig(debug, trace)
 
-    filenames = hostfile(locus, domain, config_path)
-
-    locus_info = fetch_and_decode_record(domain)
-    if not locus_info:
-        logger.error(f"Failed to fetch record, aborting")
-        sys.exit(1)
+    filenames = hostfile(locus, config_path)
 
     with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
         ep = Endpoint.load_endpoint_config(cf)
 
+    if domain:
+        if domain != ep.site_domain:
+            logger.error(f'{domain} != {ep.site_domain}')
+            logger.error('Changing the domain name is not supported at this time.')
+            sys.exit(1)
+        pass
+
+    locus_info = fetch_and_decode_record(ep.site_domain)
+    if not locus_info:
+        logger.error(f"Failed to fetch record, aborting")
+        sys.exit(1)
+
     configure(filenames, ep, hostname,
               trust_iface, trust_addrs, public_iface, public_addrs, asn, dryrun)
 
-    # set hostname
-    # public interface
-    # trusted interfac
-    # site key
     return 0
 
 @app.command()
 def publish(locus:           Annotated[str, t.Argument(help='short/familiar name, short hand for this mesh')],
-            domain:          Annotated[str, t.Argument(help='Locus domain name')],
             config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
             outfile:         Annotated[str, t.Option(help='Output file')] = '',
             force:           Annotated[bool, t.Option(help='force overwrite')] = False,
@@ -168,7 +173,7 @@ def publish(locus:           Annotated[str, t.Argument(help='short/familiar name
     ''' publish site registration - must be imported by wgsite master '''
     LoggerConfig(debug, trace)
 
-    filenames = hostfile(locus, domain, config_path)
+    filenames = hostfile(locus, config_path)
     with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
         ep = Endpoint.load_endpoint_config(cf)
         pass
@@ -229,6 +234,7 @@ def list(ignore:          Annotated[str,  t.Option(help='Comma-delimited list of
             ep = Endpoint.load_endpoint_config(x)
         except:
             print(f"Not an endpoint / invalid endpoint: {x}")
+            raise
             continue
         print(f"Found Endpoint: {x} / {ep.locus}")
         continue
@@ -241,10 +247,53 @@ def list(ignore:          Annotated[str,  t.Option(help='Comma-delimited list of
     return 0
 
 @app.command()
+def sync(locus:           Annotated[str, t.Argument(help='short/familiar name, short hand for this mesh')],
+         config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
+         dryrun:          Annotated[bool, t.Option(help='do not write anything')] = False,
+         debug:           Annotated[bool, t.Option(help='debug logging')] = False,
+         trace:           Annotated[bool, t.Option(help='trace logging')] = False):
+    ''' sync core changes from deployment-notices to local machine '''
+    LoggerConfig(debug, trace)
+
+    filenames = hostfile(locus, config_path)
+    with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
+        ep = Endpoint.load_endpoint_config(cf)
+        pass
+    old_config = ep.save_endpoint_config()
+    ep.open_keys()
+
+    target = f'{str(ep.uuid)}.{ep.site_domain}'
+    try:
+        crypt = dns_query(target)
+    except:
+        logger.error(f"DNS Exception: {target}")
+        print()
+        sys.exit(1)
+    sync_payload = munchify({}).fromJSON(ep.decrypt_message(crypt))
+    yaml = YAML(typ='rt')
+    if sync_payload.asn != ep.asn:
+        logger.info(f'Update ASN from Site: {ep.asn} => {sync_payload.asn}')
+        new_config = ep.save_endpoint_config()
+    if dryrun:
+        print('nothing saved')
+        sys.exit(1)
+    with open(filenames.sync_file, 'w') as sync_file:
+       yaml.dump(unmunchify(sync_payload), sync_file)
+    diffdata = filediff(old_config, new_config, f'{filenames.cfg_file}.old', filenames.cfg_file)
+    print('Changeset:')
+    print(diffdata)
+    if sync_payload.asn != ep.asn:
+        logger.info(f'Update ASN from Site: {ep.asn} => {sync_payload.asn}')
+        with open(filenames.cfg_file, 'w', encoding='utf-8') as cf:
+            cf.write(new_config)
+    return 0
+
+@app.command()
 def deploy(*args, **kwargs):
     ''' deploy local wgmesh configuration and scripts '''
     LoggerConfig(debug, trace)
     print(f'{args} / {kwargs}')
+
     return 0
 
 if __name__ == "__main__":

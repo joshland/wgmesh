@@ -19,7 +19,7 @@ from .datalib import fetch_and_decode_record
 
 from .transforms import SiteEncryptedHostRegistration, RemoteHostRecord, DeployMessage
 
-from .crypto import generate_site_key, load_secret_key, keyexport
+from .crypto import generate_site_key, load_public_key, load_secret_key, keyexport
 from .store_dns import DNSDataClass
 from .sitedata import Site
 
@@ -128,6 +128,7 @@ def init(locus:           Annotated[str, typer.Argument(help='short/familiar nam
 @app.command()
 def check(locus:           Annotated[str, typer.Argument(help='short/familiar name, short hand for this mesh')],
           config_path:     Annotated[str, typer.Option(envvar="WGM_CONFIG")] = '/etc/wireguard',
+          verbose:         Annotated[bool, typer.Option(help='Add verbosity')] = False,
           debug:           Annotated[bool, typer.Option(help='debug logging')] = False,
           trace:           Annotated[bool, typer.Option(help='trace logging')] = False):
     ''' check config, publish site report '''
@@ -143,12 +144,50 @@ def check(locus:           Annotated[str, typer.Argument(help='short/familiar na
     site_report(locus, site.publish())
 
     domain_report(site.site)
+    print('')
 
-    # todo: check for Octet and ASN collisions
-    # check for output
-    # generate DNS payload, get public record
-    # save records in [config_path]/dns_records file yaml
-    # print results and changes
+    for me in site.hosts:
+        myport = me.endport()
+        deploy_message = DeployMessage(asn=me.asn,
+                                       site=site.site.domain,
+                                       octet=me.octet,
+                                       portbase=site.site.portbase,
+                                       remote=site.site.tunnel_ipv6)
+        print(f'Deploy Host Check: {me.hostname}/{str(me.uuid)}')
+        if me.asn == -1:
+            print('-! Skipping Host (No ASN)')
+            print('')
+            continue
+        if me.public_key_encoded == '':
+            print('-! Skipping Host (No Public Key)')
+            print('')
+            continue
+        print(f'-> Port: {myport} | ASN: {me.asn} | Public Key: {me.public_key_encoded}')
+        if verbose:
+            print(f'-> DM: {deploy_message}')
+        print(f'-> RHR Checks:')
+        for host in site.hosts:
+            if host.uuid == me.uuid:
+                continue
+            if host.asn == -1:
+                print(f'    -> Skipping Host: {host.hostname} - (no ASN)')
+                continue
+            if host.public_key_encoded == '':
+                print(f'    -> Skipping Host: {host.hostname} - (no PublicKey)')
+                continue
+            host_record = RemoteHostRecord(key=host.public_key_encoded,
+                                           hostname=host.hostname,
+                                           asn=host.asn,
+                                           localport=host.endport(),
+                                           remoteport=myport,
+                                           remote=host.endpoint_addresses())
+            print(f'    -> Host: {host.hostname} | ASN: {host.asn} | UUID: {str(host.uuid)} | {host.public_key_encoded} | RHR Ok.')
+            if verbose:
+                print(f'    -> RHR: {host_record.export()}')
+            continue
+        print(f'-> Site Configuration Package Complete')
+        print('')
+        continue
     return 0
 
 @app.command()
@@ -295,42 +334,47 @@ def publish(locus:           Annotated[str, typer.Argument(help='short/familiar 
     dns.write_site(new_txt_record)
 
     for me in site.hosts:
-        myport = me.endport()
         if me.asn == -1:
-            logger.error(f"{my.hostname}/({str(me.uuid)} is missing a valid ASN, skipping Deployment Publishing")
+            logger.error(f"{me.hostname}/({str(me.uuid)} is missing a valid ASN, skipping Deployment Publishing")
             continue
+        if me.public_key_encoded == '':
+            logger.error(f'{me.hostname}/{str(me.uuid)} is missing a Public Key')
+            continue
+        myport = me.endport()
+        myuuid = str(me.uuid)
+        logger.trace(f'Convert PublicKey: {me.public_key_encoded}')
+        public_key = load_public_key(me.public_key_encoded)
         logger.trace(f'Assemble Deployment for Host: {me.hostname}/({str(me.uuid)})')
         deploy_message = DeployMessage(asn=me.asn,
                                        site=site.site.domain,
                                        octet=me.octet,
                                        portbase=site.site.portbase,
-                                       remote=site.site.tunnel_ipv6)
+                                       remote=str(site.site.tunnel_ipv6))
         for host in site.hosts:
             if host.uuid == me.uuid:
                 continue
             if host.asn == -1:
-                logger.error(f"{me.hostname}/({str(me.uuid)} is missing a valid ASN, skipping this Mesh Inclusion")
+                logger.warning(f"{me.hostname}/({myuuid} is missing a valid ASN, skipping this Mesh Inclusion")
                 continue
-            if not host.public_key:
-                logger.error(f"{me.hostname}/({str(me.uuid)} is missing a public key, skipping this Mesh Inclusion")
+            if not host.public_key_encoded:
+                logger.warning(f"{me.hostname}/({myuuid} is missing a public key, skipping this Mesh Inclusion")
                 continue
-            host_record = RemoteHostRecord(key=host.public_key,
+            host_record = RemoteHostRecord(key=host.public_key_encoded,
                                            hostname=host.hostname,
                                            asn=host.asn,
                                            localport=host.endport(),
                                            remoteport=myport,
                                            remote=host.endpoint_addresses())
             logger.trace(f' - Add Mesh Host: {host.hostname}/({str(host.uuid)})')
-            deploy_message.hosts[str(host.uuid)] = host_record
+            deploy_message.hosts[str(host.uuid)] = host_record.export()
             continue
         ## deploy_message should be a complete mesh deployment record.
         logger.trace('Publish Deployer Record:')
-        message_box = site.get_site_message_box(me.public_key)
+        message_box = site.get_site_message_box(public_key)
         encrypted_deploy_message = deploy_message.publish_encrypted(message_box)
-        dns_rr_name = f'{str(me.uuid)}.{site.site.domain}'
         logger.trace(f'Encrypt and Package: {deploy_message.publish()}')
-        logger.debug(f'Package DNS Record {len(encrypted_deploy_message)}bytes -> {len(dns_record)}lines')
-        dns.write_host(dns_rr_name, encrypted_deploy_message)
+        logger.debug(f'Package DNS Record {len(encrypted_deploy_message)} bytes')
+        dns.write_host(myuuid, encrypted_deploy_message)
     return 0
 
 t = "\t"
@@ -394,8 +438,6 @@ def rmhost(locus:           Annotated[str, typer.Argument(help='short/familiar n
     uuid_uuid = UUID(uuid)
     site.host_delete(uuid_uuid)
     save_data = site.save_site_config()
-
-
     diff = filediff(old_data, save_data, f"{config_file}.old", config_file)
     print(diff)
 

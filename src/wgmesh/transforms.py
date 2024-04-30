@@ -120,6 +120,12 @@ class RemoteHostRecord:
     localport:  int = field()
     remoteport: int = field()
     remote:     str = field()
+    def export(self):
+        ''' export a JSON ready form of this modules '''
+        retval = munchify(asdict(self))
+        logger.trace(retval)
+        retval.remote = [ str(x) for x in retval.remote ]
+        return retval
 
 @define
 class DeployMessage:
@@ -132,10 +138,15 @@ class DeployMessage:
     def publish(self):
         ''' publish a DeployMessage + RemoteHostRecords '''
         retval = munchify(asdict(self))
+        for k, v in retval.hosts.items():
+            logger.trace(f'Value: {v}')
+            continue
+        logger.trace(f'Publish DeployMessage: {retval}')
         return retval
+
     def publish_encrypted(self, box: Box):
         raw_content = self.publish().toJSON()
-        raw_message = box.encrypt(raw_content)
+        raw_message = box.encrypt(raw_content.encode('ascii'))
         text_message = b64encode(raw_message).decode('utf-8')
         return text_message
 

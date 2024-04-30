@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' endpoint data definition and validators '''
 
+from base64 import b64decode
 import socket
 from uuid import UUID
 from io import StringIO
@@ -56,7 +57,7 @@ class Endpoint:
         ''' load config from file '''
         yaml = YAML(typ='rt')
         y = yaml.load(source_file)
-        logger.trace(f'Local: {y.get("local")}')
+        logger.trace(f'Local: {y}')
         ep_values = munchify(y.get('local'))
         if validate:
             site_dict = {'locus': ep_values.locus, 'publickey': ep_values.site_pubkey }
@@ -69,13 +70,14 @@ class Endpoint:
         retval = cls(**ep_values)
         return retval
 
-    def get_message_box(self, publickey: PublicKey) -> Box:
-        ''' setup an SBox for decryption
-        publickey: public key from the host who encrypted the message
-        '''
-        logger.trace(f"create encrypted with box {self.hostname} -> {publickey}")
-        retval = Box(self._secret_key, publickey)
-        return retval
+    def decrypt_message(self, message: str):
+        ''' decrypt a message, return JSON payload '''
+        logger.trace(f"Decrypt Message: {message}")
+        logger.trace(f'From Site Key: {keyexport(self._site_key)} / {keyexport(self._secret_key)}')
+        raw_message = b64decode(message.encode('ascii'))
+        box = Box(self._secret_key, self._site_key)
+        payload = box.decrypt(raw_message)
+        return payload
 
     def encrypt_message(self, message: str) -> str:
         ''' encrypt a message with the host public key for transmission or posting '''
@@ -90,6 +92,14 @@ class Endpoint:
         retval.uuid = str(retval.uuid)
         return retval
 
+    def get_message_box(self, publickey: PublicKey) -> Box:
+        ''' setup an SBox for decryption
+        publickey: public key from the host who encrypted the message
+        '''
+        logger.trace(f"create encrypted with box {self.hostname} -> {publickey}")
+        retval = Box(self._secret_key, publickey)
+        return retval
+
     def open_keys(self):
         ''' try to unpack the keys '''
         logger.trace('open_keys begins')
@@ -99,6 +109,19 @@ class Endpoint:
         if self.public_key_encoded in emptyValuesTuple:
             self.public_key_encoded = keyexport(self._secret_key.public_key)
         assert self.public_key_encoded not in emptyValuesTuple
+
+    def publish(self):
+        ''' export local configuration for transport '''
+        assert self.public_key_encoded not in emptyValuesTuple
+        retval = {
+            'hostname': self.hostname,
+            'uuid': str(self.uuid),
+            'public_key_encoded': self.public_key_encoded,
+            'public_key_file': self.public_key_file,
+            'private_key_file': self.secret_key_file,
+            'asn': self.asn,
+            'remote_addr': ",".join(self.public_address) }
+        return munchify(retval)
 
     def save_endpoint_config(self):
         ''' return a yaml bundle for storing endpoint config'''
@@ -115,16 +138,3 @@ class Endpoint:
         ''' export local configuration for transport '''
         retval = EndpointHostRegistrationMessage(**self.publish())
         return retval
-
-    def publish(self):
-        ''' export local configuration for transport '''
-        assert self.public_key_encoded not in emptyValuesTuple
-        retval = {
-            'hostname': self.hostname,
-            'uuid': str(self.uuid),
-            'public_key_encoded': self.public_key_encoded,
-            'public_key_file': self.public_key_file,
-            'private_key_file': self.secret_key_file,
-            'asn': self.asn,
-            'remote_addr': ",".join(self.public_address) }
-        return munchify(retval)

@@ -6,7 +6,7 @@ from ipaddress import IPv4Address, IPv6Address
 from wgmesh.crypto import load_public_key
 from wgmesh.sitedata import Site, Host, expandRange, collapse_asn_list
 from wgmesh.lib import LoggerConfig
-from wgmesh.transforms import SitePublicRecord
+from wgmesh.transforms import DeployMessage, RemoteHostRecord, SitePublicRecord
 
 blank_data = {
     'global': {
@@ -60,7 +60,7 @@ host_data_blank = {
     'octet': '-1',
     'local_ipv4': '',
     'local_ipv6': [],
-    'public_key': '',
+    'public_key_encoded': '',
     'local_networks': '',
     'public_key_file': '',
     'private_key_file': '',
@@ -73,7 +73,7 @@ host_data_test = {
     'octet': -1,
     'local_ipv4': [],
     'local_ipv6': [],
-    'public_key': '',
+    'public_key_encoded': '',
     'local_networks': '',
     'public_key_file': '',
     'private_key_file': '',
@@ -107,7 +107,7 @@ hosts:
     - 8.8.8.8/32
     - fd86:ea04:1116::1/128
     local_ipv6: []
-    public_key: ''
+    public_key_encoded: ''
     local_networks: ''
     public_key_file: dev/example_endpoint_pub
     private_key_file: dev/example_endpoint_priv
@@ -117,7 +117,7 @@ host_add_test_data0 = {
         'uuid': '36d6d7fc-9157-4ab8-8d0b-cb1298b8aaec',
         'hostname': 'wgtest01.ashbyte.com',
         'asn': -1,
-        'public_key': '',
+        'public_key_encoded': 'dCGZAV7k5vYSpo9WNHKRQM7DIwhOymdKZtuxslzKE0s=',
         'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_pub',
         'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest01/example_endpoint_priv',
         'local_ipv4': [IPv4Address('192.0.2.1')],
@@ -128,18 +128,29 @@ host_add_test_data1 = {
         'uuid': '7ff9fb7c-53d7-4e64-b298-1bc89998c1c9',
         'hostname': 'wgtest02.ashbyte.com',
         'asn': -1,
-        'public_key': '',
+        'public_key_encoded': 'H3P59GsFmDZ+lvlBgCAbResleKHMj4MNmdLUzukEEFY=',
         'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
         'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
         'local_ipv4': [IPv4Address('192.0.3.1')],
         'local_ipv6': [IPv6Address('fd86:ea04:1116:2::1')],
 }
 
+host_add_test_data2 = {
+        'uuid': '6b02339e-67b0-4069-afa4-7b959a706751:',
+        'hostname': 'wgtest03.ashbyte.com',
+        'asn': -1,
+        'public_key_encoded': 'xI+CpEervsDNGanP04OIuhcjIVGaSAUIPbtcDjjAuXk=',
+        'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
+        'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
+        'local_ipv4': [IPv4Address('203.0.113.3')],
+        'local_ipv6': [IPv6Address('fd86:ea04:1116:3::3')],
+}
+
 host_add_test_invalid_uuid = {
         'uuid': '7ff9fb7c-53d7-4e64-b298-1bc89998c1c',
         'hostname': 'wgtest02.ashbyte.com',
         'asn': -1,
-        'public_key': '',
+        'public_key_encoded': 'xI+CpEervsDNGanP04OIuhcjIVGaSAUIPbtcDjjAuXk=',
         'public_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_pub',
         'private_key_file': '/home/joshua/_git/wgmesh/tests/wgtest02/example_endpoint_priv',
         'local_ipv4': [IPv4Address('192.0.3.1')],
@@ -259,6 +270,31 @@ def test_site_add_host_asn_fix_01():
     s.check_asn_sanity()
     assert s.hosts[0].asn == 64512
     assert s.hosts[1].asn == 64513
+
+def test_host_dns_integration_data():
+    ''' test the deploy record/site-record integreation/export test '''
+    data0 = munchify(host_add_test_data0)
+    data1 = munchify(host_add_test_data1)
+    data2 = munchify(host_add_test_data2)
+    base = DeployMessage(asn = data0.asn,
+                         site = 'wgtest01',
+                         octet = 1,
+                         portbase = 7001,
+                         remote = f'{str(data0.local_ipv4[0])},{str(data0.local_ipv6[0])}')
+    base.hosts[str(data1.uuid)] = RemoteHostRecord(key = data1.public_key_encoded,
+                                                   hostname = data1.hostname,
+                                                   asn = data1.asn,
+                                                   localport = 7002,
+                                                   remoteport = 7000,
+                                                   remote = f'{str(data1.local_ipv4[0])},{str(data1.local_ipv6[0])}')
+    base.hosts[str(data2.uuid)] = RemoteHostRecord(key = data2.public_key_encoded,
+                                                   hostname = data1.hostname,
+                                                   asn = data2.asn,
+                                                   localport = 7002,
+                                                   remoteport = 7000,
+                                                   remote = f'{str(data2.local_ipv4[0])},{str(data2.local_ipv6[0])}')
+    base.publish().toJSON()
+    pass
 
 #def test_endpoint_export():
 #    ep = Endpoint(**test_data)
