@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 ''' command data functions '''
+import sys
 import json
 import base64
 import dns.resolver
@@ -38,6 +39,34 @@ def asdict(inst: Any,
         for attribute_name, value in attrs.asdict(inst, *args, **kwargs).items()
         if attribute_name[0] != '_'
     })
+
+def check_update_file(buffer, path):
+    ''' compare existing contents to calculated buffers, write if different '''
+    try:
+        with open(path, 'r') as cf:
+            current = cf.read()
+        if current == buffer:
+            logger.debug(f'skip file {path}, no update needed.')
+            update = False
+        else:
+            update = True
+    except FileNotFoundError:
+        logger.trace(f'Unable to load file {path}')
+        update = True
+
+    try:
+        if update:
+            logger.debug(f'Write file: {path}')
+            with open(path,'w') as ifacefile:
+                ifacefile.write(buffer)
+                pass
+            pass
+    except FileNotFoundError:
+        logger.error(f'Unknown problem (re)creatign {path}')
+        sys.exit(1)
+    except PermissionError:
+        logger.error(f'Permission Denied Writing: {path}')
+        sys.exit(1)
 
 def collapse_asn_list(arg):
     ''' collapse the asn list into a minimalist range list '''

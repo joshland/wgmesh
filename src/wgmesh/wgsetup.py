@@ -305,7 +305,7 @@ def deployfile(locus: str, deploy_path:str) ->Munch:
 @app.command()
 def deploy(locus:           Annotated[str, t.Argument(help='short/familiar name, short hand for this mesh')],
            config_path:     Annotated[str, t.Argument(envvar="WGM_CONFIG")] = '/etc/wireguard',
-           deploy_path:     Annotated[str, t.Option(help='base for install') = '/',
+           deploy_path:     Annotated[str, t.Option(help='base for install')] = '/',
            dryrun:          Annotated[bool, t.Option(help='do not write anything')] = False,
            debug:           Annotated[bool, t.Option(help='debug logging')] = False,
            trace:           Annotated[bool, t.Option(help='trace logging')] = False):
