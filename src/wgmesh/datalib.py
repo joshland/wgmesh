@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 ''' command data functions '''
+import os
 import sys
 import json
 import base64
@@ -42,6 +43,9 @@ def asdict(inst: Any,
 
 def check_update_file(buffer, path):
     ''' compare existing contents to calculated buffers, write if different '''
+    dirname = os.path.abspath(os.path.dirname(path))
+    logger.trace(f'Make Directories: {dirname}')
+    os.makedirs(dirname)
     try:
         with open(path, 'r') as cf:
             current = cf.read()
@@ -53,7 +57,6 @@ def check_update_file(buffer, path):
     except FileNotFoundError:
         logger.trace(f'Unable to load file {path}')
         update = True
-
     try:
         if update:
             logger.debug(f'Write file: {path}')

@@ -8,6 +8,7 @@ import sys
 from io import StringIO
 from glob import glob
 
+import netaddr
 import typer as t
 from loguru import logger
 from typing import Annotated
@@ -311,6 +312,7 @@ def deploy(locus:           Annotated[str, t.Argument(help='short/familiar name,
            trace:           Annotated[bool, t.Option(help='trace logging')] = False):
     ''' deploy local wgmesh configuration and scripts '''
     LoggerConfig(debug, trace)
+    yaml = YAML(typ='rt')
 
     filenames = hostfile(locus, config_path)
     with open(filenames.cfg_file, 'r', encoding='utf-8') as cf:
@@ -319,7 +321,7 @@ def deploy(locus:           Annotated[str, t.Argument(help='short/familiar name,
     ep.open_keys()
 
     with open(filenames.sync_file, 'r') as sync_file:
-        sync_file = munchify(yaml.load(sync_payload, sync_file))
+        sync_file = munchify(yaml.load(sync_file))
 
     portbase = sync_file.portbase
     site = sync_file.site

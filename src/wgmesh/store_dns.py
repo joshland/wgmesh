@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 ''' handle dns/route53 storage operations '''
 
-
 from textwrap import wrap
 
 import route53
