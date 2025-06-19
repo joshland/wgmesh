@@ -78,3 +78,5 @@ s2cfg
 wgmesh-1
 aws_creds*
 
+# Storing Command history
+history/
