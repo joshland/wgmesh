@@ -175,6 +175,9 @@ def set_config(
     test_mode: Annotated[
         str, t.Option(help="Test mode: read DNS records from local folder")
     ] = "",
+    no_validate: Annotated[
+        bool, t.Option(help="Skip DNS validation (for initial setup)")
+    ] = False,
     force: Annotated[bool, t.Option(help="force overwrite")] = False,
     dryrun: Annotated[bool, t.Option(help="do not write anything")] = False,
     debug: Annotated[bool, t.Option(help="debug logging")] = False,
@@ -186,7 +189,9 @@ def set_config(
     filenames = hostfile(locus, config_path)
 
     with open(filenames.cfg_file, "r", encoding="utf-8") as cf:
-        ep = Endpoint.load_endpoint_config(cf, test_mode=test_mode)
+        ep = Endpoint.load_endpoint_config(
+            cf, validate=not no_validate, test_mode=test_mode
+        )
 
     if domain:
         if domain != ep.site_domain:
@@ -195,10 +200,11 @@ def set_config(
             sys.exit(1)
         pass
 
-    locus_info = fetch_and_decode_record(ep.site_domain, test_mode)
-    if not locus_info:
-        logger.error(f"Failed to fetch record, aborting")
-        sys.exit(1)
+    if not no_validate:
+        locus_info = fetch_and_decode_record(ep.site_domain, test_mode)
+        if not locus_info:
+            logger.error(f"Failed to fetch record, aborting")
+            sys.exit(1)
 
     configure(
         filenames,
