@@ -198,7 +198,7 @@ class Sitecfg:
     tunnel_ipv6: IPv6Network = field(default="", converter=convertNetworkAddress)
     portbase: int = field(default=58822, converter=int)
     asn_range: str = field(default="", converter=convertAsnRange)
-    asn_used: list = field(default="")
+    asn_used: list = field(factory=list)
     privatekey: str = field(default="", converter=nonone)
     publickey: str = field(default="")
     route53: str = field(default="", converter=nonone)
@@ -399,13 +399,14 @@ class Site:
             continue
 
     def check_asn_sanity(self):
-        """check and return asns to site"""
+        """check and track asns - reports only, does not auto-assign"""
         found = []
         needs_update = []
         for x in self.hosts:
             logger.trace(f"ASN sanity check: {x.hostname}->{x.asn}")
             if x.asn in ["", None, -1]:
                 needs_update.append(x)
+                logger.warning(f"Host {x.hostname} has no ASN assigned")
             else:
                 found.append(x.asn)
             continue
@@ -419,16 +420,8 @@ class Site:
         logger.trace(f"Used ASNs: {used_range}")
         open_range = list(complete_range - used_range)
         logger.debug(f"Open ASN Set: {open_range}")
-        if len(needs_update) > len(open_range):
-            logger.warning("Exhausted ASN Range")
-        for x in needs_update:
-            if len(complete_range) == 0:
-                logger.warning("Insufficient ASN range. Aborting.")
-                break
-            x.asn = complete_range.pop()
-            self.site.asn_used.append(x.asn)
-            logger.trace(f"Updated ASN: {x.hostname}({str(x.uuid)})=>{x.asn}")
-            continue
+        if len(needs_update) > 0:
+            logger.warning(f"{len(needs_update)} host(s) need ASN assignment")
         pass
 
     def save_site_config(self):
@@ -471,6 +464,17 @@ class Site:
     def host_add(self, host_args):
         """create/register a host"""
         host = Host(sitecfg=self, **host_args)
+        # Auto-assign ASN if not set
+        if host.asn == -1:
+            complete_range = set(self.site.asn_range)
+            used_range = set(self.site.asn_used)
+            open_range = list(complete_range - used_range)
+            if len(open_range) > 0:
+                host.asn = open_range[0]
+                self.site.asn_used.append(host.asn)
+                logger.debug(f"Auto-assigned ASN {host.asn} to {host.hostname}")
+            else:
+                logger.warning(f"No available ASN for host {host.hostname}")
         self.hosts.append(host)
         return host
 
