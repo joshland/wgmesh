@@ -68,8 +68,8 @@ class Endpoint:
             site_dict = {"locus": ep_values.locus, "publickey": ep_values.site_pubkey}
             public_records = fetch_and_decode_record(ep_values.site_domain, test_mode)
             if public_records != site_dict:
-                logger.error(f"Locus Mismatch: {y['host']['domain']}")
-                logger.error(f"Config: {y['site']}")
+                logger.error(f"Locus Mismatch: {ep_values.site_domain}")
+                logger.error(f"Config: {site_dict}")
                 logger.error(f"DNS: {public_records}")
                 pass
         retval = cls(**ep_values)
