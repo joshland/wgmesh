@@ -807,5 +807,59 @@ def add(
     return 0
 
 
+@app.command()
+def dnstest(
+    locus: Annotated[
+        str, typer.Argument(help="short/familiar name, short hand for this mesh")
+    ],
+    name: Annotated[
+        str,
+        typer.Option(help="Record name prefix (e.g., 'test' becomes test.domain.com)"),
+    ] = "test",
+    content: Annotated[str, typer.Option(help="TXT record content")] = "TEST TEXT",
+    config_path: Annotated[str, typer.Option(envvar="WGM_CONFIG")] = "/etc/wireguard",
+    ttl: Annotated[int, typer.Option(help="DNS record TTL in seconds")] = 300,
+    debug: Annotated[bool, typer.Option(help="debug logging")] = False,
+    trace: Annotated[bool, typer.Option(help="trace logging")] = False,
+):
+    """Create a test DNS TXT record (e.g., test.feb17.wgmesh.ashbyte.com)"""
+    LoggerConfig(debug, trace)
+    config_file = os.path.join(config_path, f"{locus}.yaml")
+
+    with open(config_file, encoding="utf-8") as cf:
+        site = Site(cf)
+
+    zone_name = site.site.route53
+    access_key = site.site.aws_access_key
+    secret_key = site.site.aws_secret_access_key
+    domain = site.site.domain
+
+    logger.info(f"Creating test DNS record: {name}.{domain}")
+    logger.debug(f"Using AWS Zone: {zone_name}")
+
+    try:
+        dns = DNSDataClass.openZone(zone_name, domain, access_key, secret_key)
+    except Exception as e:
+        logger.error(f"Failed to connect to Route53: {e}")
+        sys.exit(1)
+
+    record_name = f"{name}.{domain}"
+    chunked_data = [f'"{content}"']
+
+    try:
+        logger.trace(f"Create new record: {record_name} / {len('content')}")
+        rrset, body = dns._zone.create_txt_record(record_name, chunked_data, ttl=ttl)
+        logger.info(f"Successfully created TXT record: {record_name}")
+        logger.debug(f"Route53 response: {body}")
+        print(f"Created TXT record: {record_name}")
+        print(f"Content: {content}")
+        print(f"TTL: {ttl}")
+    except Exception as e:
+        logger.error(f"Failed to create DNS record '{record_name}': {e}")
+        sys.exit(1)
+
+    return 0
+
+
 if __name__ == "__main__":
     app()
