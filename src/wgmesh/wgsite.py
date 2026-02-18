@@ -150,7 +150,35 @@ def init(
 
 @app.command()
 def wizard(
+    locus: Annotated[
+        str, typer.Option(help="short/familiar name, short hand for this mesh")
+    ] = "",
+    domain: Annotated[
+        str,
+        typer.Option(
+            help="primary domain where the locus TXT record will be published."
+        ),
+    ] = "",
+    asn: Annotated[
+        str, typer.Option(help="Range of ASN Number (32bit ok) ex. 64512:64550")
+    ] = "",
     config_path: Annotated[str, typer.Option(envvar="WGM_CONFIG")] = "/etc/wireguard",
+    tunnel_ipv6: Annotated[
+        str, typer.Option(help="/64 ipv6 network block for tunnel routing")
+    ] = "",
+    tunnel_ipv4: Annotated[
+        str, typer.Option(help="ipv4 network block for tunnel routing")
+    ] = "",
+    portbase: Annotated[
+        int, typer.Option(help="Starting Point for inter-system tunnel connections.")
+    ] = 0,
+    aws_zone: Annotated[str, typer.Option(help="AWS Route53 Records Zone.")] = "",
+    aws_access: Annotated[
+        str, typer.Option(envvar="AWS_ACCESS_KEY", help="AWS Access Key")
+    ] = "",
+    aws_secret: Annotated[
+        str, typer.Option(envvar="AWS_SECRET_KEY", help="AWS Secret Key")
+    ] = "",
     force: Annotated[bool, typer.Option(help="force overwrite")] = False,
     dryrun: Annotated[bool, typer.Option(help="do not write anything")] = False,
     debug: Annotated[bool, typer.Option(help="debug logging")] = False,
@@ -162,28 +190,57 @@ def wizard(
     print("=== wgmesh Site Configuration Wizard ===")
     print("")
 
-    # Get required inputs
-    locus = typer.prompt("Site locus (short name for this mesh)")
-    domain = typer.prompt("Primary domain for TXT records")
-    asn = typer.prompt("ASN Range (e.g., 64512:64550)")
+    if locus:
+        print(f"Site locus: {locus}")
+    else:
+        locus = typer.prompt("Site locus (short name for this mesh)")
 
-    # Optional inputs with defaults
-    tunnel_ipv6 = typer.prompt(
-        "IPv6 tunnel network (/64)", default="fd86:ea04:1116::/64"
-    )
-    tunnel_ipv4 = typer.prompt("IPv4 tunnel network", default="192.0.2.0/24")
-    portbase = typer.prompt("Port base for tunnels", default="9000", type=int)
+    if domain:
+        print(f"Primary domain: {domain}")
+    else:
+        domain = typer.prompt("Primary domain for TXT records")
 
-    # AWS credentials
-    use_aws = typer.confirm("Configure AWS Route53?", default=True)
-    aws_zone = ""
-    aws_access = ""
-    aws_secret = ""
+    if asn:
+        print(f"ASN Range: {asn}")
+    else:
+        asn = typer.prompt("ASN Range (e.g., 64512:64550)", default="64512:64550")
+
+    if tunnel_ipv6:
+        print(f"IPv6 tunnel network: {tunnel_ipv6}")
+    else:
+        tunnel_ipv6 = typer.prompt(
+            "IPv6 tunnel network (/64)", default="fd86:ea04:1116::/64"
+        )
+
+    if tunnel_ipv4:
+        print(f"IPv4 tunnel network: {tunnel_ipv4}")
+    else:
+        tunnel_ipv4 = typer.prompt("IPv4 tunnel network", default="192.0.2.0/24")
+
+    if portbase:
+        print(f"Port base: {portbase}")
+    else:
+        portbase = typer.prompt("Port base for tunnels", default=9000, type=int)
+
+    if aws_zone:
+        print(f"AWS Route53 Zone: {aws_zone}")
+        use_aws = True
+    elif aws_access or aws_secret:
+        use_aws = True
+    else:
+        use_aws = typer.confirm("Configure AWS Route53?", default=True)
 
     if use_aws:
-        aws_zone = typer.prompt("Route53 Zone ID")
-        aws_access = typer.prompt("AWS Access Key")
-        aws_secret = typer.prompt("AWS Secret Key", hide_input=True)
+        if not aws_zone:
+            aws_zone = typer.prompt("Route53 Zone ID")
+        if not aws_access:
+            aws_access = typer.prompt("AWS Access Key")
+        if not aws_secret:
+            aws_secret = typer.prompt("AWS Secret Key", hide_input=True)
+    else:
+        aws_zone = ""
+        aws_access = ""
+        aws_secret = ""
 
     config_file = os.path.join(config_path, f"{locus}.yaml")
 
@@ -773,6 +830,8 @@ def add(
         message = host_message
         pass
 
+    message = "".join([ x for x in message.split('\n') if x.strip()[0] != '#'])
+
     logger.warning("Unlock Message")
     logger.debug("transform stage 1, decode")
     logger.trace(f"raw message: {message}")
@@ -836,6 +895,9 @@ def dnstest(
     trace: Annotated[bool, typer.Option(help="trace logging")] = False,
 ):
     """Create a test DNS TXT record (e.g., test.feb17.wgmesh.ashbyte.com)"""
+    import time
+    import dns.resolver
+
     LoggerConfig(debug, trace)
     config_file = os.path.join(config_path, f"{locus}.yaml")
 
@@ -847,28 +909,77 @@ def dnstest(
     secret_key = site.site.aws_secret_access_key
     domain = site.site.domain
 
-    logger.info(f"Creating test DNS record: {name}.{domain}")
+    logger.info(f"Testing DNS record: {name}.{domain}")
     logger.debug(f"Using AWS Zone: {zone_name}")
 
     try:
-        dns = DNSDataClass.openZone(zone_name, domain, access_key, secret_key)
+        dns_store = DNSDataClass.openZone(zone_name, domain, access_key, secret_key)
     except Exception as e:
         logger.error(f"Failed to connect to Route53: {e}")
         sys.exit(1)
 
     record_name = f"{name}.{domain}"
+    record_name_fqdn = f"{record_name}."
     chunked_data = [f'"{content}"']
 
+    existing_record = None
+    for rrset in dns_store.records:
+        if rrset.name == record_name_fqdn:
+            existing_record = rrset
+            break
+
     try:
-        logger.trace(f"Create new record: {record_name} / {len('content')}")
-        rrset, body = dns._zone.create_txt_record(record_name, chunked_data, ttl=ttl)
-        logger.info(f"Successfully created TXT record: {record_name}")
-        logger.debug(f"Route53 response: {body}")
-        print(f"Created TXT record: {record_name}")
-        print(f"Content: {content}")
-        print(f"TTL: {ttl}")
+        if existing_record:
+            logger.info(f"Record exists, updating: {record_name}")
+            print(f"Updating existing TXT record: {record_name}")
+            existing_record.records = chunked_data
+            existing_record.ttl = ttl
+            body = existing_record.save()
+            logger.debug(f"Route53 response: {body}")
+        else:
+            logger.info(f"Creating new record: {record_name}")
+            print(f"Creating new TXT record: {record_name}")
+            rrset, body = dns_store._zone.create_txt_record(
+                record_name, chunked_data, ttl=ttl
+            )
+            logger.debug(f"Route53 response: {body}")
     except Exception as e:
-        logger.error(f"Failed to create DNS record '{record_name}': {e}")
+        logger.error(f"Failed to create/update DNS record '{record_name}': {e}")
+        sys.exit(1)
+
+    print(f"Content: {content}")
+    print(f"TTL: {ttl}")
+    print("")
+    print("Waiting 30 seconds for DNS propagation...")
+    time.sleep(30)
+
+    print("")
+    print("Verifying DNS record...")
+    try:
+        answer = dns.resolver.resolve(record_name, "TXT")
+        retrieved = "".join([r.strings[0].decode("utf-8") for r in answer])
+        print(f"Retrieved content: {retrieved}")
+        if retrieved == content:
+            print("Verification: PASSED")
+        else:
+            print(f"Verification: FAILED (expected '{content}')")
+    except Exception as e:
+        print(f"Verification: FAILED ({e})")
+
+    print("")
+    print("Cleaning up - deleting test record...")
+    try:
+        if existing_record:
+            body = existing_record.delete()
+        else:
+            for rrset in dns_store._zone.record_sets:
+                if rrset.name == record_name_fqdn and rrset.rrset_type == "TXT":
+                    body = rrset.delete()
+                    break
+        print(f"Deleted TXT record: {record_name}")
+        logger.debug(f"Route53 response: {body}")
+    except Exception as e:
+        logger.error(f"Failed to delete DNS record '{record_name}': {e}")
         sys.exit(1)
 
     return 0

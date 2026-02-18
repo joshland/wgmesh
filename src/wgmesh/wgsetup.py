@@ -111,6 +111,14 @@ def init(
     """
     LoggerConfig(debug, trace)
 
+    for k, v in locals().items():
+        logger.trace(f"{k} => {v}")
+        continue
+
+    if not os.path.exists(config_path) and not dryrun:
+        logger.info(f"Creating config directory: {config_path}")
+        os.makedirs(config_path, exist_ok=True)
+
     filenames = hostfile(locus, config_path)
 
     for x in (filenames.cfg_file, filenames.pubkey, filenames.privkey):
@@ -261,7 +269,7 @@ def publish(
         with open(outfile, "w", encoding="utf-8") as mf:
             mf.write(host_message)
     else:
-        print('Transmit the following b64 string, and use "wgsite host"')
+        print('# Transmit the following b64 string, and use "wgsite host"')
         print(host_message)
         pass
 
@@ -435,17 +443,18 @@ def deploy(
         index = values.localport - sync_file.portbase
         remotes = ""
         if len(values.remote):
-            remotes = ",".join(
-                [f"{str(x)}:{values.remoteport}" for x in values.remote.split(",")]
+            remote_list = (
+                values.remote
+                if isinstance(values.remote, list)
+                else values.remote.split(",")
             )
+            remotes = ",".join([f"{str(x)}:{values.remoteport}" for x in remote_list])
             portpoints = [sync_file.octet]
             portpoints.append(index)
             netbits = "".join(
                 ["{:02X}".format(a) for a in sorted(portpoints, reverse=True)]
             )
-            local_endpoint_addr = (
-                f"{tunnel_net_base}:{netbits}::{deploy_message['octet']}/64"
-            )
+            local_endpoint_addr = f"{tunnel_net_base}:{netbits}::{sync_file.octet}/64"
             remote_endpoint_addr = f"{tunnel_net_base}:{netbits}::{index}"
             listen_address = template_args["interface_trust_ip"].split("/")[0]
 
@@ -457,7 +466,7 @@ def deploy(
                 "interface_trust": template_args.interface_trust,
                 "listen_address": listen_address,
                 "local_port": values["localport"],
-                "octet": deploy_message["octet"],
+                "octet": sync_file.octet,
                 "private_key": mykey,
                 "public_key": values["key"],
                 "remote_address": remotes,
@@ -470,7 +479,7 @@ def deploy(
             ]
             template_args.local_endpoint_addr = local_endpoint_addr
             wgconf = render(wireguard_conf, fulfill)
-            if dry_run:
+            if dryrun:
                 logger.info(f"Dry-run Mode.")
                 print(wgconf)
             else:
@@ -484,30 +493,30 @@ def deploy(
         tssysvinit = render(ns_tester, template_args)
         meshstart = render(mesh_start, template_args)
         bird_priv = render(bird_private, template_args)
-        check_update_file(nssysvinit, deploy_file.ns_private)
-        check_update_file(tssysvinit, deploy_file.ns_tester)
-        check_update_file(meshstart, deploy_file.mesh_wg_restart)
-        check_update_file(bird_priv, deploy_file.bird_private)
+        check_update_file(nssysvinit, deploy_files.ns_private)
+        check_update_file(tssysvinit, deploy_files.ns_tester)
+        check_update_file(meshstart, deploy_files.mesh_wg_restart)
+        check_update_file(bird_priv, deploy_files.bird_private)
         for x in (
-            deploy_file.ns_private,
-            deploy_file.ns_tester,
-            deploy_file.mesh_wg_restart,
+            deploy_files.ns_private,
+            deploy_files.ns_tester,
+            deploy_files.mesh_wg_restart,
         ):
             os.chmod(x, 0o750)
             continue
-        os.chmod(deploy_file.bird_private, 0o640)
+        os.chmod(deploy_files.bird_private, 0o640)
         buser = pwd.getpwnam("bird").pw_uid
         bgroup = pwd.getpwnam("bird").pw_gid
-        if not os.path.exists(deploy_file.bird_conf_d):
-            os.makedirs(deploy_file.bird_conf_d)
+        if not os.path.exists(deploy_files.bird_conf_d):
+            os.makedirs(deploy_files.bird_conf_d)
             try:
-                os.chown(deploy_file.bird_conf_d, buser, bgroup)
+                os.chown(deploy_files.bird_conf_d, buser, bgroup)
             except PermissionError:
-                logger.warning(f"Failed to set ownership of {deploy_file.bird_conf_d}")
+                logger.warning(f"Failed to set ownership of {deploy_files.bird_conf_d}")
                 pass
             pass
         try:
-            os.chown(deploy_file.bird_private, buser, bgroup)
+            os.chown(deploy_files.bird_private, buser, bgroup)
         except PermissionError:
             logger.warning(f"Failed to set ownership of /etc/bird/bird_private.conf")
         return 0
