@@ -359,7 +359,7 @@ def check(
         )
         if verbose:
             print(f"-> DM: {deploy_message}")
-        print(f"-> RHR Checks:")
+        print("-> RHR Checks:")
         for host in site.hosts:
             if host.uuid == me.uuid:
                 continue
@@ -383,7 +383,7 @@ def check(
             if verbose:
                 print(f"    -> RHR: {host_record.export()}")
             continue
-        print(f"-> Site Configuration Package Complete")
+        print("-> Site Configuration Package Complete")
         print("")
         continue
     return 0
@@ -553,7 +553,7 @@ def genkeys(
         )
         sys.exit(4)
 
-    key = generate_site_key(site.site.privatekey, False)
+    _ = generate_site_key(site.site.privatekey, False)
 
     print("Key overwritten, good luck")
     return 0
@@ -586,10 +586,6 @@ def publish(
     """publish site and host records to dns"""
     LoggerConfig(debug, trace)
 
-    if dryrun:
-        commit = False
-    else:
-        commit = True
     config_file = os.path.join(config_path, f"{locus}.yaml")
 
     if aws_zone:
@@ -846,7 +842,7 @@ def add(
     logger.warning("Import Decrypted Host")
     ## override for old system
     if host_record.get("publickey"):
-        logger.info(f"old host message: publickey -> public_key")
+        logger.info("old host message: publickey -> public_key")
         host_record["public_key"] = host_record["publickey"]
 
     ## lookup existing, if it's an update
