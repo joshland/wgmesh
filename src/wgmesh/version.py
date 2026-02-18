@@ -1,2 +1,3 @@
-''' wgmesh version '''
-VERSION='2.0.0'
+"""wgmesh version"""
+
+VERSION = "2.0.1"
