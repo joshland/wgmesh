@@ -193,6 +193,11 @@ def wizard(
         )
         sys.exit(1)
 
+    # Create config directory if it doesn't exist
+    if not dryrun and not os.path.exists(config_path):
+        logger.info(f"Creating config directory: {config_path}")
+        os.makedirs(config_path, exist_ok=True)
+
     # Generate or use existing key
     secret_path = os.path.join(config_path, f"{locus}_priv")
     if os.path.exists(secret_path):
@@ -245,6 +250,12 @@ def check(
         str, typer.Argument(help="short/familiar name, short hand for this mesh")
     ],
     config_path: Annotated[str, typer.Option(envvar="WGM_CONFIG")] = "/etc/wireguard",
+    test_mode: Annotated[
+        str,
+        typer.Option(
+            help="Test mode: read DNS records from local folder for validation"
+        ),
+    ] = "",
     verbose: Annotated[bool, typer.Option(help="Add verbosity")] = False,
     debug: Annotated[bool, typer.Option(help="debug logging")] = False,
     trace: Annotated[bool, typer.Option(help="trace logging")] = False,
@@ -261,7 +272,11 @@ def check(
 
     site_report(locus, site.publish())
 
-    domain_report(site.site)
+    if test_mode:
+        logger.info(f"TEST MODE: Reading DNS from {test_mode}")
+        _domain_report_test_mode(site, test_mode)
+    else:
+        domain_report(site.site)
     print("")
 
     for me in site.hosts:
@@ -315,6 +330,43 @@ def check(
         print("")
         continue
     return 0
+
+
+def _domain_report_test_mode(site: Site, test_dir: str):
+    """Display domain report using test DNS storage"""
+    from pathlib import Path
+    import json
+
+    # Load test DNS data
+    site_file = Path(test_dir) / "site_record.json"
+
+    existing_records = None
+    if site_file.exists():
+        with open(site_file, "r") as f:
+            data = json.load(f)
+            # Parse the chunked payload
+            raw_payload = data.get("raw_payload", "")
+            try:
+                from .datalib import decode_domain
+
+                existing_records = decode_domain(raw_payload)
+            except Exception as e:
+                logger.warning(f"Test DNS holds invalid data: {e}")
+                existing_records = "[Invalid data]"
+
+    dns_payload = site.site.publish_public_payload()
+
+    print()
+    print("DNS CHECK (TEST MODE):")
+    if existing_records:
+        if existing_records == dns_payload:
+            print("  DNS CHECK: Passed")
+        else:
+            print("  DNS CHECK: Failed")
+        print(f"  - Calculated: {dns_payload}")
+        print(f"  - Published (test): {existing_records}")
+    else:
+        print("  No DNS records found in test directory")
 
 
 @app.command()

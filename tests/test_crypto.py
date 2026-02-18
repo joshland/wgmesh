@@ -8,7 +8,7 @@ test_key_secret = 'OSm+bnxiopuxZU75TDaCF4mOOlZDBw11KrDDGshol9A='
 test_key_public = '8BanecEAEKcByL4BDslkHNfPXiiljOgfd68g4A/cJlQ='
 
 def test_init():
-    LoggerConfig(0, 0)
+    LoggerConfig(False, False)
 
 def test_generate_key():
     ''' verify that generate_key produces valid keys '''

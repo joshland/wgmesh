@@ -10,7 +10,7 @@ from wgmesh.lib import LoggerConfig
 from wgmesh.crypto import generate_key
 from wgmesh.transforms import EncryptedHostRegistration, SiteEncryptedHostRegistration, SitePublicRecord, EncryptedAWSSecrets
 
-LoggerConfig(1,0)
+LoggerConfig(True, False)
 
 message = munchify({'publickey': 'demokey', 'message': 'simulatedb64'})
 json_message = message.toJSON()

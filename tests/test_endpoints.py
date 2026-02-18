@@ -63,7 +63,7 @@ local:
   public_key_encoded: 8BanecEAEKcByL4BDslkHNfPXiiljOgfd68g4A/cJlQ=
 """[1:]
 
-LoggerConfig(True, True)
+LoggerConfig(True, False)
 
 def test_endpoint_blank():
     ''' test loading an endpoint with a blank dataset '''

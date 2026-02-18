@@ -399,3 +399,138 @@ class TestWgsiteIntegration:
 
         # Verify maps contains all hosts
         assert len(dns.maps) == 3
+
+    def test_check_command_test_mode(self, temp_site, test_dns_dir):
+        """Test the check command with test mode (simulating DNS check)"""
+        # Load site
+        with open(temp_site["config_path"], "r") as cf:
+            site = Site(cf)
+
+        # First, write site record to test DNS (simulating a publish)
+        public_message = site.site.publish_public_payload()
+        from wgmesh.lib import create_public_txt_record
+
+        dns = TestDNSDataClass.openZone(
+            zoneid=site.site.route53,
+            domain=site.site.domain,
+            access=site.site.aws_access_key,
+            secret=site.site.aws_secret_access_key,
+            test_dir=test_dns_dir,
+        )
+        dns.write_site(create_public_txt_record(public_message))
+
+        # Now simulate what check command does in test mode
+        # Read the test DNS record back
+        from pathlib import Path
+        import json
+
+        site_file = Path(test_dns_dir) / "site_record.json"
+        assert site_file.exists()
+
+        with open(site_file, "r") as f:
+            data = json.load(f)
+            raw_payload = data.get("raw_payload", "")
+            from wgmesh.datalib import decode_domain
+
+            existing_records = decode_domain(raw_payload)
+
+        # Compare with current site config
+        dns_payload = site.site.publish_public_payload()
+        assert existing_records == dns_payload, "DNS records should match site config"
+
+        # Add a host and check again
+        host_uuid = uuid4()
+        host_key = generate_key()
+        signup_data = {
+            "uuid": str(host_uuid),
+            "hostname": "checkhost.example.com",
+            "public_key_encoded": keyexport(host_key.public_key),
+            "local_ipv4": ["10.0.50.1"],
+            "local_ipv6": [],
+        }
+        site.host_add(munchify(signup_data))
+
+        # Write updated site record
+        updated_message = site.site.publish_public_payload()
+        dns.write_site(create_public_txt_record(updated_message))
+
+        # Read back and verify
+        with open(site_file, "r") as f:
+            data = json.load(f)
+            raw_payload = data.get("raw_payload", "")
+            existing_records = decode_domain(raw_payload)
+
+        # Should now be different if we compare with original (pre-host-add) payload
+        assert existing_records == updated_message
+
+    def test_test_mode_read_write_cycle(self, temp_site, test_dns_dir):
+        """Test writing to test DNS and reading it back (hosts command simulation)"""
+        # Load site
+        with open(temp_site["config_path"], "r") as cf:
+            site = Site(cf)
+
+        # Add a host
+        host_uuid = uuid4()
+        host_key = generate_key()
+        signup_data = {
+            "uuid": str(host_uuid),
+            "hostname": "cyclichost.example.com",
+            "public_key_encoded": keyexport(host_key.public_key),
+            "local_ipv4": ["10.0.99.1"],
+            "local_ipv6": [],
+        }
+        site.host_add(munchify(signup_data))
+        added_host = site.get_host_by_uuid(host_uuid)
+
+        # Write to test DNS (like publish command would)
+        dns = TestDNSDataClass.openZone(
+            zoneid=site.site.route53,
+            domain=site.site.domain,
+            access=site.site.aws_access_key,
+            secret=site.site.aws_secret_access_key,
+            test_dir=test_dns_dir,
+        )
+
+        # Write site record
+        public_message = site.site.publish_public_payload()
+        from wgmesh.lib import create_public_txt_record
+
+        dns.write_site(create_public_txt_record(public_message))
+
+        # Write host record
+        from wgmesh.transforms import DeployMessage
+
+        deploy_message = DeployMessage(
+            asn=added_host.asn,
+            site=site.site.domain,
+            octet=added_host.octet,
+            portbase=site.site.portbase,
+            remote=str(site.site.tunnel_ipv6),
+        )
+        message_box = site.get_site_message_box(host_key.public_key)
+        encrypted_message = deploy_message.publish_encrypted(message_box)
+        dns.write_host(str(host_uuid), encrypted_message)
+
+        # Now simulate reading back (like hosts command would)
+        # Create a new DNS instance to read the files fresh
+        dns_read = TestDNSDataClass.openZone(
+            zoneid=site.site.route53,
+            domain=site.site.domain,
+            access=site.site.aws_access_key,
+            secret=site.site.aws_secret_access_key,
+            test_dir=test_dns_dir,
+        )
+
+        # Verify we can read the records back
+        assert dns_read.site_record is not None
+        assert str(host_uuid) in dns_read.maps
+        assert dns_read.maps[str(host_uuid)]["uuid"] == str(host_uuid)
+
+        # Verify the records are readable
+        site_record_data = dns_read.site_record
+        assert site_record_data["type"] == "TXT"
+        assert site_record_data["name"] == f"{site.site.domain}."
+
+        host_record_data = dns_read.maps[str(host_uuid)]
+        assert host_record_data["type"] == "TXT"
+        assert host_record_data["uuid"] == str(host_uuid)
