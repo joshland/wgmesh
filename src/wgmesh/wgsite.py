@@ -405,6 +405,9 @@ def setsite(
     asnfix: Annotated[
         bool, typer.Option(help="Update ASNs, supply any which are empty.")
     ] = False,
+    reset_aws: Annotated[
+        bool, typer.Option(help="Reset AWS credentials (prompts for new keys)")
+    ] = False,
     force: Annotated[bool, typer.Option(help="force overwrite")] = False,
     dryrun: Annotated[bool, typer.Option(help="do not write anything")] = False,
     debug: Annotated[bool, typer.Option(help="debug logging")] = False,
@@ -444,6 +447,16 @@ def setsite(
         if aws_zone:
             logger.trace(f"AWS Zone Changed: {site.site.route53} => {aws_zone}")
             site.site.route53 = aws_zone
+        site.site.aws_access_key = aws_access
+        site.site.aws_secret_access_key = aws_secret
+        site.site.update_aws_credentials(aws_access, aws_secret)
+        pass
+
+    if reset_aws:
+        print("\n=== Reset AWS Credentials ===")
+        aws_access = typer.prompt("AWS Access Key")
+        aws_secret = typer.prompt("AWS Secret Key", hide_input=True)
+        logger.debug("Set AWS Credentials")
         site.site.aws_access_key = aws_access
         site.site.aws_secret_access_key = aws_secret
         site.site.update_aws_credentials(aws_access, aws_secret)
