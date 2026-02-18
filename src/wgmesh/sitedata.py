@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """sited data definition and validator functions"""
 
-from logging import warning
 import os
 import sys
 import uuid
@@ -15,15 +14,14 @@ from loguru import logger
 from typing import Dict, List, Union
 
 from ruamel.yaml import YAML
-from munch import munchify, unmunchify, Munch
+from munch import munchify, unmunchify
 from attrs import define, validators, field
 from nacl.public import PrivateKey, PublicKey, Box
 
 from .crypto import keyexport, load_secret_key, load_public_key
 from .datalib import nonone, collapse_asn_list, expandRange
-from .datalib import message_encode, message_decode
+from .datalib import message_encode
 from .transforms import EncryptedAWSSecrets
-from .store_dns import DNSDataClass
 
 
 class HostMismatch(Exception):

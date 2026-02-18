@@ -95,6 +95,7 @@ class DNSDataClass:
                     logger.error(
                         f"Failed to update site DNS record: {self.site_domain}"
                     )
+                    logger.trace(f"DNS Exception: {e}")
                     raise
             else:
                 logger.trace("Site data already correct, ignoring update")
@@ -107,6 +108,7 @@ class DNSDataClass:
                 rrset, body = self._zone.create_txt_record(domain, chunked_data)
             except Exception as e:
                 logger.error(f"Failed to create site DNS record: {domain}")
+                logger.trace(f"DNS Exception: {e}")
                 raise
             logger.trace("Create site records: {rrset}")
             self.site_record = rrset
@@ -132,6 +134,7 @@ class DNSDataClass:
                 logger.error(
                     f"Failed to update DNS record for '{uuid}.{self.site_domain}'"
                 )
+                logger.trace(f"DNS Exception: {e}")
                 raise
             logger.trace(f"DNS Response {body}")
             logger.debug("Committing to dns")
@@ -145,6 +148,7 @@ class DNSDataClass:
                 rrset, body = self._zone.create_txt_record(record_name, chunked_data)
             except Exception as e:
                 logger.error(f"Failed to create DNS record: '{record_name}'")
+                logger.trace(f"DNS Exception: {e}")
                 raise
             logger.trace(f"Create Map: {uuid} => {rrset}")
             self.maps[uuid] = rrset

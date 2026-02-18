@@ -217,7 +217,7 @@ class HostRegistration:
                 self.local_ipv6.append(addr)
                 logger.trace(f": Host remote address: {addr}")
             else:
-                logger.error(f"Unknown Address: x")
+                logger.error(f"Unknown Address: {x}")
                 continue
             continue
 

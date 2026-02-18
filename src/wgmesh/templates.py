@@ -1,5 +1,5 @@
 ## templates
-from jinja2 import Template, Environment, FileSystemLoader, StrictUndefined
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 env = Environment(loader=FileSystemLoader("."))
 env.undefined = StrictUndefined

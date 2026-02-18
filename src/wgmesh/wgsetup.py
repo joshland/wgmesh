@@ -2,10 +2,9 @@
 """wgmesh site-specific operations"""
 
 # Create the host basics locally
-from logging import warning
 import os
 import sys
-from io import StringIO
+import pwd
 from glob import glob
 
 import netaddr
@@ -16,11 +15,10 @@ from munch import munchify, Munch, unmunchify
 from ruamel.yaml import YAML
 
 from .endpointdata import Endpoint
-from .datalib import message_encode, message_decode, dns_query, check_update_file
+from .datalib import message_encode, dns_query, check_update_file
 from .datalib import fetch_and_decode_record
 from .lib import LoggerConfig, filediff
-from .version import VERSION
-from .crypto import *
+from .crypto import keyexport, generate_key
 from .hostlib import get_local_addresses_with_interfaces
 from .templates import bird_private, ns_private, ns_tester, mesh_start, wireguard_conf
 from .templates import render
@@ -128,12 +126,12 @@ def init(
 
     locus_info = fetch_and_decode_record(domain, test_mode)
     if not locus_info:
-        logger.error(f"Failed to fetch record, aborting")
+        logger.error(f"Failed to fetch record, aborting {domain}")
         sys.exit(1)
 
     newkey = generate_key()
     if dryrun:
-        print(f"Generated key, ignoring (dryrun)")
+        print("Generated key, ignoring (dryrun)")
     else:
         with open(filenames.privkey, "w", encoding="utf-8") as keyf:
             keyf.write(keyexport(newkey))
@@ -211,7 +209,7 @@ def set_config(
     if not no_validate:
         locus_info = fetch_and_decode_record(ep.site_domain, test_mode)
         if not locus_info:
-            logger.error(f"Failed to fetch record, aborting")
+            logger.error(f"Failed to fetch record, aborting {ep.site_domain}")
             sys.exit(1)
 
     configure(
@@ -361,6 +359,7 @@ def sync(
         else:
             crypt = dns_query(target)
     except:
+        logger.warning("Bare Exception Warning")
         logger.error(f"DNS Exception: {target}")
         print()
         sys.exit(1)
@@ -423,8 +422,6 @@ def deploy(
     with open(filenames.sync_file, "r") as sync_file:
         sync_file = munchify(yaml.load(sync_file))
 
-    portbase = sync_file.portbase
-    site = sync_file.site
     tunnel_network = netaddr.IPNetwork(sync_file.remote)
     tunnel_net_base = str(tunnel_network.network).split("::")[0]
     mykey = open(ep.secret_key_file, "r").read().strip()
@@ -487,7 +484,7 @@ def deploy(
             template_args.local_endpoint_addr = local_endpoint_addr
             wgconf = render(wireguard_conf, fulfill)
             if dryrun:
-                logger.info(f"Dry-run Mode.")
+                logger.info("Dry-run Mode.")
                 print(wgconf)
             else:
                 check_update_file(
@@ -525,7 +522,7 @@ def deploy(
         try:
             os.chown(deploy_files.bird_private, buser, bgroup)
         except PermissionError:
-            logger.warning(f"Failed to set ownership of /etc/bird/bird_private.conf")
+            logger.warning(f"Failed to set ownership of {deploy_files.bird_private}")
         return 0
 
 
