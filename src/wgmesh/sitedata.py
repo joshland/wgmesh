@@ -58,6 +58,20 @@ def convertNetworkAddress(arg):
     return retval
 
 
+def convertAsnUsed(arg):
+    """ensure asn_used is always a list"""
+    if arg in empty_set or arg == []:
+        return []
+    if isinstance(arg, list):
+        return arg
+    if isinstance(arg, str):
+        # Handle comma-separated string if needed
+        if arg:
+            return [int(x.strip()) for x in arg.split(",") if x.strip()]
+        return []
+    return []
+
+
 def convertAddressBlocks(arg: Union[str, list]) -> list:
     """validate and clean up network addressing"""
     retval = []
@@ -198,7 +212,7 @@ class Sitecfg:
     tunnel_ipv6: IPv6Network = field(default="", converter=convertNetworkAddress)
     portbase: int = field(default=58822, converter=int)
     asn_range: str = field(default="", converter=convertAsnRange)
-    asn_used: list = field(factory=list)
+    asn_used: list = field(factory=list, converter=convertAsnUsed)
     privatekey: str = field(default="", converter=nonone)
     publickey: str = field(default="")
     route53: str = field(default="", converter=nonone)
