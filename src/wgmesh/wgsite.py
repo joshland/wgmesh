@@ -529,9 +529,6 @@ def publish(
     with open(config_file, "r", encoding="utf-8") as cf:
         site = Site(cf)
 
-    # Load keys and decrypt AWS credentials
-    site.site.open_keys()
-
     current_records = None
     try:
         current_records = fetch_and_decode_record(site.site.domain)

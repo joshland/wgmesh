@@ -153,8 +153,11 @@ def dns_query(domain: str) -> str:
     """return the record from the DNS"""
     try:
         answer = dns.resolver.resolve(domain, "TXT").response.answer[0]
-    except dns.resolver.NXDOMAIN as exc:
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as exc:
         logger.error(f"Invalid Hostname {domain} / No TXT Record.")
+        raise InvalidHostName from exc
+    except Exception as exc:
+        logger.error(f"DNS query failed for {domain}: {exc}")
         raise InvalidHostName from exc
 
     response = []
