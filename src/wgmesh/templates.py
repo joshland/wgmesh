@@ -4,10 +4,12 @@ from jinja2 import Template, Environment, FileSystemLoader, StrictUndefined
 env = Environment(loader=FileSystemLoader("."))
 env.undefined = StrictUndefined
 
+
 def render(template, args):
-    ''' return a string with a rendered template '''
+    """return a string with a rendered template"""
     t = env.from_string(template)
     return t.render(args)
+
 
 bird_private = """
 log syslog { debug, trace, info, remote, warning, error, auth, fatal, bug };

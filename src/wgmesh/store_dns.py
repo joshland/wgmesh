@@ -61,8 +61,10 @@ class DNSDataClass:
 
         text_records = [x for x in self._zone.record_sets if x.rrset_type == "TXT"]
         self.records = [x for x in text_records if self.site_domain in x.name]
-        logger.debug(f'Zone-load: {len(text_records)} records loaded')
-        logger.debug(f'Site Records {self.site_domain}: {len(self.records)} records loaded')
+        logger.debug(f"Zone-load: {len(text_records)} records loaded")
+        logger.debug(
+            f"Site Records {self.site_domain}: {len(self.records)} records loaded"
+        )
         self.maps = {}
         for rrset in self.records:
             if self.site_domain == rrset.name:

@@ -5,18 +5,16 @@ import sys
 import json
 
 from difflib import unified_diff
-from typing import Callable, TextIO, List, Tuple
+from typing import TextIO, List, Tuple
 
 from loguru import logger
 from ruamel.yaml import YAML
-from natsort import natsorted
 from munch import munchify, unmunchify
 
-from .sitedata import Site, Sitecfg
+from .sitedata import Sitecfg
 from .endpointdata import Endpoint
 from .datalib import (
     message_encode,
-    message_decode,
     dns_query,
     decode_domain,
     fetch_and_decode_record,

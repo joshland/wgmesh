@@ -5,8 +5,7 @@ from base64 import b64decode
 import socket
 from uuid import UUID
 from io import StringIO
-from typing import List, TextIO, Union
-from ipaddress import IPv4Address, IPv6Address
+from typing import List, TextIO
 
 from loguru import logger
 from ruamel.yaml import YAML

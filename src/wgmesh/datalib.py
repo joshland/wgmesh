@@ -197,7 +197,6 @@ def test_dns_query(domain: str, test_dir: str) -> list:
     """return the record from local test files instead of DNS"""
     from pathlib import Path
 
-    domain_clean = domain.rstrip(".")
     site_file = Path(test_dir) / "site_record.json"
 
     if not site_file.exists():
