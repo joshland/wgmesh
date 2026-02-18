@@ -15,7 +15,7 @@ from munch import munchify, Munch, unmunchify
 from ruamel.yaml import YAML
 
 from .endpointdata import Endpoint
-from .datalib import message_encode, dns_query, check_update_file
+from .datalib import message_encode, dns_query, check_update_file, InvalidHostName
 from .datalib import fetch_and_decode_record
 from .lib import LoggerConfig, filediff
 from .crypto import keyexport, generate_key
@@ -124,7 +124,11 @@ def init(
             logger.error(f"{x} exists, aborting (use --force to overwrite)")
             sys.exit(4)
 
-    locus_info = fetch_and_decode_record(domain, test_mode)
+    try:
+        locus_info = fetch_and_decode_record(domain, test_mode)
+    except InvalidHostName:
+        logger.error(f'Failed to resolve hostname {domain}, may be propagation or other unavailability')
+        raise t.Exit(code=2)
     if not locus_info:
         logger.error(f"Failed to fetch record, aborting {domain}")
         sys.exit(1)
