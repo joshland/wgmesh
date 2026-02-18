@@ -16,7 +16,7 @@ from munch import munchify, Munch, unmunchify
 from ruamel.yaml import YAML
 
 from .endpointdata import Endpoint
-from .datalib import message_encode, message_decode, dns_query
+from .datalib import message_encode, message_decode, dns_query, check_update_file
 from .datalib import fetch_and_decode_record
 from .lib import LoggerConfig, filediff
 from .version import VERSION
@@ -368,7 +368,8 @@ def sync(
     yaml = YAML(typ="rt")
     if sync_payload.asn != ep.asn:
         logger.info(f"Update ASN from Site: {ep.asn} => {sync_payload.asn}")
-        new_config = ep.save_endpoint_config()
+        ep.asn = sync_payload.asn
+    new_config = ep.save_endpoint_config()
     if dryrun:
         print("nothing saved")
         sys.exit(1)
@@ -379,8 +380,7 @@ def sync(
     )
     print("Changeset:")
     print(diffdata)
-    if sync_payload.asn != ep.asn:
-        logger.info(f"Update ASN from Site: {ep.asn} => {sync_payload.asn}")
+    if new_config != old_config:
         with open(filenames.cfg_file, "w", encoding="utf-8") as cf:
             cf.write(new_config)
     return 0
@@ -431,6 +431,8 @@ def deploy(
     template_args = munchify({})
     template_args.interface_outbound = ep.public_iface
     template_args.interface_trust = ep.trust_iface
+    template_args.interface_trust_ip = ep.trust_address
+    template_args.interface_public = ep.public_iface
     template_args.wireguard_interfaces = {}
     template_args.cmds = {"binfping": ep.cmdfping}
     template_args.locus = ep.locus
@@ -438,6 +440,7 @@ def deploy(
     template_args.local_asn = ep.asn
     template_args.octet = sync_file.octet
     template_args.tunnel_remote = sync_file.remote
+    template_args.ports = []
     deploy_files = deployfile(locus, deploy_path)
     for host, values in sync_file.hosts.items():
         index = values.localport - sync_file.portbase
@@ -456,7 +459,11 @@ def deploy(
             )
             local_endpoint_addr = f"{tunnel_net_base}:{netbits}::{sync_file.octet}/64"
             remote_endpoint_addr = f"{tunnel_net_base}:{netbits}::{index}"
-            listen_address = template_args["interface_trust_ip"].split("/")[0]
+            trust_ip = template_args.interface_trust_ip
+            if isinstance(trust_ip, list):
+                listen_address = trust_ip[0].split("/")[0] if trust_ip else ""
+            else:
+                listen_address = trust_ip.split("/")[0] if trust_ip else ""
 
             fulfill = {
                 "myhost": ep.hostname,
@@ -484,7 +491,7 @@ def deploy(
                 print(wgconf)
             else:
                 check_update_file(
-                    wgconf, os.path.join(deploy_path, f"/etc/wireguard/wg{index}.conf")
+                    wgconf, os.path.join(deploy_path, f"etc/wireguard/wg{index}.conf")
                 )
                 pass
             continue
