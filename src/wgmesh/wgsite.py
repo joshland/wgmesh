@@ -827,7 +827,7 @@ def add(
         message = host_message
         pass
 
-    message = "".join([x for x in message.split("\n") if x.strip()[0] != "#"])
+    message = "".join([x for x in message.split("\n") if x > '' and x.strip()[0] != "#"])
     logger.debug(f'Host Message: {message}')
 
     logger.warning("Unlock Message")
