@@ -62,7 +62,7 @@ def check_update_file(buffer, path):
     """compare existing contents to calculated buffers, write if different"""
     dirname = os.path.abspath(os.path.dirname(path))
     logger.trace(f"Make Directories: {dirname}")
-    os.makedirs(dirname)
+    os.makedirs(dirname, exist_ok=True)
     try:
         with open(path, "r") as cf:
             current = cf.read()
