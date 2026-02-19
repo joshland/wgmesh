@@ -827,6 +827,7 @@ def add(
         pass
 
     message = "".join([x for x in message.split("\n") if x.strip()[0] != "#"])
+    logger.debug(f'Host Message: {message}')
 
     logger.warning("Unlock Message")
     logger.debug("transform stage 1, decode")
