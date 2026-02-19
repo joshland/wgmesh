@@ -821,6 +821,7 @@ def add(
         logger.debug(f"{host_message} is a file.")
         with open(host_message, "r", encoding="utf-8") as msg:
             message = msg.read()
+        logger.debug(f'Message read: {len(message)}')
     else:
         logger.debug("Message supplied through command line")
         message = host_message
