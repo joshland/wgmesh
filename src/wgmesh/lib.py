@@ -40,13 +40,13 @@ def LoggerConfig(debug: bool, trace: bool):
     if debug:
         logger.info("Debug")
         logger.remove()
-        logger.add(sys.stdout, level="DEBUG")
+        logger.add(sys.stderr, level="DEBUG")
         pass
 
     if trace:
         logger.info("Trace")
         logger.remove()
-        logger.add(sys.stdout, level="TRACE")
+        logger.add(sys.stderr, level="TRACE")
         pass
 
     pass
