@@ -71,3 +71,12 @@ target/
 Documents/Relationships.md
 wif.py
 
+activate
+local
+s2cfg
+*.tar.gz
+wgmesh-1
+aws_creds*
+
+# Storing Command history
+history/

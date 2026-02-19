@@ -1,13 +1,15 @@
 ## templates
-from jinja2 import Template, Environment, FileSystemLoader, StrictUndefined
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 env = Environment(loader=FileSystemLoader("."))
 env.undefined = StrictUndefined
 
+
 def render(template, args):
-    ''' return a string with a rendered template '''
+    """return a string with a rendered template"""
     t = env.from_string(template)
     return t.render(args)
+
 
 bird_private = """
 log syslog { debug, trace, info, remote, warning, error, auth, fatal, bug };
@@ -97,7 +99,7 @@ function cmd(){
 function start(){
   shift
 
-  echo "stopping namespace: $1"
+  echo "starting namespace: $1"
 
   ## default namespace
   cmd /usr/bin/env ip addr add 169.254.{{ octet }}.1/24 brd + dev {{ interface_outbound }}
@@ -171,7 +173,7 @@ function cmd(){
 function start(){
   shift
 
-  echo "stopping namespace: $1"
+  echo "starting namespace: $1"
 
   ## Private Setup
   cmd /usr/bin/env ip netns exec private ip link add tester1 type veth peer name tester1 netns tester
@@ -245,12 +247,12 @@ loop=0
 function start(){
     shift
     while [ $loop -eq 0 ]; do
-	${binfping} 8.8.8.8 > /dev/null
-	if [ $? ]; then
+        ${binfping} 8.8.8.8 > /dev/null
+        if [ $? ]; then
             loop=1
             echo "mesh startup: internet is alive."
-	fi
-	sleep 5
+        fi
+        sleep 5
     done
 
     ## Start Wireguard
@@ -287,72 +289,6 @@ case "$1" in
    *)
       echo "Usage: $0 {start|stop|restart}"
 esac
-
-"""[1:]
-
-## Tab align in rendered template.  (important for readability.)
-shorewall_rules = """
-## wgmesh - wgdeploy /etc/shorewall/rules
-#  DO NOT EDIT BY HAND
-######################################################################################################################################################################################################
-#ACTION		SOURCE		DEST		PROTO	DEST	SOURCE		ORIGINAL	RATE		USER/	MARK	CONNLIMIT	TIME		HEADERS		SWITCH		HELPER
-#							PORT	PORT(S)		DEST		LIMIT		GROUP
-?SECTION ALL
-?SECTION ESTABLISHED
-?SECTION RELATED
-?SECTION INVALID
-?SECTION UNTRACKED
-?SECTION NEW
-
-# NAT Ports for Wireguard Interfaces
-DNAT:info	net		loc:169.254.{{ octet }}.2	udp	{{ ports | join(',') }}
-
-# Don't allow connection pickup from the net
-Invalid(DROP)	net	all	tcp
-Invalid(DROP)	net	all	udp
-Invalid(DROP)	loc	net:172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
-
-# Accept DNS connections from the firewall to the Internet
-DNS(ACCEPT)	$FW		net
-NTP(ACCEPT)	$FW		net
-SNMP(ACCEPT)	$FW		net
-SSH(ACCEPT)	$FW		net
-
-# Accept SSH connections from the local network to the firewall and DMZ
-SSH(ACCEPT)	net		$FW
-SSH(ACCEPT)	loc		$FW
-## We don't need any 
-#BGP(ACCEPT)	loc		$FW
-#BGP(ACCEPT)	$FW		loc
-
-# Drop Ping from the "bad" net zone.
-Ping(ACCEPT)   	net             $FW
-
-# Make ping work bi-directionally between the dmz, net, Firewall and local zone
-# (assumes that the loc-> net policy is ACCEPT).
-Ping(ACCEPT)    loc             $FW
-Ping(ACCEPT)    $FW             loc
-
-SNMP(ACCEPT) 	loc		$FW
-
-Ping(ACCEPT)	$FW		net		icmp
-ACCEPT		$FW		loc		icmp
-ACCEPT		$FW		loc
-
-ACCEPT		$FW		net		tcp	https
-ACCEPT		$FW		net		tcp	http
-
-"""[1:]
-
-shorewall_interfaces = """
-## wgmesh - wgdeploy /etc/shorewall/interfaces
-#  DO NOT EDIT BY HAND
-###############################################################################
-?FORMAT 2
-###############################################################################
-#ZONE	INTERFACE	OPTIONS
-net     NET_IF      tcpflags,nosmurfs,routefilter,sourceroute=0,physical={{ interface_public }}
-loc     LOC_IF      tcpflags,routefilter,physical={{ interface_outbound }}
 
 """[1:]
 

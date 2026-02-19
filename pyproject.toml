@@ -1,33 +1,30 @@
 [build-system]
-requires = ["setuptools>=61.2"]
-requies-python = ">=3.6"
+requires = [
+    "setuptools>=42",
+    "wheel"
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "wgmesh"
-version = "1.0.6"
-authors = [{name = "Joshua M. Schmidlkofer", email = "joshland@protonmail.com"}]
-description = "Wireguard Mesh Maker"
-keywords = ["wireguard", "frr"]
+description = "Wireguard Mesh Configuration Coordinator"
+authors = [
+    {name = "Joshua Schmidlkofer", email = "joshua+wgmesh@joshuainnovates.us" },
+]
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
 classifiers = [
-    "Environment :: Console",
-    "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Operating System :: POSIX :: Linux",
-    "Topic :: Internet",
-    "Topic :: System :: Networking",
-    "Development Status :: 4 - Beta",
-    "Natural Language :: English",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: Linux",
 ]
 dependencies = [
+    "typer[all]",
     "wheel",
     "attrs",
-    "click",
+    "rich",
     "dnspython",
     "ifaddr",
     "loguru",
@@ -38,27 +35,25 @@ dependencies = [
     "ruamel.yaml",
     "six",
     "jinja2",
+    "munch",
 ]
+dynamic = ["version", "readme"]
 
-[project.urls]
-Homepage = "https://github.com/joshland/wgmesh"
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["wgmesh"]
+namespaces = false
 
-[project.readme]
-file = "README.md"
-content-type = "text/markdown"
-
-[tool.setuptools]
-zip-safe = false
-include-package-data = true
-
-[tool.setuptools.packages]
-find = {namespaces = false}
+[tool.setuptools.dynamic]
+version = {attr = "wgmesh.version.VERSION"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [project.scripts]
-wgconfig = "wgmesh.config:cli"
-wgdeploy = "wgmesh.deploy:cli"
-wghost   = "wgmesh.host:cli"
-wgpub    = "wgmesh.pub:cli"
-wgsite   = "wgmesh.site:cli"
-wgkeys   = "wgmesh.init:keygen"
+wgsite   = "wgmesh.wgsite:app"
+wgsetup  = "wgmesh.wgsetup:app"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
 

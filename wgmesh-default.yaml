@@ -1,13 +1,15 @@
 global:
+  locus: corpmesh
   alerts: alerts@example.com
-  domain: example.com
+  domain: corp.example.com
   #local_ipv4: 172.16.42.0/24
   local_ipv6: fd86:ea04:1116::/64
   # Examples: https://simpledns.plus/private-ipv6
-  locus: wgmesh
   portbase: 21100
   asn_range: 64512:64525
   publickey: ''
   privatekey: site.key
-
+  route53: Z1XXXXXXX2RH
+  aws_access_key_id: <access key>
+  aws_secret_access_key: <secret key>
 hosts: {}
