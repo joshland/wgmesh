@@ -2,6 +2,7 @@
 """wgmesh site-specific operations"""
 
 # Create the host basics locally
+import json
 import os
 import sys
 import typer
@@ -578,6 +579,16 @@ def publish(
             help="Test mode: write DNS records to local folder instead of Route53"
         ),
     ] = "",
+    output_dir: Annotated[
+        str,
+        typer.Option(
+            help="Output directory for per-node configuration files (instead of Route53)"
+        ),
+    ] = "",
+    insecure_debug_payloads: Annotated[
+        bool,
+        typer.Option(help="Write unencrypted payloads (for debugging only)"),
+    ] = False,
     force: Annotated[bool, typer.Option(help="force overwrite")] = False,
     dryrun: Annotated[bool, typer.Option(help="do not write anything")] = False,
     debug: Annotated[bool, typer.Option(help="debug logging")] = False,
@@ -688,9 +699,29 @@ def publish(
         logger.trace("Publish Deployer Record:")
         message_box = site.get_site_message_box(public_key)
         encrypted_deploy_message = deploy_message.publish_encrypted(message_box)
-        logger.trace(f"Encrypt and Package: {deploy_message.publish()}")
+        unencrypted_deploy_message = deploy_message.publish()
+        logger.trace(f"Encrypt and Package: {unencrypted_deploy_message}")
         logger.debug(f"Package DNS Record {len(encrypted_deploy_message)} bytes")
-        dns.write_host(myuuid, encrypted_deploy_message)
+        if output_dir:
+            output_file = os.path.join(output_dir, f"{myuuid}.json")
+            logger.info(f"Writing node configuration to {output_file}")
+            payload = (
+                unencrypted_deploy_message
+                if insecure_debug_payloads
+                else encrypted_deploy_message
+            )
+            with open(output_file, "w") as f:
+                json.dump(
+                    {
+                        "uuid": myuuid,
+                        "hostname": me.hostname,
+                        "raw_payload": payload,
+                    },
+                    f,
+                    indent=2,
+                )
+        else:
+            dns.write_host(myuuid, encrypted_deploy_message)
     return 0
 
 
@@ -821,14 +852,16 @@ def add(
         logger.debug(f"{host_message} is a file.")
         with open(host_message, "r", encoding="utf-8") as msg:
             message = msg.read()
-        logger.debug(f'Message read: {len(message)}')
+        logger.debug(f"Message read: {len(message)}")
     else:
         logger.debug("Message supplied through command line")
         message = host_message
         pass
 
-    message = "".join([x for x in message.split("\n") if x > '' and x.strip()[0] != "#"])
-    logger.debug(f'Host Message: {message}')
+    message = "".join(
+        [x for x in message.split("\n") if x > "" and x.strip()[0] != "#"]
+    )
+    logger.debug(f"Host Message: {message}")
 
     logger.warning("Unlock Message")
     logger.debug("transform stage 1, decode")
