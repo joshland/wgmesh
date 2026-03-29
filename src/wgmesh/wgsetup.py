@@ -127,7 +127,9 @@ def init(
     try:
         locus_info = fetch_and_decode_record(domain, test_mode)
     except InvalidHostName:
-        logger.error(f'Failed to resolve hostname {domain}, may be propagation or other unavailability')
+        logger.error(
+            f"Failed to resolve hostname {domain}, may be propagation or other unavailability"
+        )
         raise t.Exit(code=2)
     if not locus_info:
         logger.error(f"Failed to fetch record, aborting {domain}")
@@ -523,11 +525,140 @@ def deploy(
                 logger.warning(f"Failed to set ownership of {deploy_files.bird_conf_d}")
                 pass
             pass
-        try:
-            os.chown(deploy_files.bird_private, buser, bgroup)
-        except PermissionError:
-            logger.warning(f"Failed to set ownership of {deploy_files.bird_private}")
+            try:
+                os.chown(deploy_files.bird_private, buser, bgroup)
+            except PermissionError:
+                logger.warning(
+                    f"Failed to set ownership of {deploy_files.bird_private}"
+                )
         return 0
+
+
+@app.command()
+def start(
+    locus: Annotated[
+        str, t.Argument(help="short/familiar name, short hand for this mesh")
+    ],
+    config_path: Annotated[str, t.Argument(envvar="WGM_CONFIG")] = "/etc/wireguard",
+    namespace: Annotated[str, t.Option(help="Network namespace name")] = "wireguard0",
+    debug: Annotated[bool, t.Option(help="debug logging")] = False,
+    trace: Annotated[bool, t.Option(help="trace logging")] = False,
+):
+    """start wireguard mesh"""
+    import subprocess
+
+    LoggerConfig(debug, trace)
+    yaml = YAML(typ="rt")
+
+    if os.geteuid() != 0:
+        logger.error("This command must be run as root")
+        sys.exit(1)
+
+    filenames = hostfile(locus, config_path)
+    with open(filenames.cfg_file, "r", encoding="utf-8") as cf:
+        ep = Endpoint.load_endpoint_config(cf)
+    ep.open_keys()
+
+    with open(filenames.sync_file, "r") as sync_file:
+        sync_file = munchify(yaml.load(sync_file))
+
+    single_endpoint = getattr(sync_file, "single_endpoint", True)
+    portbase = sync_file.portbase
+    my_octet = sync_file.octet
+    my_port = portbase if single_endpoint else portbase + my_octet
+    mykey = open(ep.secret_key_file, "r").read().strip()
+
+    tunnel_network = netaddr.IPNetwork(sync_file.remote)
+    tunnel_net_base = str(tunnel_network.network).split("::")[0]
+    my_tunnel_addr = f"{tunnel_net_base}::{my_octet}/64"
+
+    def run_cmd(cmd: str, check: bool = True):
+        logger.debug(f"+ {cmd}")
+        subprocess.run(cmd, shell=True, check=check, text=True)
+
+    logger.info(f"Creating network namespace: {namespace}")
+    run_cmd(f"ip netns add {namespace} 2>/dev/null || true")
+
+    if single_endpoint:
+        wg_iface = "wg0"
+        logger.info(f"Setting up single endpoint mode: {wg_iface}:{my_port}")
+
+        run_cmd(f"ip link add {wg_iface} type wireguard 2>/dev/null || true")
+        run_cmd(
+            f"wg set {wg_iface} private-key {ep.secret_key_file} listen-port {my_port}"
+        )
+
+        for host, values in sync_file.hosts.items():
+            if host == ep.hostname:
+                continue
+            pubkey = values.key
+            remote_addrs = (
+                values.remote
+                if isinstance(values.remote, list)
+                else values.remote.split(",")
+            )
+            remote_port = values.remoteport
+            for remote_addr in remote_addrs:
+                endpoint = f"{remote_addr}:{remote_port}"
+                peer_addr = f"{tunnel_net_base}::{values.octet}/128"
+                run_cmd(
+                    f"wg set {wg_iface} peer {pubkey} endpoint {endpoint} allowed-ips {peer_addr} persistent-keepalive 25"
+                )
+
+        run_cmd(f"ip link set {wg_iface} netns {namespace} 2>/dev/null || true")
+        run_cmd(f"ip -n {namespace} addr add {my_tunnel_addr} dev {wg_iface}")
+        run_cmd(f"ip -n {namespace} link set {wg_iface} up")
+    else:
+        logger.info("Setting up multi-endpoint mode (one interface per peer)")
+        for host, values in sync_file.hosts.items():
+            if host == ep.hostname:
+                continue
+            index = values.localport - portbase
+            wg_iface = f"wg{index}"
+            local_port = values.localport
+            remote_port = values.remoteport
+
+            netbits = "".join(
+                ["{:02X}".format(a) for a in sorted([my_octet, index], reverse=True)]
+            )
+            local_endpoint_addr = f"{tunnel_net_base}:{netbits}::{my_octet}/64"
+            remote_endpoint_addr = f"{tunnel_net_base}:{netbits}::{index}"
+
+            logger.info(f"Setting up {wg_iface}:{local_port} => {host}")
+
+            run_cmd(f"ip link add {wg_iface} type wireguard 2>/dev/null || true")
+            run_cmd(
+                f"wg set {wg_iface} private-key {ep.secret_key_file} listen-port {local_port}"
+            )
+
+            pubkey = values.key
+            remote_addrs = (
+                values.remote
+                if isinstance(values.remote, list)
+                else values.remote.split(",")
+            )
+            for remote_addr in remote_addrs:
+                endpoint = f"{remote_addr}:{remote_port}"
+                run_cmd(
+                    f"wg set {wg_iface} peer {pubkey} endpoint {endpoint} allowed-ips {remote_endpoint_addr} persistent-keepalive 25"
+                )
+
+            run_cmd(f"ip link set {wg_iface} netns {namespace} 2>/dev/null || true")
+            run_cmd(f"ip -n {namespace} addr add {local_endpoint_addr} dev {wg_iface}")
+            run_cmd(f"ip -n {namespace} link set {wg_iface} up")
+
+    ns = f"ip -n {namespace}"
+    if ep.trust_iface:
+        run_cmd(f"ip link set {ep.trust_iface} netns {namespace} 2>/dev/null || true")
+        if ep.trust_address:
+            run_cmd(f"{ns} addr add {ep.trust_address} dev {ep.trust_iface}")
+        run_cmd(f"{ns} link set {ep.trust_iface} up")
+
+    run_cmd(f"{ns} link set lo up")
+    run_cmd(f"{ns} sysctl -w net.ipv4.ip_forward=1")
+
+    logger.info("Mesh started successfully")
+    return 0
 
 
 if __name__ == "__main__":

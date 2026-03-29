@@ -53,6 +53,9 @@ def init(
     portbase: Annotated[
         int, typer.Option(help="Starting Point for inter-system tunnel connections.")
     ] = 0,
+    single_endpoint: Annotated[
+        bool, typer.Option(help="Use single port for all peers (default: true)")
+    ] = True,
     aws_zone: Annotated[str, typer.Option(help="AWS Route53 Records Zone.")] = "",
     aws_access: Annotated[
         str, typer.Option(envvar="AWS_ACCESS_KEY", help="AWS Access Key")
@@ -125,6 +128,8 @@ def init(
     elif suggest:
         arguments.portbase = 9000
         pass
+
+    arguments.single_endpoint = single_endpoint
 
     if aws_zone and aws_access and aws_secret:
         arguments.route53 = aws_zone

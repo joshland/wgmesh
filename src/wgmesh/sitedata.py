@@ -147,9 +147,10 @@ class Host(object):
         return retval
 
     def endport(self):
-        """returns the octet added to the site.portbase"""
-        retval = self.sitecfg.site.portbase + self.octet
-        return retval
+        """returns the port for this host"""
+        if self.sitecfg.site.single_endpoint:
+            return self.sitecfg.site.portbase
+        return self.sitecfg.site.portbase + self.octet
 
     def endpoint_addresses(self):
         """return a formatted list of endpoint IP addresses"""
@@ -209,6 +210,7 @@ class Sitecfg:
     tunnel_ipv4: IPv4Network = field(default="", converter=convertNetworkAddress)
     tunnel_ipv6: IPv6Network = field(default="", converter=convertNetworkAddress)
     portbase: int = field(default=58822, converter=int)
+    single_endpoint: bool = field(default=True)
     asn_range: str = field(default="", converter=convertAsnRange)
     asn_used: list = field(factory=list, converter=convertAsnUsed)
     privatekey: str = field(default="", converter=nonone)
@@ -339,6 +341,7 @@ class Sitecfg:
             "tunnel_ipv6": str(self.tunnel_ipv6) if self.tunnel_ipv6 else None,
             "domain": self.domain,
             "portbase": self.portbase,
+            "single_endpoint": self.single_endpoint,
             "asn_range": collapse_asn_list(self.asn_range),
             "asn_used": self.asn_used,
             "publickey": self.publickey,
